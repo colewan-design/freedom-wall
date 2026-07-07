@@ -1,0 +1,27 @@
+:root {
+  font: 16px/1.5 system-ui, 'Segoe UI', Roboto, sans-serif;
+  color-scheme: light;
+
+  --ink: #1c231d;
+  --muted: #6b756c;
+  --accent: #2f5233;
+  --accent-dark: #223d26;
+  --paper: #f6f5f1;
+  --line: #e2e0d7;
+  --danger: #a13a2f;
+  --danger-bg: #fbe9e6;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #fbfaf7;
+}
+
+h1 {
+  font-size: 1.75rem;
+  margin: 0 0 0.5rem;
+}
