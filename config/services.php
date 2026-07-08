@@ -37,7 +37,7 @@ return [
 
     'admin' => [
         'username' => env('ADMIN_USERNAME'),
-        'password_hash' => env('ADMIN_PASSWORD_HASH'),
+        'password' => env('ADMIN_PASSWORD'),
     ],
 
     'facebook' => [
