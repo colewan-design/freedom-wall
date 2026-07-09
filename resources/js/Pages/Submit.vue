@@ -6,8 +6,6 @@ import TurnstileWidget from '../Components/TurnstileWidget.vue';
 
 defineOptions({ layout: AppLayout });
 
-const MAX_LENGTH = 1000;
-
 const page = usePage();
 const successMessage = computed(() => page.props.flash?.success ?? null);
 const fileInput = ref(null);
@@ -66,11 +64,9 @@ function onSubmit() {
       <div class="field">
         <textarea
           v-model="form.content"
-          :maxlength="MAX_LENGTH"
           rows="6"
           placeholder="What's on your mind?"
         ></textarea>
-        <div class="char-count">{{ form.content.length }} / {{ MAX_LENGTH }}</div>
       </div>
 
       <label class="file-field">
@@ -191,13 +187,6 @@ textarea:focus {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(47, 82, 51, 0.12);
-}
-
-.char-count {
-  text-align: right;
-  font-size: 0.75rem;
-  color: var(--muted);
-  margin-top: 0.35rem;
 }
 
 .file-field input[type='file'] {

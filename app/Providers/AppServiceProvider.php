@@ -31,7 +31,7 @@ class AppServiceProvider extends ServiceProvider
         Authenticate::redirectUsing(fn () => route('admin.login'));
 
         RateLimiter::for('submission', function (Request $request) {
-            return Limit::perMinutes(5, 1)->by($request->ip());
+            return Limit::perMinutes(5, 3)->by($request->ip());
         });
     }
 }

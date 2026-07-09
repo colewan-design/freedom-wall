@@ -14,7 +14,7 @@ class StoreSubmissionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'content' => ['required', 'string', 'max:1000'],
+            'content' => ['required', 'string'],
             'images' => ['nullable', 'array', 'max:4'],
             'images.*' => ['file', 'mimes:jpeg,png,webp', 'max:5120'],
             'captchaToken' => ['nullable', 'string'],

@@ -295,7 +295,7 @@ onMounted(() => {
 
 <style scoped>
 .dashboard {
-  max-width: 860px;
+  max-width: 100%;
   margin: 0 auto;
   padding: 0.5rem 0 3rem;
   color: var(--ink);
@@ -342,7 +342,7 @@ h1 {
 
 .stats {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 0.9rem;
   margin-bottom: 1.75rem;
 }
@@ -441,9 +441,10 @@ h1 {
   list-style: none;
   padding: 0;
   margin: 0;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
   gap: 0.9rem;
+  align-items: start;
 }
 
 .item {
@@ -451,6 +452,7 @@ h1 {
   border: 1px solid var(--line);
   border-radius: 14px;
   padding: 1rem;
+  min-width: 0;
 }
 
 .item textarea {
@@ -486,7 +488,7 @@ h1 {
 
 .image-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 0.5rem;
   margin-top: 0.6rem;
 }
@@ -636,6 +638,21 @@ h1 {
 .page-indicator {
   font-size: 0.85rem;
   color: var(--muted);
+}
+
+@media (max-width: 640px) {
+  .header-row {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .queue {
+    grid-template-columns: 1fr;
+  }
+
+  .actions {
+    flex-wrap: wrap;
+  }
 }
 
 .skeleton-list {

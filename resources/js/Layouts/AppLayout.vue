@@ -4,6 +4,7 @@ import { computed } from 'vue';
 
 const page = usePage();
 const isActive = (path) => computed(() => page.url === path || page.url.startsWith(`${path}?`));
+const isWidePage = computed(() => page.component?.startsWith('Admin/'));
 </script>
 
 <template>
@@ -15,7 +16,7 @@ const isActive = (path) => computed(() => page.url === path || page.url.startsWi
         <Link href="/wall" :class="{ active: isActive('/wall').value }">Wall</Link>
       </nav>
     </header>
-    <main>
+    <main :class="{ wide: isWidePage }">
       <slot />
     </main>
   </div>
@@ -64,5 +65,10 @@ main {
   max-width: 640px;
   margin: 0 auto;
   padding: 1.5rem 1rem;
+}
+
+main.wide {
+  max-width: min(1560px, calc(100vw - 2rem));
+  padding-inline: 1.5rem;
 }
 </style>
