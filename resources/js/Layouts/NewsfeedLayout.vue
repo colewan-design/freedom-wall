@@ -4,6 +4,7 @@ import { computed, onMounted, provide, ref } from 'vue';
 
 const page = usePage();
 const isActive = (path) => computed(() => page.url === path || page.url.startsWith(`${path}?`));
+const isChatPage = computed(() => page.component === 'Chat');
 
 const search = ref('');
 provide('wallSearch', search);
@@ -21,10 +22,12 @@ function toggleTheme() {
 }
 
 const posts = computed(() => page.props.posts ?? []);
+const chatNickname = computed(() => page.props.chatNickname ?? 'Anonymous');
+const chatStats = computed(() => page.props.chatStats ?? { totalMessages: 0, messagesToday: 0, pollLabel: 'Every 4 sec' });
+const recentChatNicknames = computed(() => page.props.recentChatNicknames ?? []);
 
 const withPhotos = computed(() => posts.value.filter((p) => p.image_urls?.length).length);
 const textOnly = computed(() => posts.value.length - withPhotos.value);
-
 const highlights = computed(() => posts.value.slice(0, 3));
 
 const TAGS = ['confession', 'crush', 'exam', 'campus', 'org', 'rant'];
@@ -43,14 +46,14 @@ function excerpt(text, length = 60) {
   <div class="nf-shell" :class="theme">
     <header class="nf-topbar">
       <span class="nf-brand">
-        <span class="nf-brand-mark">FW</span>
+        <img src="/images/branding/bsufw-mark-64.png" alt="BSU Freedom Wall" class="nf-brand-mark" />
         BSU Freedom Wall
       </span>
 
       <nav class="nf-tabs">
         <Link href="/" :class="{ active: isActive('/').value }">Discussions</Link>
         <Link href="/wall" :class="{ active: isActive('/wall').value }">News Feed</Link>
-        <span class="nf-tab-disabled">Chat <em>soon</em></span>
+        <Link href="/chat" :class="{ active: isActive('/chat').value }">Chat</Link>
       </nav>
 
       <div class="nf-user">
@@ -78,29 +81,6 @@ function excerpt(text, length = 60) {
             />
           </svg>
         </button>
-        <button type="button" class="nf-icon-btn" aria-label="Notifications">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path
-              d="M12 3a6 6 0 0 0-6 6v3.5L4.5 15h15L18 12.5V9a6 6 0 0 0-6-6Z"
-              stroke="currentColor"
-              stroke-width="1.6"
-              stroke-linejoin="round"
-            />
-            <path d="M9.5 18a2.5 2.5 0 0 0 5 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
-          </svg>
-        </button>
-        <button type="button" class="nf-icon-btn" aria-label="Settings">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.6" />
-            <path
-              d="M19.4 13.5a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.04 1.56V19.5a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.11-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.04H4.5a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.56-1.11 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H10.5a1.7 1.7 0 0 0 1.04-1.56V4.5a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1.04 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87v.09c.24.7.82 1.23 1.56 1.42"
-              stroke="currentColor"
-              stroke-width="1.2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
-        </button>
         <span class="nf-avatar" title="Browsing anonymously">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path
@@ -110,13 +90,13 @@ function excerpt(text, length = 60) {
             />
           </svg>
         </span>
-        <span class="nf-greeting">Hello, Anonymous</span>
+        <span class="nf-greeting">Hello, {{ isChatPage ? chatNickname : 'Anonymous' }}</span>
       </div>
     </header>
 
     <div class="nf-body">
       <aside class="nf-sidebar nf-left">
-        <label class="nf-search">
+        <label v-if="!isChatPage" class="nf-search">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8" />
             <path d="m20 20-3.2-3.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
@@ -125,15 +105,23 @@ function excerpt(text, length = 60) {
         </label>
 
         <div class="nf-panel">
-          <h2>Wall Stats</h2>
+          <h2>{{ isChatPage ? 'Chat Snapshot' : 'Wall Stats' }}</h2>
           <ul class="nf-stat-list">
-            <li><span>Approved posts</span><strong>{{ posts.length }}</strong></li>
-            <li><span>With photos</span><strong>{{ withPhotos }}</strong></li>
-            <li><span>Text only</span><strong>{{ textOnly }}</strong></li>
+            <template v-if="isChatPage">
+              <li><span>Your nickname</span><strong>{{ chatNickname }}</strong></li>
+              <li><span>Total messages</span><strong>{{ chatStats.totalMessages }}</strong></li>
+              <li><span>Messages today</span><strong>{{ chatStats.messagesToday }}</strong></li>
+              <li><span>Refresh pace</span><strong>{{ chatStats.pollLabel }}</strong></li>
+            </template>
+            <template v-else>
+              <li><span>Approved posts</span><strong>{{ posts.length }}</strong></li>
+              <li><span>With photos</span><strong>{{ withPhotos }}</strong></li>
+              <li><span>Text only</span><strong>{{ textOnly }}</strong></li>
+            </template>
           </ul>
         </div>
 
-        <div class="nf-panel">
+        <div v-if="!isChatPage" class="nf-panel">
           <h2>Browse Tags</h2>
           <div class="nf-tags">
             <button
@@ -150,11 +138,18 @@ function excerpt(text, length = 60) {
         </div>
 
         <div class="nf-panel">
-          <h2>Posting Guidelines</h2>
+          <h2>{{ isChatPage ? 'Chat Guidelines' : 'Posting Guidelines' }}</h2>
           <ul class="nf-guidelines">
-            <li>Stay respectful, no personal attacks</li>
-            <li>Don't share identifying info</li>
-            <li>Every post is reviewed before it's live</li>
+            <template v-if="isChatPage">
+              <li>Keep it campus-safe and respectful</li>
+              <li>No threats, doxxing, or targeted harassment</li>
+              <li>Messages are filtered and rate-limited automatically</li>
+            </template>
+            <template v-else>
+              <li>Stay respectful, no personal attacks</li>
+              <li>Don't share identifying info</li>
+              <li>Every post is reviewed before it's live</li>
+            </template>
           </ul>
         </div>
       </aside>
@@ -165,21 +160,29 @@ function excerpt(text, length = 60) {
 
       <aside class="nf-sidebar nf-right">
         <div class="nf-panel">
-          <h2>Recent Highlights</h2>
-          <ul v-if="highlights.length" class="nf-highlights">
+          <h2>{{ isChatPage ? 'Recent Nicknames' : 'Recent Highlights' }}</h2>
+          <ul v-if="isChatPage && recentChatNicknames.length" class="nf-highlights">
+            <li v-for="nickname in recentChatNicknames" :key="nickname">
+              <span class="nf-highlight-chip">{{ nickname.slice(0, 2).toUpperCase() }}</span>
+              <p>{{ nickname }}</p>
+            </li>
+          </ul>
+          <ul v-else-if="!isChatPage && highlights.length" class="nf-highlights">
             <li v-for="post in highlights" :key="post.id">
               <img v-if="post.image_urls?.length" :src="post.image_urls[0]" alt="" />
-              <span v-else class="nf-highlight-fallback">FW</span>
+              <img v-else src="/images/branding/bsufw-mark-64.png" alt="" class="nf-highlight-fallback" />
               <p>{{ excerpt(post.content) }}</p>
             </li>
           </ul>
-          <p v-else class="nf-empty">Nothing posted yet.</p>
+          <p v-else class="nf-empty">{{ isChatPage ? 'The room is quiet right now.' : 'Nothing posted yet.' }}</p>
         </div>
 
         <div class="nf-panel nf-cta">
-          <h2>Got something to say?</h2>
-          <p>Submit your own post anonymously — it'll show up here once reviewed.</p>
-          <Link href="/" class="nf-cta-btn">Start a Discussion</Link>
+          <h2>{{ isChatPage ? 'Prefer something more permanent?' : 'Got something to say?' }}</h2>
+          <p>
+            {{ isChatPage ? 'Use the moderated wall if you want a post reviewed and featured publicly.' : "Submit your own post anonymously — it'll show up here once reviewed." }}
+          </p>
+          <Link href="/" class="nf-cta-btn">{{ isChatPage ? 'Open submission form' : 'Start a Discussion' }}</Link>
         </div>
       </aside>
     </div>
@@ -193,10 +196,10 @@ function excerpt(text, length = 60) {
   --nf-line: #2c2d36;
   --nf-ink: #e9e9ee;
   --nf-muted: #9497a6;
-  --nf-accent: #f2540b;
+  --nf-accent: #0d9488;
   --nf-accent-contrast: #ffffff;
   --nf-surface-2: #2a2b33;
-  --nf-hero-grad: linear-gradient(135deg, #23242c 0%, #2c1f1a 60%, #3a2417 100%);
+  --nf-hero-grad: linear-gradient(135deg, #23242c 0%, #16302e 60%, #0f3d38 100%);
 }
 
 .nf-shell.light {
@@ -205,10 +208,10 @@ function excerpt(text, length = 60) {
   --nf-line: #e7e8ec;
   --nf-ink: #16181d;
   --nf-muted: #6b7280;
-  --nf-accent: #f2540b;
+  --nf-accent: #0d9488;
   --nf-accent-contrast: #ffffff;
   --nf-surface-2: #f1f1f4;
-  --nf-hero-grad: linear-gradient(135deg, #fff1e9 0%, #ffe4d1 60%, #ffd9bd 100%);
+  --nf-hero-grad: linear-gradient(135deg, #ecfdf9 0%, #d3f6ee 60%, #b8ede1 100%);
 }
 
 .nf-shell {
@@ -239,16 +242,11 @@ function excerpt(text, length = 60) {
 }
 
 .nf-brand-mark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
   width: 2rem;
   height: 2rem;
-  border-radius: 9px;
-  background: var(--nf-accent);
-  color: #fff;
-  font-size: 0.8rem;
-  font-weight: 700;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
 }
 
 .nf-tabs {
@@ -269,25 +267,6 @@ function excerpt(text, length = 60) {
 .nf-tabs :deep(a.active) {
   color: var(--nf-ink);
   border-bottom-color: var(--nf-accent);
-}
-
-.nf-tab-disabled {
-  color: var(--nf-muted);
-  opacity: 0.7;
-  font-weight: 600;
-  font-size: 0.92rem;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-
-.nf-tab-disabled em {
-  font-style: normal;
-  font-size: 0.65rem;
-  background: var(--nf-panel);
-  border: 1px solid var(--nf-line);
-  border-radius: 999px;
-  padding: 0.1rem 0.4rem;
 }
 
 .nf-user {
@@ -390,6 +369,11 @@ function excerpt(text, length = 60) {
 .nf-stat-list li {
   display: flex;
   justify-content: space-between;
+  gap: 1rem;
+}
+
+.nf-stat-list strong {
+  text-align: right;
 }
 
 .nf-tags {
@@ -439,26 +423,31 @@ function excerpt(text, length = 60) {
   align-items: flex-start;
 }
 
-.nf-highlights img {
+.nf-highlights img,
+.nf-highlight-chip {
   width: 40px;
   height: 40px;
   border-radius: 8px;
-  object-fit: cover;
   flex-shrink: 0;
 }
 
+.nf-highlights img {
+  object-fit: cover;
+}
+
 .nf-highlight-fallback {
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
-  background: var(--nf-surface-2);
-  color: var(--nf-muted);
+  object-fit: contain;
+  padding: 6px;
+}
+
+.nf-highlight-chip {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.7rem;
+  background: var(--nf-surface-2);
+  color: var(--nf-accent);
+  font-size: 0.72rem;
   font-weight: 700;
-  flex-shrink: 0;
 }
 
 .nf-highlights p {

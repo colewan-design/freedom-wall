@@ -53,6 +53,7 @@ async function sharePost(post) {
   <div class="wall-page">
     <div class="hero">
       <div class="hero-text">
+        <img src="/images/branding/bsufw-banner.png" alt="BSU Freedom Wall" class="hero-banner" />
         <span class="hero-eyebrow">BSU Community</span>
         <h1>Speak freely. Stay anonymous.</h1>
         <p>Confessions, rants, and stories from the BSU community — reviewed and posted for everyone to read.</p>
@@ -72,7 +73,7 @@ async function sharePost(post) {
       <article v-for="post in filteredPosts" :id="`post-${post.id}`" :key="post.id" class="feed-card">
         <div class="feed-thumb" :class="{ 'no-image': !post.image_urls?.length }">
           <img v-if="post.image_urls?.length" :src="post.image_urls[0]" alt="" />
-          <span v-else>FW</span>
+          <img v-else src="/images/branding/bsufw-mark-64.png" alt="" class="feed-thumb-fallback" />
         </div>
 
         <div class="feed-body">
@@ -149,6 +150,15 @@ async function sharePost(post) {
   margin-bottom: 1.5rem;
   background: var(--nf-hero-grad);
   border: 1px solid var(--nf-line);
+}
+
+.hero-banner {
+  display: block;
+  max-width: 320px;
+  width: 100%;
+  height: auto;
+  margin-bottom: 1rem;
+  border-radius: 8px;
 }
 
 .hero-eyebrow {
@@ -235,12 +245,16 @@ async function sharePost(post) {
 
 .feed-thumb.no-image {
   background: var(--nf-surface-2);
-  color: var(--nf-muted);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
-  font-size: 0.85rem;
+  padding: 14px;
+}
+
+.feed-thumb-fallback {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
 }
 
 .feed-body {

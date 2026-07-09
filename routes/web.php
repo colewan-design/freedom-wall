@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AuthController as AdminAuthController;
+use App\Http\Controllers\ChatController;
 use App\Http\Controllers\PublicMediaController;
 use App\Http\Controllers\Admin\SubmissionModerationController;
 use App\Http\Controllers\SubmissionController;
@@ -13,6 +14,11 @@ Route::post('/submissions', [SubmissionController::class, 'store'])
 Route::get('/media/{path}', [PublicMediaController::class, 'show'])
     ->where('path', '.*')
     ->name('media.show');
+Route::get('/chat', [ChatController::class, 'index'])->name('chat');
+Route::get('/chat/messages', [ChatController::class, 'fetch'])->name('chat.messages.index');
+Route::post('/chat/messages', [ChatController::class, 'store'])
+    ->middleware('throttle:chat-message')
+    ->name('chat.messages.store');
 Route::get('/wall', [SubmissionController::class, 'wall'])->name('wall');
 
 Route::prefix('admin')->name('admin.')->group(function () {

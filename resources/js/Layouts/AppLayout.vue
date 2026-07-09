@@ -11,7 +11,7 @@ const isWidePage = computed(() => page.component?.startsWith('Admin/'));
   <div class="app-shell">
     <header class="topbar">
       <span class="brand">
-        <span class="brand-mark">FW</span>
+        <img src="/images/branding/bsufw-mark-64.png" alt="BSU Freedom Wall" class="brand-mark" />
         BSU Freedom Wall
       </span>
       <nav>
@@ -51,16 +51,11 @@ const isWidePage = computed(() => page.component?.startsWith('Admin/'));
 }
 
 .brand-mark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
   width: 2rem;
   height: 2rem;
-  border-radius: 9px;
-  background: var(--accent);
-  color: #fff;
-  font-size: 0.8rem;
-  font-weight: 700;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
 }
 
 .topbar nav {
