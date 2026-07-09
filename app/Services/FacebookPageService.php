@@ -79,7 +79,20 @@ class FacebookPageService
     private function throwIfFailed($response): void
     {
         if ($response->failed()) {
-            throw new RuntimeException($response->json('error.message') ?? 'Facebook post failed');
+            throw new RuntimeException($this->normalizeErrorMessage($response->json('error.message')));
         }
+    }
+
+    private function normalizeErrorMessage(?string $message): string
+    {
+        if (! $message) {
+            return 'Facebook post failed';
+        }
+
+        if (str_contains($message, 'publish_actions')) {
+            return 'The configured Facebook token is using the deprecated publish_actions permission. Replace FB_PAGE_ACCESS_TOKEN with a Page or System User token that has pages_manage_posts for this Page.';
+        }
+
+        return $message;
     }
 }
