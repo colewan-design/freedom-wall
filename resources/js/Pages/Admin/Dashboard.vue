@@ -1,11 +1,10 @@
 <script setup>
 import { nextTick, onMounted, reactive, ref } from 'vue';
-import { router } from '@inertiajs/vue3';
 import { adminApi } from '../../lib/adminApi';
 import { formatDateTime } from '../../lib/date';
-import AppLayout from '../../Layouts/AppLayout.vue';
+import NewsfeedLayout from '../../Layouts/NewsfeedLayout.vue';
 
-defineOptions({ layout: AppLayout });
+defineOptions({ layout: NewsfeedLayout });
 
 const pending = ref([]);
 const pendingPage = ref(1);
@@ -141,10 +140,6 @@ async function retryFacebook(post) {
   }
 }
 
-function logout() {
-  router.post(route('admin.logout'));
-}
-
 function truncate(text, length = 90) {
   if (!text) return '';
   return text.length > length ? `${text.slice(0, length).trim()}…` : text;
@@ -223,7 +218,6 @@ onMounted(() => {
             Table
           </button>
         </div>
-        <button class="logout" @click="logout">Log out</button>
       </div>
     </div>
 
@@ -456,6 +450,24 @@ onMounted(() => {
   max-width: 100%;
   margin: 0 auto;
   padding: 0.5rem 0 3rem;
+
+  --ink: var(--nf-ink);
+  --muted: var(--nf-muted);
+  --paper: var(--nf-panel);
+  --line: var(--nf-line);
+  --page-bg: var(--nf-surface-2);
+  --accent-soft: rgba(13, 148, 136, 0.18);
+  --danger: #f87171;
+  --danger-bg: rgba(220, 38, 38, 0.18);
+  --status-pending-fg: #fbbf24;
+  --status-pending-bg: rgba(180, 83, 9, 0.22);
+  --status-active-fg: #4ade80;
+  --status-active-bg: rgba(21, 128, 61, 0.22);
+  --status-draft-fg: var(--nf-muted);
+  --status-draft-bg: var(--nf-surface-2);
+  --status-rejected-fg: #f87171;
+  --status-rejected-bg: rgba(185, 28, 28, 0.22);
+
   color: var(--ink);
 }
 
@@ -489,7 +501,7 @@ h1 {
 .view-toggle {
   display: inline-flex;
   padding: 0.2rem;
-  background: #fff;
+  background: var(--paper);
   border: 1px solid var(--line);
   border-radius: 10px;
 }
@@ -643,7 +655,7 @@ h1 {
 }
 
 .item {
-  background: #fff;
+  background: var(--paper);
   border: 1px solid var(--line);
   border-radius: 14px;
   padding: 1rem;
@@ -655,10 +667,12 @@ h1 {
   padding: 0.65rem;
   font: inherit;
   font-size: 0.92rem;
-  border: none;
+  color: var(--ink);
+  background: var(--page-bg);
+  border: 1px solid var(--line);
   border-radius: 10px;
   resize: vertical;
-  transition: box-shadow 0.15s ease;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
 }
 
 .item textarea:focus {
@@ -764,9 +778,9 @@ h1 {
 }
 
 .btn-reject {
-  background: #fff;
+  background: var(--paper);
   color: var(--danger);
-  border: 1px solid #f0d3ce;
+  border: 1px solid rgba(220, 38, 38, 0.35);
 }
 
 .btn-reject:hover:not(:disabled) {
@@ -914,7 +928,7 @@ h1 {
   height: 2.1rem;
   border-radius: 50%;
   border: 1px solid var(--line);
-  background: #fff;
+  background: var(--paper);
   color: var(--ink);
   cursor: pointer;
   transition: border-color 0.15s ease, transform 0.1s ease;
@@ -961,7 +975,7 @@ h1 {
 }
 
 .skeleton-card {
-  background: #fff;
+  background: var(--paper);
   border: 1px solid var(--line);
   border-radius: 14px;
   padding: 1rem;
@@ -973,7 +987,7 @@ h1 {
 .skeleton-line {
   height: 0.8rem;
   border-radius: 6px;
-  background: linear-gradient(90deg, #ece9e1 25%, #f5f3ee 37%, #ece9e1 63%);
+  background: linear-gradient(90deg, var(--nf-surface-2) 25%, var(--nf-line) 37%, var(--nf-surface-2) 63%);
   background-size: 400% 100%;
   animation: shimmer 1.4s ease infinite;
 }

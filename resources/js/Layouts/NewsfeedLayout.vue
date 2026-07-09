@@ -1,10 +1,15 @@
 <script setup>
-import { Link, usePage } from '@inertiajs/vue3';
+import { Link, router, usePage } from '@inertiajs/vue3';
 import { computed, onMounted, provide, ref } from 'vue';
 
 const page = usePage();
 const isActive = (path) => computed(() => page.url === path || page.url.startsWith(`${path}?`));
 const isChatPage = computed(() => page.component === 'Chat');
+const isAdminPage = computed(() => page.component?.startsWith('Admin/'));
+
+function logout() {
+  router.post(route('admin.logout'));
+}
 
 const search = ref('');
 provide('wallSearch', search);
@@ -50,11 +55,12 @@ function excerpt(text, length = 60) {
         BSU Freedom Wall
       </span>
 
-      <nav class="nf-tabs">
+      <nav v-if="!isAdminPage" class="nf-tabs">
         <Link href="/" :class="{ active: isActive('/').value }">Discussions</Link>
         <Link href="/wall" :class="{ active: isActive('/wall').value }">News Feed</Link>
         <Link href="/chat" :class="{ active: isActive('/chat').value }">Chat</Link>
       </nav>
+      <span v-else class="nf-admin-label">Moderation Dashboard</span>
 
       <div class="nf-user">
         <button
@@ -81,21 +87,24 @@ function excerpt(text, length = 60) {
             />
           </svg>
         </button>
-        <span class="nf-avatar" title="Browsing anonymously">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path
-              d="M21 11.5a8.5 8.5 0 0 1-12.36 7.58L4 20l1.02-4.55A8.5 8.5 0 1 1 21 11.5Z"
-              stroke="currentColor"
-              stroke-width="1.6"
-            />
-          </svg>
-        </span>
-        <span class="nf-greeting">Hello, {{ isChatPage ? chatNickname : 'Anonymous' }}</span>
+        <template v-if="!isAdminPage">
+          <span class="nf-avatar" title="Browsing anonymously">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path
+                d="M21 11.5a8.5 8.5 0 0 1-12.36 7.58L4 20l1.02-4.55A8.5 8.5 0 1 1 21 11.5Z"
+                stroke="currentColor"
+                stroke-width="1.6"
+              />
+            </svg>
+          </span>
+          <span class="nf-greeting">Hello, {{ isChatPage ? chatNickname : 'Anonymous' }}</span>
+        </template>
+        <button v-else type="button" class="nf-logout-btn" @click="logout">Log out</button>
       </div>
     </header>
 
-    <div class="nf-body">
-      <aside class="nf-sidebar nf-left">
+    <div class="nf-body" :class="{ 'admin-mode': isAdminPage }">
+      <aside v-if="!isAdminPage" class="nf-sidebar nf-left">
         <label v-if="!isChatPage" class="nf-search">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8" />
@@ -158,7 +167,7 @@ function excerpt(text, length = 60) {
         <slot />
       </main>
 
-      <aside class="nf-sidebar nf-right">
+      <aside v-if="!isAdminPage" class="nf-sidebar nf-right">
         <div class="nf-panel">
           <h2>{{ isChatPage ? 'Recent Nicknames' : 'Recent Highlights' }}</h2>
           <ul v-if="isChatPage && recentChatNicknames.length" class="nf-highlights">
@@ -269,6 +278,13 @@ function excerpt(text, length = 60) {
   border-bottom-color: var(--nf-accent);
 }
 
+.nf-admin-label {
+  flex: 1;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--nf-ink);
+}
+
 .nf-user {
   display: flex;
   align-items: center;
@@ -306,6 +322,23 @@ function excerpt(text, length = 60) {
   white-space: nowrap;
 }
 
+.nf-logout-btn {
+  background: var(--nf-panel);
+  border: 1px solid var(--nf-line);
+  color: var(--nf-ink);
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.nf-logout-btn:hover {
+  border-color: var(--nf-accent);
+  color: var(--nf-accent);
+}
+
 .nf-body {
   display: grid;
   grid-template-columns: 250px minmax(0, 1fr) 280px;
@@ -313,6 +346,11 @@ function excerpt(text, length = 60) {
   max-width: 1440px;
   margin: 0 auto;
   padding: 1.25rem 1.5rem 3rem;
+}
+
+.nf-body.admin-mode {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 1160px;
 }
 
 .nf-sidebar {
