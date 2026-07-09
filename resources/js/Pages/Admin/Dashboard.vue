@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, reactive, ref } from 'vue';
+import { nextTick, onMounted, reactive, ref } from 'vue';
 import { router } from '@inertiajs/vue3';
 import { adminApi } from '../../lib/adminApi';
 import { formatDateTime } from '../../lib/date';
@@ -19,6 +19,9 @@ const stats = reactive({ pending: 0, approvedToday: 0, rejectedToday: 0 });
 const displayStats = reactive({ pending: 0, approvedToday: 0, rejectedToday: 0 });
 
 const editingContent = reactive({});
+const expandedContent = reactive({});
+const overflowingContent = reactive({});
+const textareaEls = {};
 const loadingPending = ref(true);
 const loadingFailed = ref(true);
 const errorMessage = ref('');
@@ -60,6 +63,9 @@ async function loadPending(page = pendingPage.value) {
     pendingTotalPages.value = data.totalPages;
     data.items.forEach((p) => {
       if (!(p.id in editingContent)) editingContent[p.id] = p.content;
+    });
+    nextTick(() => {
+      data.items.forEach((p) => checkOverflow(p.id));
     });
   } catch (err) {
     errorMessage.value = err.message;
@@ -142,6 +148,44 @@ function logout() {
 function truncate(text, length = 90) {
   if (!text) return '';
   return text.length > length ? `${text.slice(0, length).trim()}…` : text;
+}
+
+function registerTextarea(id) {
+  return (el) => {
+    if (el) textareaEls[id] = el;
+  };
+}
+
+function checkOverflow(id) {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      const el = textareaEls[id];
+      if (!el || expandedContent[id]) return;
+      overflowingContent[id] = el.scrollHeight > el.clientHeight + 2;
+    });
+  });
+}
+
+function resizeExpanded(id) {
+  const el = textareaEls[id];
+  if (!el) return;
+  el.style.height = 'auto';
+  el.style.height = `${el.scrollHeight}px`;
+}
+
+function toggleExpand(post) {
+  expandedContent[post.id] = !expandedContent[post.id];
+  if (expandedContent[post.id]) {
+    nextTick(() => resizeExpanded(post.id));
+  } else {
+    nextTick(() => checkOverflow(post.id));
+  }
+}
+
+function onContentInput(post) {
+  if (expandedContent[post.id]) {
+    resizeExpanded(post.id);
+  }
 }
 
 onMounted(() => {
@@ -233,7 +277,22 @@ onMounted(() => {
 
       <TransitionGroup v-else-if="viewMode === 'card'" name="card" tag="ul" class="queue">
         <li v-for="post in pending" :key="post.id" class="item">
-          <textarea v-model="editingContent[post.id]" rows="3"></textarea>
+          <textarea
+            :ref="registerTextarea(post.id)"
+            v-model="editingContent[post.id]"
+            rows="3"
+            class="content-textarea"
+            :class="{ expanded: expandedContent[post.id] }"
+            @input="onContentInput(post)"
+          ></textarea>
+          <button
+            v-if="overflowingContent[post.id] || expandedContent[post.id]"
+            type="button"
+            class="see-more"
+            @click="toggleExpand(post)"
+          >
+            {{ expandedContent[post.id] ? 'See less' : 'See more' }}
+          </button>
           <div v-if="post.image_urls?.length" class="image-grid">
             <img v-for="(imageUrl, index) in post.image_urls" :key="`${post.id}-${index}`" :src="imageUrl" alt="" />
           </div>
@@ -606,6 +665,34 @@ h1 {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.content-textarea {
+  max-height: 4.6rem;
+  overflow-y: hidden;
+  resize: none;
+}
+
+.content-textarea.expanded {
+  max-height: none;
+  overflow-y: hidden;
+}
+
+.see-more {
+  display: inline-flex;
+  border: none;
+  background: none;
+  padding: 0.3rem 0 0;
+  margin: 0 0 -0.2rem;
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.see-more:hover {
+  color: var(--accent-dark);
+  text-decoration: underline;
 }
 
 .static-content {
