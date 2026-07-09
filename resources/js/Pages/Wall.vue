@@ -81,9 +81,9 @@ function accentFor(post) {
 }
 
 h1 {
-  font-family: 'Fraunces', Georgia, serif;
-  font-weight: 500;
-  font-size: 2.2rem;
+  font-weight: 800;
+  font-size: 2.1rem;
+  letter-spacing: -0.02em;
   color: var(--ink);
   margin-bottom: 0.25rem;
 }
@@ -117,12 +117,19 @@ h1 {
 .card {
   break-inside: avoid;
   margin-bottom: 1.1rem;
-  border-radius: 18px;
+  border-radius: 14px;
   overflow: hidden;
-  background: #fff;
+  background: var(--paper);
   border: 1px solid var(--line);
+  border-left: 3px solid var(--line);
+  box-shadow: var(--shadow-card);
   display: flex;
   flex-direction: column;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
 }
 
 .card-image {
@@ -162,23 +169,19 @@ h1 {
 }
 
 .card.accent-sage {
-  background: #e4ede4;
-  border-color: #d3e0d3;
+  border-left-color: #16a34a;
 }
 
 .card.accent-cream {
-  background: #f6efdd;
-  border-color: #ecdfc0;
+  border-left-color: var(--accent);
 }
 
 .card.accent-slate {
-  background: #e6eaee;
-  border-color: #d6dce2;
+  border-left-color: #64748b;
 }
 
 .card.accent-gold {
-  background: #fbe6d4;
-  border-color: #f2d3ac;
+  border-left-color: #d97706;
 }
 
 .card.accent-sage .card-content,
@@ -186,8 +189,7 @@ h1 {
 .card.accent-slate .card-content,
 .card.accent-gold .card-content {
   padding-top: 1.25rem;
-  font-family: 'Fraunces', Georgia, serif;
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 500;
 }
 
@@ -214,6 +216,12 @@ h1 {
 
 .fb-badge {
   display: inline-flex;
-  color: #1877f2;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 </style>

@@ -12,14 +12,14 @@ class SubmissionImageUrlTest extends TestCase
     {
         config([
             'app.url' => 'https://freedom-wall.salidumay.com',
-            'filesystems.disks.public.url' => 'https://freedom-wall.salidumay.com/storage',
+            'filesystems.disks.public.url' => 'https://freedom-wall.salidumay.com/media',
         ]);
 
         $submission = new Submission([
             'image_url' => 'http://127.0.0.1:8000/storage/uploads/first.jpg',
             'images' => [
                 'http://localhost/storage/uploads/first.jpg',
-                'https://old-domain.test/storage/uploads/second.png',
+                'https://old-domain.test/media/uploads/second.png',
             ],
         ]);
 

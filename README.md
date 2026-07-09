@@ -13,7 +13,6 @@ composer install
 cp .env.example .env       # fill in DB_*, ADMIN_*, IP_SALT, FB_* vars
 php artisan key:generate
 php artisan migrate --seed  # creates the submissions table + seeds the admin user
-php artisan storage:link    # symlinks storage/app/public -> public/storage (uploads)
 
 npm install
 npm run build                # or `npm run dev` for local development
@@ -40,9 +39,9 @@ npm run dev            # Vite dev server for HMR (pinned to port 5210, see vite.
   System User token) with `pages_manage_posts` for the target Page. The old
   `publish_actions` permission was deprecated years ago and will fail with
   `(#200) The permission(s) publish_actions are not available`.
-- Uploaded images live at `storage/app/public/uploads/`, served via the
-  `storage:link` symlink.
-- Rate limiting (1 submission per IP per 5 minutes) is defined in
+- Uploaded images live at `storage/app/public/uploads/`, served by the app at
+  `/media/uploads/...` so shared hosting does not need `storage:link`.
+- Rate limiting (3 submissions per IP per 5 minutes) is defined in
   `AppServiceProvider` via `RateLimiter::for('submission', ...)`.
 - Migrated from an earlier Node/Express + Vue SPA prototype to run natively
   on PHP/MySQL shared hosting (no native module compilation, no separate

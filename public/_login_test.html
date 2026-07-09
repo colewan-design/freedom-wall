@@ -1,0 +1,29 @@
+<!doctype html>
+<html><body>
+<script>
+async function run() {
+  await fetch('/admin/login', { credentials: 'same-origin' });
+  function getCookie(name) {
+    const m = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+    return m ? decodeURIComponent(m[2]) : null;
+  }
+  const xsrf = getCookie('XSRF-TOKEN');
+  const res = await fetch('/admin/login', {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest',
+      'X-XSRF-TOKEN': xsrf,
+    },
+    body: JSON.stringify({ username: 'admin', password: 'admin123' }),
+  });
+  document.title = 'login-status-' + res.status;
+  if (res.status < 400) {
+    window.location.href = '/admin/dashboard';
+  }
+}
+run();
+</script>
+</body></html>

@@ -66,8 +66,8 @@ class Submission extends Model
 
         $path = parse_url($imageUrl, PHP_URL_PATH);
 
-        if (is_string($path) && str_starts_with($path, '/storage/')) {
-            return Storage::disk('public')->url(preg_replace('#^/storage/#', '', $path));
+        if (is_string($path) && preg_match('#^/(storage|media)/#', $path)) {
+            return Storage::disk('public')->url(preg_replace('#^/(storage|media)/#', '', $path));
         }
 
         return $imageUrl;

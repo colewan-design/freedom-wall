@@ -49,11 +49,11 @@ class FacebookPageService
     private function relativeUploadPath(string $imageUrl): string
     {
         // imageUrl is stored as an absolute URL (e.g.
-        // "http://host/storage/uploads/xxx.jpg") — translate back to the
+        // "http://host/media/uploads/xxx.jpg") — translate back to the
         // disk-relative path ("uploads/xxx.jpg").
         $path = parse_url($imageUrl, PHP_URL_PATH);
 
-        return preg_replace('#^/storage/#', '', $path);
+        return preg_replace('#^/(storage|media)/#', '', $path);
     }
 
     private function endpoint(string $edge): string

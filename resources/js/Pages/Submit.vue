@@ -122,29 +122,27 @@ function onSubmit() {
   align-items: center;
   gap: 0.4rem;
   padding: 0.35rem 0.8rem;
-  border: 1px solid var(--line);
   border-radius: 999px;
   color: var(--accent);
   font-size: 0.72rem;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  background: #fff;
+  background: var(--accent-soft);
 }
 
 .headline {
-  font-family: 'Fraunces', Georgia, serif;
-  font-weight: 500;
-  font-size: 3rem;
-  line-height: 1.05;
-  letter-spacing: -0.01em;
+  font-weight: 800;
+  font-size: 2.75rem;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
   color: var(--ink);
   margin: 1.1rem 0 0.9rem;
 }
 
 .headline em {
-  font-style: italic;
-  font-weight: 400;
+  font-style: normal;
+  font-weight: 800;
   color: var(--accent);
 }
 
@@ -162,7 +160,8 @@ function onSubmit() {
   gap: 1rem;
   background: var(--paper);
   border: 1px solid var(--line);
-  border-radius: 20px;
+  border-radius: 16px;
+  box-shadow: var(--shadow-card);
   padding: 1.5rem;
 }
 
@@ -186,7 +185,7 @@ textarea {
 textarea:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(47, 82, 51, 0.12);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 .file-field input[type='file'] {
@@ -232,13 +231,13 @@ textarea:focus {
 }
 
 .error {
-  color: #a13a2f;
-  background: #fbe9e6;
+  color: var(--danger);
+  background: var(--danger-bg);
 }
 
 .success {
-  color: var(--accent-dark);
-  background: #e4ede4;
+  color: var(--status-active-fg);
+  background: var(--status-active-bg);
 }
 
 .submit-btn {
@@ -251,7 +250,7 @@ textarea:focus {
   background: var(--accent);
   color: #fff;
   border: none;
-  border-radius: 999px;
+  border-radius: 10px;
   font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;

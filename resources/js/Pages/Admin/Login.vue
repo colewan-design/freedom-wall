@@ -34,23 +34,40 @@ form {
   flex-direction: column;
   gap: 0.75rem;
   max-width: 320px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--shadow-card);
+  padding: 1.5rem;
 }
 
 input {
-  padding: 0.6rem;
-  border: 1px solid #ccc;
-  border-radius: 6px;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
   font: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 button {
-  background: #0b5d2e;
+  background: var(--accent);
   color: #fff;
   border: none;
   padding: 0.7rem;
-  border-radius: 6px;
+  border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+button:hover:not(:disabled) {
+  background: var(--accent-dark);
 }
 
 button:disabled {
@@ -58,6 +75,6 @@ button:disabled {
 }
 
 .error {
-  color: #c0392b;
+  color: var(--danger);
 }
 </style>

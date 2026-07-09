@@ -27,6 +27,8 @@ const approvingId = ref(null);
 const rejectingId = ref(null);
 const retryingId = ref(null);
 
+const viewMode = ref('card');
+
 function animateStats(next) {
   const from = { ...displayStats };
   const start = performance.now();
@@ -137,6 +139,11 @@ function logout() {
   router.post(route('admin.logout'));
 }
 
+function truncate(text, length = 90) {
+  if (!text) return '';
+  return text.length > length ? `${text.slice(0, length).trim()}…` : text;
+}
+
 onMounted(() => {
   loadStats();
   loadPending();
@@ -151,7 +158,29 @@ onMounted(() => {
         <h1>Moderation Queue</h1>
         <p class="subtext">Review submissions before they go live.</p>
       </div>
-      <button class="logout" @click="logout">Log out</button>
+      <div class="header-actions">
+        <div class="view-toggle" role="group" aria-label="View mode">
+          <button
+            type="button"
+            class="view-btn"
+            :class="{ active: viewMode === 'card' }"
+            @click="viewMode = 'card'"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.8" /><rect x="13" y="3" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.8" /><rect x="3" y="13" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.8" /><rect x="13" y="13" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.8" /></svg>
+            Cards
+          </button>
+          <button
+            type="button"
+            class="view-btn"
+            :class="{ active: viewMode === 'table' }"
+            @click="viewMode = 'table'"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="1.5" stroke="currentColor" stroke-width="1.8" /><path d="M3 10h18M9 10v10" stroke="currentColor" stroke-width="1.8" /></svg>
+            Table
+          </button>
+        </div>
+        <button class="logout" @click="logout">Log out</button>
+      </div>
     </div>
 
     <div class="stats">
@@ -202,7 +231,7 @@ onMounted(() => {
 
       <p v-else-if="pending.length === 0" class="hint">No pending submissions.</p>
 
-      <TransitionGroup v-else name="card" tag="ul" class="queue">
+      <TransitionGroup v-else-if="viewMode === 'card'" name="card" tag="ul" class="queue">
         <li v-for="post in pending" :key="post.id" class="item">
           <textarea v-model="editingContent[post.id]" rows="3"></textarea>
           <div v-if="post.image_urls?.length" class="image-grid">
@@ -236,6 +265,47 @@ onMounted(() => {
         </li>
       </TransitionGroup>
 
+      <div v-else class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Submission</th>
+              <th>Submitted</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="post in pending" :key="post.id">
+              <td class="cell-content">
+                <span class="row-avatar">A</span>
+                <span :title="post.content">{{ truncate(post.content) }}</span>
+              </td>
+              <td class="cell-muted">{{ formatDateTime(post.submitted_at) }}</td>
+              <td><span class="status-pill is-pending">Pending</span></td>
+              <td class="cell-actions">
+                <button
+                  class="btn btn-approve btn-sm"
+                  :disabled="approvingId === post.id || rejectingId === post.id"
+                  @click="approve(post)"
+                >
+                  <span class="spinner" v-if="approvingId === post.id"></span>
+                  {{ approvingId === post.id ? 'Approving…' : 'Approve' }}
+                </button>
+                <button
+                  class="btn btn-reject btn-sm"
+                  :disabled="approvingId === post.id || rejectingId === post.id"
+                  @click="reject(post)"
+                >
+                  <span class="spinner" v-if="rejectingId === post.id"></span>
+                  {{ rejectingId === post.id ? 'Rejecting…' : 'Reject' }}
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
       <div class="pagination" v-if="!loadingPending && pendingTotalPages > 1">
         <button class="page-btn" :disabled="pendingPage <= 1" @click="loadPending(pendingPage - 1)">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
@@ -260,7 +330,7 @@ onMounted(() => {
 
       <p v-else-if="failedFb.length === 0" class="hint">No failed posts right now.</p>
 
-      <TransitionGroup v-else name="card" tag="ul" class="queue">
+      <TransitionGroup v-else-if="viewMode === 'card'" name="card" tag="ul" class="queue">
         <li v-for="post in failedFb" :key="post.id" class="item">
           <p class="static-content">{{ post.content }}</p>
           <div v-if="post.image_urls?.length" class="image-grid">
@@ -279,6 +349,35 @@ onMounted(() => {
           </div>
         </li>
       </TransitionGroup>
+
+      <div v-else class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Submission</th>
+              <th>Approved</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="post in failedFb" :key="post.id">
+              <td class="cell-content">
+                <span class="row-avatar">A</span>
+                <span :title="post.content">{{ truncate(post.content) }}</span>
+              </td>
+              <td class="cell-muted">{{ formatDateTime(post.reviewed_at) }}</td>
+              <td><span class="status-pill is-failed">Failed</span></td>
+              <td class="cell-actions">
+                <button class="btn btn-approve btn-sm" :disabled="retryingId === post.id" @click="retryFacebook(post)">
+                  <span class="spinner" v-if="retryingId === post.id"></span>
+                  {{ retryingId === post.id ? 'Retrying…' : 'Retry' }}
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
       <div class="pagination" v-if="!loadingFailed && failedTotalPages > 1">
         <button class="page-btn" :disabled="failedPage <= 1" @click="loadFailed(failedPage - 1)">
@@ -306,12 +405,14 @@ onMounted(() => {
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 1.5rem;
+  gap: 1rem;
+  flex-wrap: wrap;
 }
 
 h1 {
-  font-family: 'Fraunces', Georgia, serif;
-  font-weight: 500;
-  font-size: 2rem;
+  font-weight: 800;
+  font-size: 1.85rem;
+  letter-spacing: -0.02em;
   margin: 0;
 }
 
@@ -320,10 +421,44 @@ h1 {
   margin: 0.2rem 0 0;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.view-toggle {
+  display: inline-flex;
+  padding: 0.2rem;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.view-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: none;
+  background: transparent;
+  padding: 0.4rem 0.75rem;
+  border-radius: 7px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.view-btn.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
 .logout {
   background: #fff;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: 10px;
   padding: 0.5rem 1.1rem;
   cursor: pointer;
   font-weight: 600;
@@ -348,9 +483,10 @@ h1 {
 }
 
 .stat-card {
-  background: #fff;
+  background: var(--paper);
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: 14px;
+  box-shadow: var(--shadow-card);
   padding: 1rem 1.1rem;
   display: flex;
   flex-direction: column;
@@ -361,7 +497,7 @@ h1 {
 .stat-card strong {
   font-size: 1.7rem;
   line-height: 1;
-  font-family: 'Fraunces', Georgia, serif;
+  font-weight: 800;
 }
 
 .stat-label {
@@ -380,13 +516,13 @@ h1 {
 }
 
 .stat-pending .stat-icon {
-  background: #fbe6d4;
-  color: #92531a;
+  background: var(--status-pending-bg);
+  color: var(--status-pending-fg);
 }
 
 .stat-approved .stat-icon {
-  background: #e4ede4;
-  color: var(--accent-dark);
+  background: var(--status-active-bg);
+  color: var(--status-active-fg);
 }
 
 .stat-rejected .stat-icon {
@@ -397,15 +533,15 @@ h1 {
 .panel {
   background: var(--paper);
   border: 1px solid var(--line);
-  border-radius: 20px;
+  border-radius: 16px;
+  box-shadow: var(--shadow-card);
   padding: 1.5rem;
   margin-bottom: 1.5rem;
 }
 
 .panel h2 {
-  font-family: 'Fraunces', Georgia, serif;
-  font-weight: 500;
-  font-size: 1.3rem;
+  font-weight: 700;
+  font-size: 1.15rem;
   margin: 0 0 0.25rem;
 }
 
@@ -469,7 +605,7 @@ h1 {
 .item textarea:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(47, 82, 51, 0.12);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 .static-content {
@@ -510,11 +646,16 @@ h1 {
   gap: 0.4rem;
   border: none;
   padding: 0.5rem 0.9rem;
-  border-radius: 999px;
+  border-radius: 8px;
   font-weight: 600;
   font-size: 0.85rem;
   cursor: pointer;
   transition: background 0.15s ease, transform 0.1s ease, opacity 0.15s ease;
+}
+
+.btn-sm {
+  padding: 0.4rem 0.7rem;
+  font-size: 0.8rem;
 }
 
 .btn:active:not(:disabled) {
@@ -597,6 +738,77 @@ h1 {
 
 .card-move {
   transition: transform 0.3s ease;
+}
+
+.table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.data-table th {
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+  background: var(--page-bg);
+  padding: 0.65rem 0.9rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.data-table td {
+  padding: 0.7rem 0.9rem;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+
+.data-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.data-table tbody tr:hover {
+  background: var(--page-bg);
+}
+
+.cell-content {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  max-width: 420px;
+}
+
+.cell-muted {
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.cell-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  white-space: nowrap;
+}
+
+.row-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 0.75rem;
+  font-weight: 700;
+  flex-shrink: 0;
 }
 
 .pagination {

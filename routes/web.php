@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AuthController as AdminAuthController;
+use App\Http\Controllers\PublicMediaController;
 use App\Http\Controllers\Admin\SubmissionModerationController;
 use App\Http\Controllers\SubmissionController;
 use Illuminate\Support\Facades\Route;
@@ -9,6 +10,9 @@ Route::get('/', [SubmissionController::class, 'create'])->name('submit');
 Route::post('/submissions', [SubmissionController::class, 'store'])
     ->middleware('throttle:submission')
     ->name('submissions.store');
+Route::get('/media/{path}', [PublicMediaController::class, 'show'])
+    ->where('path', '.*')
+    ->name('media.show');
 Route::get('/wall', [SubmissionController::class, 'wall'])->name('wall');
 
 Route::prefix('admin')->name('admin.')->group(function () {

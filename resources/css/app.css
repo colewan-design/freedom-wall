@@ -1,15 +1,27 @@
 :root {
-  font: 16px/1.5 system-ui, 'Segoe UI', Roboto, sans-serif;
+  font: 16px/1.5 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif;
   color-scheme: light;
 
-  --ink: #1c231d;
-  --muted: #6b756c;
-  --accent: #2f5233;
-  --accent-dark: #223d26;
-  --paper: #f6f5f1;
-  --line: #e2e0d7;
-  --danger: #a13a2f;
-  --danger-bg: #fbe9e6;
+  --ink: #16181d;
+  --muted: #6b7280;
+  --accent: #f2540b;
+  --accent-dark: #c8420a;
+  --accent-soft: #fff1e9;
+  --paper: #ffffff;
+  --line: #e7e8ec;
+  --page-bg: #f7f7f9;
+  --danger: #dc2626;
+  --danger-bg: #fee2e2;
+  --shadow-card: 0 1px 2px rgba(16, 20, 30, 0.04), 0 8px 24px -12px rgba(16, 20, 30, 0.12);
+
+  --status-active-fg: #15803d;
+  --status-active-bg: #dcfce7;
+  --status-pending-fg: #b45309;
+  --status-pending-bg: #fef3c7;
+  --status-draft-fg: #4b5563;
+  --status-draft-bg: #f3f4f6;
+  --status-rejected-fg: #b91c1c;
+  --status-rejected-bg: #fee2e2;
 }
 
 * {
@@ -18,10 +30,53 @@
 
 body {
   margin: 0;
-  background: #fbfaf7;
+  background: var(--page-bg);
+  font-family: 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif;
 }
 
 h1 {
   font-size: 1.75rem;
   margin: 0 0 0.5rem;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.status-pill::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.status-pill.is-active,
+.status-pill.is-approved {
+  color: var(--status-active-fg);
+  background: var(--status-active-bg);
+}
+
+.status-pill.is-pending {
+  color: var(--status-pending-fg);
+  background: var(--status-pending-bg);
+}
+
+.status-pill.is-draft {
+  color: var(--status-draft-fg);
+  background: var(--status-draft-bg);
+}
+
+.status-pill.is-rejected,
+.status-pill.is-failed {
+  color: var(--status-rejected-fg);
+  background: var(--status-rejected-bg);
 }
