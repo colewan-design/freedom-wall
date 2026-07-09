@@ -147,8 +147,8 @@ async function sharePost(post) {
   border-radius: 16px;
   padding: 2rem;
   margin-bottom: 1.5rem;
-  background: linear-gradient(135deg, #23242c 0%, #2c1f1a 60%, #3a2417 100%);
-  border: 1px solid #2c2d36;
+  background: var(--nf-hero-grad);
+  border: 1px solid var(--nf-line);
 }
 
 .hero-eyebrow {
@@ -157,7 +157,7 @@ async function sharePost(post) {
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #f2540b;
+  color: var(--nf-accent);
   margin-bottom: 0.5rem;
 }
 
@@ -165,12 +165,12 @@ async function sharePost(post) {
   margin: 0 0 0.5rem;
   font-size: 1.7rem;
   font-weight: 800;
-  color: #e9e9ee;
+  color: var(--nf-ink);
 }
 
 .hero-text p {
   margin: 0;
-  color: #9497a6;
+  color: var(--nf-muted);
   max-width: 46ch;
   font-size: 0.92rem;
   line-height: 1.5;
@@ -187,12 +187,12 @@ async function sharePost(post) {
   margin: 0;
   font-size: 1.15rem;
   font-weight: 700;
-  color: #e9e9ee;
+  color: var(--nf-ink);
 }
 
 .start-btn {
-  background: #f2540b;
-  color: #fff;
+  background: var(--nf-accent);
+  color: var(--nf-accent-contrast);
   text-decoration: none;
   font-weight: 600;
   font-size: 0.82rem;
@@ -201,7 +201,7 @@ async function sharePost(post) {
 }
 
 .hint {
-  color: #9497a6;
+  color: var(--nf-muted);
 }
 
 .feed-list {
@@ -213,8 +213,8 @@ async function sharePost(post) {
 .feed-card {
   display: flex;
   gap: 1rem;
-  background: #1f2027;
-  border: 1px solid #2c2d36;
+  background: var(--nf-panel);
+  border: 1px solid var(--nf-line);
   border-radius: 14px;
   padding: 1rem;
 }
@@ -234,8 +234,8 @@ async function sharePost(post) {
 }
 
 .feed-thumb.no-image {
-  background: #2a2b33;
-  color: #9497a6;
+  background: var(--nf-surface-2);
+  color: var(--nf-muted);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -253,7 +253,7 @@ async function sharePost(post) {
   align-items: center;
   gap: 0.4rem;
   font-size: 0.78rem;
-  color: #9497a6;
+  color: var(--nf-muted);
   margin-bottom: 0.4rem;
 }
 
@@ -262,7 +262,7 @@ async function sharePost(post) {
   align-items: center;
   gap: 0.3rem;
   font-weight: 600;
-  color: #c3c5d1;
+  color: var(--nf-ink);
 }
 
 .fb-badge {
@@ -272,15 +272,15 @@ async function sharePost(post) {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #2a2b33;
-  color: #f2540b;
+  background: var(--nf-surface-2);
+  color: var(--nf-accent);
 }
 
 .feed-content {
   margin: 0 0 0.6rem;
   white-space: pre-wrap;
   line-height: 1.5;
-  color: #e9e9ee;
+  color: var(--nf-ink);
   font-size: 0.92rem;
 }
 
@@ -308,7 +308,7 @@ async function sharePost(post) {
   gap: 0.35rem;
   background: none;
   border: none;
-  color: #9497a6;
+  color: var(--nf-muted);
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
@@ -316,10 +316,10 @@ async function sharePost(post) {
 }
 
 .action:hover {
-  color: #e9e9ee;
+  color: var(--nf-ink);
 }
 
 .action.active {
-  color: #f2540b;
+  color: var(--nf-accent);
 }
 </style>

@@ -81,7 +81,7 @@ class SubmissionModerationController extends Controller
         $submission->save();
 
         try {
-            $fbPostId = $facebook->post($finalContent, $submission->image_url);
+            $fbPostId = $facebook->post($finalContent, $submission->image_urls);
             $submission->fb_post_id = $fbPostId;
             $submission->save();
 
@@ -112,7 +112,7 @@ class SubmissionModerationController extends Controller
         }
 
         try {
-            $fbPostId = $facebook->post($submission->content, $submission->image_url);
+            $fbPostId = $facebook->post($submission->content, $submission->image_urls);
             $submission->fb_post_id = $fbPostId;
             $submission->save();
 

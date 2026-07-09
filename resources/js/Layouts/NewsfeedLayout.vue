@@ -1,12 +1,24 @@
 <script setup>
 import { Link, usePage } from '@inertiajs/vue3';
-import { computed, provide, ref } from 'vue';
+import { computed, onMounted, provide, ref } from 'vue';
 
 const page = usePage();
 const isActive = (path) => computed(() => page.url === path || page.url.startsWith(`${path}?`));
 
 const search = ref('');
 provide('wallSearch', search);
+
+const theme = ref('dark');
+
+onMounted(() => {
+  const saved = localStorage.getItem('wall-theme');
+  if (saved === 'light' || saved === 'dark') theme.value = saved;
+});
+
+function toggleTheme() {
+  theme.value = theme.value === 'dark' ? 'light' : 'dark';
+  localStorage.setItem('wall-theme', theme.value);
+}
 
 const posts = computed(() => page.props.posts ?? []);
 
@@ -28,7 +40,7 @@ function excerpt(text, length = 60) {
 </script>
 
 <template>
-  <div class="nf-shell">
+  <div class="nf-shell" :class="theme">
     <header class="nf-topbar">
       <span class="nf-brand">
         <span class="nf-brand-mark">FW</span>
@@ -42,6 +54,30 @@ function excerpt(text, length = 60) {
       </nav>
 
       <div class="nf-user">
+        <button
+          type="button"
+          class="nf-icon-btn"
+          :aria-label="theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'"
+          @click="toggleTheme"
+        >
+          <svg v-if="theme === 'dark'" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle cx="12" cy="12" r="4.5" stroke="currentColor" stroke-width="1.6" />
+            <path
+              d="M12 2.5v2M12 19.5v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2.5 12h2M19.5 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+            />
+          </svg>
+          <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path
+              d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </button>
         <button type="button" class="nf-icon-btn" aria-label="Notifications">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path
@@ -151,14 +187,31 @@ function excerpt(text, length = 60) {
 </template>
 
 <style scoped>
-.nf-shell {
+.nf-shell.dark {
   --nf-bg: #17181d;
   --nf-panel: #1f2027;
   --nf-line: #2c2d36;
   --nf-ink: #e9e9ee;
   --nf-muted: #9497a6;
   --nf-accent: #f2540b;
+  --nf-accent-contrast: #ffffff;
+  --nf-surface-2: #2a2b33;
+  --nf-hero-grad: linear-gradient(135deg, #23242c 0%, #2c1f1a 60%, #3a2417 100%);
+}
 
+.nf-shell.light {
+  --nf-bg: #f7f7f9;
+  --nf-panel: #ffffff;
+  --nf-line: #e7e8ec;
+  --nf-ink: #16181d;
+  --nf-muted: #6b7280;
+  --nf-accent: #f2540b;
+  --nf-accent-contrast: #ffffff;
+  --nf-surface-2: #f1f1f4;
+  --nf-hero-grad: linear-gradient(135deg, #fff1e9 0%, #ffe4d1 60%, #ffd9bd 100%);
+}
+
+.nf-shell {
   width: 100vw;
   position: relative;
   left: 50%;
@@ -166,6 +219,7 @@ function excerpt(text, length = 60) {
   min-height: 100vh;
   background: var(--nf-bg);
   color: var(--nf-ink);
+  transition: background 0.2s ease, color 0.2s ease;
 }
 
 .nf-topbar {
@@ -218,7 +272,8 @@ function excerpt(text, length = 60) {
 }
 
 .nf-tab-disabled {
-  color: #5a5c68;
+  color: var(--nf-muted);
+  opacity: 0.7;
   font-weight: 600;
   font-size: 0.92rem;
   display: inline-flex;
@@ -344,7 +399,7 @@ function excerpt(text, length = 60) {
 }
 
 .nf-tag {
-  background: #2a2b33;
+  background: var(--nf-surface-2);
   border: 1px solid var(--nf-line);
   color: var(--nf-muted);
   border-radius: 999px;
@@ -356,7 +411,7 @@ function excerpt(text, length = 60) {
 .nf-tag.active {
   background: var(--nf-accent);
   border-color: var(--nf-accent);
-  color: #fff;
+  color: var(--nf-accent-contrast);
 }
 
 .nf-guidelines {
@@ -396,7 +451,7 @@ function excerpt(text, length = 60) {
   width: 40px;
   height: 40px;
   border-radius: 8px;
-  background: #2a2b33;
+  background: var(--nf-surface-2);
   color: var(--nf-muted);
   display: inline-flex;
   align-items: center;
