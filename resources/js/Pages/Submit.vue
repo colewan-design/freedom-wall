@@ -1,6 +1,6 @@
 <script setup>
 import { useForm, usePage } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import AppLayout from '../Layouts/AppLayout.vue';
 import TurnstileWidget from '../Components/TurnstileWidget.vue';
 
@@ -10,15 +10,16 @@ const MAX_LENGTH = 1000;
 
 const page = usePage();
 const successMessage = computed(() => page.props.flash?.success ?? null);
+const fileInput = ref(null);
 
 const form = useForm({
   content: '',
-  image: null,
+  images: [],
   captchaToken: null,
 });
 
 function onFileChange(e) {
-  form.image = e.target.files[0] || null;
+  form.images = Array.from(e.target.files || []);
 }
 
 function onSubmit() {
@@ -33,7 +34,10 @@ function onSubmit() {
 
   form.post(route('submissions.store'), {
     forceFormData: true,
-    onSuccess: () => form.reset(),
+    onSuccess: () => {
+      form.reset();
+      if (fileInput.value) fileInput.value.value = '';
+    },
   });
 }
 </script>
@@ -70,7 +74,7 @@ function onSubmit() {
       </div>
 
       <label class="file-field">
-        <input type="file" accept="image/jpeg,image/png,image/webp" @change="onFileChange" />
+        <input ref="fileInput" type="file" accept="image/jpeg,image/png,image/webp" multiple @change="onFileChange" />
         <span class="file-btn">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path
@@ -80,15 +84,22 @@ function onSubmit() {
               stroke-linecap="round"
             />
           </svg>
-          {{ form.image ? form.image.name : 'Attach an image (optional)' }}
+          {{ form.images.length ? `${form.images.length} image${form.images.length > 1 ? 's' : ''} selected` : 'Attach up to 4 images (optional)' }}
         </span>
       </label>
+
+      <ul v-if="form.images.length" class="file-list">
+        <li v-for="image in form.images" :key="`${image.name}-${image.lastModified}`">
+          {{ image.name }}
+        </li>
+      </ul>
 
       <TurnstileWidget @verified="(token) => (form.captchaToken = token)" />
 
       <p v-if="form.errors.content" class="banner error">{{ form.errors.content }}</p>
       <p v-else-if="form.errors.captchaToken" class="banner error">{{ form.errors.captchaToken }}</p>
-      <p v-else-if="form.errors.image" class="banner error">{{ form.errors.image }}</p>
+      <p v-else-if="form.errors.images" class="banner error">{{ form.errors.images }}</p>
+      <p v-else-if="form.errors['images.0']" class="banner error">{{ form.errors['images.0'] }}</p>
       <p v-if="successMessage" class="banner success">{{ successMessage }}</p>
 
       <button type="submit" class="submit-btn" :disabled="form.processing">
@@ -215,6 +226,13 @@ textarea:focus {
 .file-field:hover .file-btn {
   border-color: var(--accent);
   color: var(--accent);
+}
+
+.file-list {
+  margin: -0.3rem 0 0;
+  padding-left: 1rem;
+  color: var(--muted);
+  font-size: 0.85rem;
 }
 
 .banner {

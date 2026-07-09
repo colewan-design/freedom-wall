@@ -28,9 +28,17 @@ function accentFor(post) {
           v-for="post in posts"
           :key="post.id"
           class="card"
-          :class="{ [accentFor(post)]: !post.image_url }"
+          :class="{ [accentFor(post)]: !post.image_urls?.length }"
         >
-          <img v-if="post.image_url" :src="post.image_url" alt="" class="card-image" />
+          <div v-if="post.image_urls?.length" class="card-gallery" :class="`count-${Math.min(post.image_urls.length, 4)}`">
+            <img
+              v-for="(imageUrl, index) in post.image_urls"
+              :key="`${post.id}-${index}`"
+              :src="imageUrl"
+              alt=""
+              class="card-image"
+            />
+          </div>
           <p class="card-content">{{ post.content }}</p>
           <div class="card-footer">
             <span class="byline">
@@ -121,6 +129,27 @@ h1 {
   width: 100%;
   display: block;
   object-fit: cover;
+  aspect-ratio: 4 / 3;
+}
+
+.card-gallery {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  background: #f6f3ee;
+}
+
+.card-gallery.count-1 {
+  grid-template-columns: 1fr;
+}
+
+.card-gallery.count-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.card-gallery.count-3,
+.card-gallery.count-4 {
+  grid-template-columns: repeat(2, 1fr);
 }
 
 .card-content {

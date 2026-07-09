@@ -41,16 +41,17 @@ class SubmissionController extends Controller
             ]);
         }
 
-        $imageUrl = null;
-        if ($request->hasFile('image')) {
-            $filename = Str::uuid().'.'.$request->file('image')->getClientOriginalExtension();
-            $path = $request->file('image')->storeAs('uploads', $filename, 'public');
-            $imageUrl = Storage::disk('public')->url($path);
+        $imageUrls = [];
+        foreach ($request->file('images', []) as $image) {
+            $filename = Str::uuid().'.'.$image->getClientOriginalExtension();
+            $path = $image->storeAs('uploads', $filename, 'public');
+            $imageUrls[] = Storage::disk('public')->url($path);
         }
 
         Submission::create([
             'content' => $content,
-            'image_url' => $imageUrl,
+            'image_url' => $imageUrls[0] ?? null,
+            'images' => $imageUrls ?: null,
             'ip_hash' => $ipHasher->hash($request->ip()),
         ]);
 
@@ -63,7 +64,7 @@ class SubmissionController extends Controller
             ->approved()
             ->orderByDesc('reviewed_at')
             ->limit(50)
-            ->get(['id', 'content', 'image_url', 'reviewed_at', 'fb_post_id']);
+            ->get(['id', 'content', 'image_url', 'images', 'reviewed_at', 'fb_post_id']);
 
         return Inertia::render('Wall', [
             'posts' => $posts,

@@ -205,7 +205,9 @@ onMounted(() => {
       <TransitionGroup v-else name="card" tag="ul" class="queue">
         <li v-for="post in pending" :key="post.id" class="item">
           <textarea v-model="editingContent[post.id]" rows="3"></textarea>
-          <img v-if="post.image_url" :src="post.image_url" alt="" />
+          <div v-if="post.image_urls?.length" class="image-grid">
+            <img v-for="(imageUrl, index) in post.image_urls" :key="`${post.id}-${index}`" :src="imageUrl" alt="" />
+          </div>
           <div class="meta">Submitted {{ formatDateTime(post.submitted_at) }}</div>
           <div class="actions">
             <button
@@ -261,6 +263,9 @@ onMounted(() => {
       <TransitionGroup v-else name="card" tag="ul" class="queue">
         <li v-for="post in failedFb" :key="post.id" class="item">
           <p class="static-content">{{ post.content }}</p>
+          <div v-if="post.image_urls?.length" class="image-grid">
+            <img v-for="(imageUrl, index) in post.image_urls" :key="`${post.id}-failed-${index}`" :src="imageUrl" alt="" />
+          </div>
           <div class="meta">Approved {{ formatDateTime(post.reviewed_at) }}</div>
           <div class="actions">
             <button class="btn btn-approve" :disabled="retryingId === post.id" @click="retryFacebook(post)">
@@ -472,8 +477,17 @@ h1 {
 }
 
 .item img {
-  max-width: 100%;
+  width: 100%;
   border-radius: 10px;
+  margin-top: 0.6rem;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+}
+
+.image-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.5rem;
   margin-top: 0.6rem;
 }
 

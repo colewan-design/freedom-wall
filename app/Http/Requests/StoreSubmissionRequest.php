@@ -15,7 +15,8 @@ class StoreSubmissionRequest extends FormRequest
     {
         return [
             'content' => ['required', 'string', 'max:1000'],
-            'image' => ['nullable', 'file', 'mimes:jpeg,png,webp', 'max:5120'],
+            'images' => ['nullable', 'array', 'max:4'],
+            'images.*' => ['file', 'mimes:jpeg,png,webp', 'max:5120'],
             'captchaToken' => ['nullable', 'string'],
         ];
     }
