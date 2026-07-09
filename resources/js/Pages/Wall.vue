@@ -1,6 +1,6 @@
 <script setup>
 import { Link } from '@inertiajs/vue3';
-import { computed, inject, nextTick, reactive, ref, watch } from 'vue';
+import { computed, inject, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import NewsfeedLayout from '../Layouts/NewsfeedLayout.vue';
 import { timeAgo } from '../lib/date';
 
@@ -84,6 +84,36 @@ watch(
   },
   { immediate: true },
 );
+
+const lightbox = reactive({ open: false, images: [], index: 0 });
+
+function openLightbox(post, index) {
+  lightbox.images = post.image_urls;
+  lightbox.index = index;
+  lightbox.open = true;
+}
+
+function closeLightbox() {
+  lightbox.open = false;
+}
+
+function nextImage() {
+  lightbox.index = (lightbox.index + 1) % lightbox.images.length;
+}
+
+function prevImage() {
+  lightbox.index = (lightbox.index - 1 + lightbox.images.length) % lightbox.images.length;
+}
+
+function onLightboxKeydown(e) {
+  if (!lightbox.open) return;
+  if (e.key === 'Escape') closeLightbox();
+  else if (e.key === 'ArrowRight') nextImage();
+  else if (e.key === 'ArrowLeft') prevImage();
+}
+
+onMounted(() => window.addEventListener('keydown', onLightboxKeydown));
+onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
 </script>
 
 <template>
@@ -160,12 +190,18 @@ watch(
         </div>
 
         <div v-if="post.image_urls?.length" class="feed-photo-grid" :class="`tiles-${Math.min(post.image_urls.length, 4)}`">
-          <div v-for="(imageUrl, index) in post.image_urls.slice(0, 4)" :key="index" class="feed-photo-tile">
+          <button
+            v-for="(imageUrl, index) in post.image_urls.slice(0, 4)"
+            :key="index"
+            type="button"
+            class="feed-photo-tile"
+            @click="openLightbox(post, index)"
+          >
             <img :src="imageUrl" alt="" />
             <span v-if="index === 3 && post.image_urls.length > 4" class="feed-photo-more">
               +{{ post.image_urls.length - 4 }}
             </span>
-          </div>
+          </button>
         </div>
 
         <div class="feed-actions">
@@ -198,6 +234,46 @@ watch(
         </div>
       </article>
     </div>
+
+    <Teleport to="body">
+      <div v-if="lightbox.open" class="lightbox" @click.self="closeLightbox">
+        <button type="button" class="lightbox-close" aria-label="Close" @click="closeLightbox">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+          </svg>
+        </button>
+
+        <button
+          v-if="lightbox.images.length > 1"
+          type="button"
+          class="lightbox-nav prev"
+          aria-label="Previous image"
+          @click.stop="prevImage"
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M15 5 8 12l7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </button>
+
+        <img :src="lightbox.images[lightbox.index]" alt="" class="lightbox-image" />
+
+        <button
+          v-if="lightbox.images.length > 1"
+          type="button"
+          class="lightbox-nav next"
+          aria-label="Next image"
+          @click.stop="nextImage"
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="m9 5 7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </button>
+
+        <div v-if="lightbox.images.length > 1" class="lightbox-counter">
+          {{ lightbox.index + 1 }} / {{ lightbox.images.length }}
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -425,6 +501,17 @@ watch(
   position: relative;
   overflow: hidden;
   background: var(--nf-surface-2);
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.feed-photo-tile:hover img {
+  filter: brightness(0.92);
 }
 
 .feed-photo-tile img {
@@ -472,5 +559,83 @@ watch(
 
 .action.active {
   color: var(--nf-accent);
+}
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lightbox-image {
+  max-width: 90vw;
+  max-height: 88vh;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+.lightbox-close,
+.lightbox-nav {
+  position: fixed;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.lightbox-close:hover,
+.lightbox-nav:hover {
+  background: rgba(255, 255, 255, 0.24);
+}
+
+.lightbox-close {
+  top: 1.25rem;
+  left: 1.25rem;
+  width: 2.6rem;
+  height: 2.6rem;
+}
+
+.lightbox-nav {
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3rem;
+  height: 3rem;
+}
+
+.lightbox-nav.prev {
+  left: 1.25rem;
+}
+
+.lightbox-nav.next {
+  right: 1.25rem;
+}
+
+.lightbox-counter {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.35rem 0.9rem;
+  border-radius: 999px;
+}
+
+@media (max-width: 640px) {
+  .lightbox-nav {
+    width: 2.4rem;
+    height: 2.4rem;
+  }
 }
 </style>
