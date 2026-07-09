@@ -655,10 +655,10 @@ h1 {
   padding: 0.65rem;
   font: inherit;
   font-size: 0.92rem;
-  border: 1px solid var(--line);
+  border: none;
   border-radius: 10px;
   resize: vertical;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition: box-shadow 0.15s ease;
 }
 
 .item textarea:focus {
