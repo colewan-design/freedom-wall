@@ -225,10 +225,7 @@ function excerpt(text, length = 60) {
 }
 
 .nf-shell {
-  width: 100vw;
-  position: relative;
-  left: 50%;
-  transform: translateX(-50%);
+  width: 100%;
   min-height: 100vh;
   background: var(--nf-bg);
   color: var(--nf-ink);

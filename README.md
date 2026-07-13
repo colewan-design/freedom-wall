@@ -25,8 +25,7 @@ php artisan serve      # backend, defaults to http://127.0.0.1:8000
 npm run dev            # Vite dev server for HMR (pinned to port 5210, see vite.config.js)
 ```
 
-- Public submission form: `/`
-- Public approved-posts wall: `/wall`
+- Public wall + submission composer: `/wall` (`/` redirects here)
 - Admin dashboard: `/admin/login`
 
 ## Notes
