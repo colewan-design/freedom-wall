@@ -138,7 +138,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
 
     <div v-else class="feed-list">
       <article v-for="post in filteredPosts" :id="`post-${post.id}`" :key="post.id" class="feed-card">
-        <div class="feed-header">
+        <div class="feed-post-header">
           <img src="/images/branding/bsufw-mark-64.png" alt="" class="feed-avatar" />
           <div class="feed-header-text">
             <div class="feed-name-row">
@@ -367,7 +367,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
   padding: 1rem;
 }
 
-.feed-header {
+.feed-post-header {
   display: flex;
   align-items: flex-start;
   gap: 0.6rem;

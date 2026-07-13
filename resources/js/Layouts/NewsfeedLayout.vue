@@ -539,4 +539,53 @@ function excerpt(text, length = 60) {
     order: 3;
   }
 }
+
+@media (max-width: 640px) {
+  .nf-topbar {
+    flex-wrap: wrap;
+    row-gap: 0.6rem;
+    padding: 0.7rem 1rem;
+  }
+
+  .nf-brand {
+    font-size: 0.95rem;
+    gap: 0.45rem;
+  }
+
+  .nf-brand-mark {
+    width: 1.7rem;
+    height: 1.7rem;
+  }
+
+  .nf-tabs,
+  .nf-admin-label {
+    order: 3;
+    flex-basis: 100%;
+  }
+
+  .nf-tabs {
+    gap: 1.1rem;
+    overflow-x: auto;
+  }
+
+  .nf-user {
+    gap: 0.5rem;
+    margin-left: auto;
+  }
+
+  .nf-greeting {
+    display: none;
+  }
+
+  .nf-logout-btn {
+    white-space: nowrap;
+    font-size: 0.8rem;
+    padding: 0.4rem 0.7rem;
+  }
+
+  .nf-body {
+    padding: 1rem 1rem 2.5rem;
+    gap: 1rem;
+  }
+}
 </style>
