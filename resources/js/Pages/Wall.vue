@@ -1,13 +1,60 @@
 <script setup>
-import { Link } from '@inertiajs/vue3';
+import { useForm, usePage } from '@inertiajs/vue3';
 import { computed, inject, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import NewsfeedLayout from '../Layouts/NewsfeedLayout.vue';
+import TurnstileWidget from '../Components/TurnstileWidget.vue';
 import { timeAgo } from '../lib/date';
 
 defineOptions({ layout: NewsfeedLayout });
 
 const props = defineProps({
   posts: { type: Array, required: true },
+});
+
+const page = usePage();
+const successMessage = computed(() => page.props.flash?.success ?? null);
+const composerTextarea = ref(null);
+const fileInput = ref(null);
+
+const composerForm = useForm({
+  content: '',
+  images: [],
+  captchaToken: null,
+});
+
+function onComposerFileChange(e) {
+  composerForm.images = Array.from(e.target.files || []);
+}
+
+function onComposerSubmit() {
+  if (!composerForm.content.trim()) {
+    composerForm.setError('content', 'Please write something before submitting.');
+    return;
+  }
+  if (composerForm.captchaToken === null) {
+    composerForm.setError('captchaToken', 'Please complete the CAPTCHA challenge.');
+    return;
+  }
+
+  composerForm.post(route('submissions.store'), {
+    forceFormData: true,
+    preserveScroll: true,
+    onSuccess: () => {
+      composerForm.reset();
+      if (fileInput.value) fileInput.value.value = '';
+    },
+  });
+}
+
+function focusComposer() {
+  composerTextarea.value?.focus();
+  composerTextarea.value?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+onMounted(() => {
+  if (window.location.hash === '#composer') {
+    focusComposer();
+  }
 });
 
 const search = inject('wallSearch', ref(''));
@@ -127,9 +174,60 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
       </div>
     </div>
 
+    <div id="composer" class="composer">
+      <img src="/images/branding/bsufw-mark-64.png" alt="" class="composer-avatar" />
+      <form class="composer-form" @submit.prevent="onComposerSubmit">
+        <textarea
+          ref="composerTextarea"
+          v-model="composerForm.content"
+          rows="2"
+          placeholder="What's on your mind?"
+          class="composer-textarea"
+        ></textarea>
+
+        <label class="composer-file">
+          <input
+            ref="fileInput"
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            multiple
+            @change="onComposerFileChange"
+          />
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path
+              d="M21.44 11.05 12.25 20.24a5 5 0 0 1-7.07-7.07l8.49-8.49a3.5 3.5 0 0 1 4.95 4.95l-8.49 8.49a2 2 0 0 1-2.83-2.83l7.78-7.78"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+            />
+          </svg>
+          {{ composerForm.images.length ? `${composerForm.images.length} image${composerForm.images.length > 1 ? 's' : ''} selected` : 'Attach up to 4 images (optional)' }}
+        </label>
+
+        <ul v-if="composerForm.images.length" class="composer-file-list">
+          <li v-for="image in composerForm.images" :key="`${image.name}-${image.lastModified}`">{{ image.name }}</li>
+        </ul>
+
+        <TurnstileWidget @verified="(token) => (composerForm.captchaToken = token)" />
+
+        <p v-if="composerForm.errors.content" class="composer-banner error">{{ composerForm.errors.content }}</p>
+        <p v-else-if="composerForm.errors.captchaToken" class="composer-banner error">{{ composerForm.errors.captchaToken }}</p>
+        <p v-else-if="composerForm.errors.images" class="composer-banner error">{{ composerForm.errors.images }}</p>
+        <p v-else-if="composerForm.errors['images.0']" class="composer-banner error">{{ composerForm.errors['images.0'] }}</p>
+        <p v-if="successMessage" class="composer-banner success">{{ successMessage }}</p>
+
+        <div class="composer-footer">
+          <span class="composer-hint">Anonymous &middot; reviewed before it's posted</span>
+          <button type="submit" class="composer-submit" :disabled="composerForm.processing">
+            {{ composerForm.processing ? 'Posting…' : 'Post anonymously' }}
+          </button>
+        </div>
+      </form>
+    </div>
+
     <div class="feed-header">
       <h2>Latest Newsfeed</h2>
-      <Link href="/" class="start-btn">Start a Discussion</Link>
+      <button type="button" class="start-btn" @click="focusComposer">Start a Discussion</button>
     </div>
 
     <p v-if="filteredPosts.length === 0" class="hint">
@@ -317,6 +415,144 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
   line-height: 1.5;
 }
 
+.composer {
+  display: flex;
+  gap: 0.75rem;
+  background: var(--nf-panel);
+  border: 1px solid var(--nf-line);
+  border-radius: 14px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  scroll-margin-top: 1.5rem;
+}
+
+.composer-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.composer-form {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.composer-textarea {
+  width: 100%;
+  padding: 0.7rem 0.85rem;
+  font: inherit;
+  font-size: 0.95rem;
+  color: var(--nf-ink);
+  background: var(--nf-surface-2);
+  border: 1px solid var(--nf-line);
+  border-radius: 12px;
+  resize: vertical;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.composer-textarea:focus {
+  outline: none;
+  border-color: var(--nf-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--nf-accent) 20%, transparent);
+}
+
+.composer-file {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.6rem 0.85rem;
+  font-size: 0.85rem;
+  color: var(--nf-muted);
+  background: var(--nf-surface-2);
+  border: 1px dashed var(--nf-line);
+  border-radius: 10px;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.composer-file:hover {
+  border-color: var(--nf-accent);
+  color: var(--nf-accent);
+}
+
+.composer-file input[type='file'] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  overflow: hidden;
+}
+
+.composer-file-list {
+  margin: -0.3rem 0 0;
+  padding-left: 1.1rem;
+  color: var(--nf-muted);
+  font-size: 0.8rem;
+}
+
+.composer-banner {
+  margin: 0;
+  padding: 0.6rem 0.85rem;
+  border-radius: 10px;
+  font-size: 0.85rem;
+}
+
+.composer-banner.error {
+  color: #f87171;
+  background: rgba(220, 38, 38, 0.16);
+}
+
+.composer-banner.success {
+  color: var(--status-active-fg, #4ade80);
+  background: var(--status-active-bg, rgba(21, 128, 61, 0.18));
+}
+
+.composer-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.composer-hint {
+  font-size: 0.78rem;
+  color: var(--nf-muted);
+}
+
+.composer-submit {
+  border: none;
+  border-radius: 999px;
+  padding: 0.55rem 1.1rem;
+  background: var(--nf-accent);
+  color: var(--nf-accent-contrast);
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.composer-submit:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+@media (max-width: 480px) {
+  .composer {
+    flex-direction: column;
+  }
+
+  .composer-avatar {
+    display: none;
+  }
+}
+
 .feed-header {
   display: flex;
   align-items: center;
@@ -334,11 +570,14 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
 .start-btn {
   background: var(--nf-accent);
   color: var(--nf-accent-contrast);
+  border: none;
   text-decoration: none;
+  font: inherit;
   font-weight: 600;
   font-size: 0.82rem;
   padding: 0.5rem 0.9rem;
   border-radius: 8px;
+  cursor: pointer;
 }
 
 .hint {

@@ -7,7 +7,7 @@ use App\Http\Controllers\Admin\SubmissionModerationController;
 use App\Http\Controllers\SubmissionController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', [SubmissionController::class, 'create'])->name('submit');
+Route::redirect('/', '/wall');
 Route::post('/submissions', [SubmissionController::class, 'store'])
     ->middleware('throttle:submission')
     ->name('submissions.store');

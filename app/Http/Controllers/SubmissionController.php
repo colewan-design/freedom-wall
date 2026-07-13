@@ -16,11 +16,6 @@ use Inertia\Response;
 
 class SubmissionController extends Controller
 {
-    public function create(): Response
-    {
-        return Inertia::render('Submit');
-    }
-
     public function store(
         StoreSubmissionRequest $request,
         ContentFilterService $contentFilter,
@@ -55,7 +50,7 @@ class SubmissionController extends Controller
             'ip_hash' => $ipHasher->hash($request->ip()),
         ]);
 
-        return redirect()->route('submit')->with('success', 'Submitted! Our team will review it before posting.');
+        return redirect()->route('wall')->with('success', 'Submitted! Our team will review it before posting.');
     }
 
     public function wall(): Response

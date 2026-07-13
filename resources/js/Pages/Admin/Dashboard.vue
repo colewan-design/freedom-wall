@@ -299,7 +299,11 @@ onMounted(() => {
             {{ expandedContent[post.id] ? 'See less' : 'See more' }}
           </button>
 
-          <div v-if="post.image_urls?.length" class="image-grid">
+          <div
+            v-if="post.image_urls?.length"
+            class="image-grid"
+            :class="`tiles-${Math.min(post.image_urls.length, 4)}`"
+          >
             <img v-for="(imageUrl, index) in post.image_urls" :key="`${post.id}-${index}`" :src="imageUrl" alt="" />
           </div>
 
@@ -393,7 +397,11 @@ onMounted(() => {
         <li v-for="post in approved" :key="post.id" class="item">
           <p class="static-content">{{ post.content }}</p>
 
-          <div v-if="post.image_urls?.length" class="image-grid">
+          <div
+            v-if="post.image_urls?.length"
+            class="image-grid"
+            :class="`tiles-${Math.min(post.image_urls.length, 4)}`"
+          >
             <img v-for="(imageUrl, index) in post.image_urls" :key="`${post.id}-approved-${index}`" :src="imageUrl" alt="" />
           </div>
 
@@ -469,6 +477,7 @@ onMounted(() => {
   --success-bg: rgba(34, 197, 94, 0.16);
   --info: var(--nf-accent);
   --info-bg: rgba(13, 148, 136, 0.14);
+  --nf-accent-dark: #0f766e;
 }
 
 .header-row {
@@ -659,16 +668,46 @@ h1 {
 
 .image-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 0.5rem;
+  gap: 3px;
+  border-radius: 10px;
+  overflow: hidden;
   margin-top: 0.6rem;
+}
+
+.image-grid.tiles-1 {
+  grid-template-columns: 1fr;
+}
+
+.image-grid.tiles-1 img {
+  aspect-ratio: 16 / 10;
+}
+
+.image-grid.tiles-2 {
+  grid-template-columns: 1fr 1fr;
+  height: 240px;
+}
+
+.image-grid.tiles-3 {
+  grid-template-columns: 1.2fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  height: 320px;
+}
+
+.image-grid.tiles-3 img:first-child {
+  grid-row: 1 / 3;
+}
+
+.image-grid.tiles-4 {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  height: 320px;
 }
 
 .image-grid img {
   width: 100%;
-  border-radius: 10px;
-  aspect-ratio: 4 / 3;
+  height: 100%;
   object-fit: cover;
+  display: block;
 }
 
 .meta {

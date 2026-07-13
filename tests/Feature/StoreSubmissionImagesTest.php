@@ -25,7 +25,7 @@ class StoreSubmissionImagesTest extends TestCase
             'captchaToken' => 'test-token',
         ]);
 
-        $response->assertRedirect(route('submit'));
+        $response->assertRedirect(route('wall'));
         $response->assertSessionHas('success');
 
         $submission = Submission::query()->firstOrFail();

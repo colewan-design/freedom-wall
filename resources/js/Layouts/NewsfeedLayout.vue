@@ -5,6 +5,7 @@ import { computed, onMounted, provide, ref } from 'vue';
 const page = usePage();
 const isActive = (path) => computed(() => page.url === path || page.url.startsWith(`${path}?`));
 const isChatPage = computed(() => page.component === 'Chat');
+const isWallPage = computed(() => page.component === 'Wall');
 const isAdminPage = computed(() => page.component?.startsWith('Admin/'));
 
 function logout() {
@@ -56,7 +57,6 @@ function excerpt(text, length = 60) {
       </span>
 
       <nav v-if="!isAdminPage" class="nf-tabs">
-        <Link href="/" :class="{ active: isActive('/').value }">Discussions</Link>
         <Link href="/wall" :class="{ active: isActive('/wall').value }">News Feed</Link>
         <Link href="/chat" :class="{ active: isActive('/chat').value }">Chat</Link>
       </nav>
@@ -191,7 +191,8 @@ function excerpt(text, length = 60) {
           <p>
             {{ isChatPage ? 'Use the moderated wall if you want a post reviewed and featured publicly.' : "Submit your own post anonymously — it'll show up here once reviewed." }}
           </p>
-          <Link href="/" class="nf-cta-btn">{{ isChatPage ? 'Open submission form' : 'Start a Discussion' }}</Link>
+          <a v-if="isWallPage" href="#composer" class="nf-cta-btn">Start a Discussion</a>
+          <Link v-else href="/wall#composer" class="nf-cta-btn">{{ isChatPage ? 'Open submission form' : 'Start a Discussion' }}</Link>
         </div>
       </aside>
     </div>
