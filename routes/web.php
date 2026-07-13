@@ -32,10 +32,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         Route::get('dashboard', [SubmissionModerationController::class, 'dashboard'])->name('dashboard');
         Route::get('submissions', [SubmissionModerationController::class, 'index'])->name('submissions.index');
-        Route::get('submissions/failed-fb', [SubmissionModerationController::class, 'failedFacebook'])->name('submissions.failed-fb');
         Route::get('stats', [SubmissionModerationController::class, 'stats'])->name('stats');
         Route::post('submissions/{submission}/approve', [SubmissionModerationController::class, 'approve'])->name('submissions.approve');
         Route::post('submissions/{submission}/reject', [SubmissionModerationController::class, 'reject'])->name('submissions.reject');
-        Route::post('submissions/{submission}/retry-fb', [SubmissionModerationController::class, 'retryFacebook'])->name('submissions.retry-fb');
     });
 });

@@ -150,13 +150,6 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
                 />
                 <path d="m9.2 12.4 1.8 1.8 3.8-4.2" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
               </svg>
-              <span v-if="post.fb_post_id" class="fb-badge" title="Also posted on Facebook">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                  <path
-                    d="M22 12a10 10 0 1 0-11.56 9.88v-6.99H7.9V12h2.54V9.8c0-2.5 1.49-3.89 3.78-3.89 1.1 0 2.24.2 2.24.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56V12h2.78l-.44 2.89h-2.34v6.99A10 10 0 0 0 22 12Z"
-                  />
-                </svg>
-              </span>
             </div>
             <div class="feed-sub-meta">
               <span class="timestamp">{{ timeAgo(post.reviewed_at) }}</span>
@@ -402,18 +395,6 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
 .feed-verified {
   color: var(--nf-accent);
   flex-shrink: 0;
-}
-
-.fb-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--nf-surface-2);
-  color: var(--nf-accent);
-  margin-left: 0.15rem;
 }
 
 .feed-sub-meta {

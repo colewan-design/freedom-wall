@@ -64,7 +64,7 @@ class SubmissionController extends Controller
             ->approved()
             ->orderByDesc('reviewed_at')
             ->limit(50)
-            ->get(['id', 'content', 'image_url', 'images', 'reviewed_at', 'fb_post_id']);
+            ->get(['id', 'content', 'image_url', 'images', 'reviewed_at']);
 
         return Inertia::render('Wall', [
             'posts' => $posts,

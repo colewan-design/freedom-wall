@@ -2,15 +2,15 @@
 
 Anonymous submission site: a Laravel + Inertia + Vue 3 app (submission form +
 public wall + admin dashboard), backed by MySQL, with approved posts
-auto-posted to a Facebook Page via the Graph API. See [plan.md](plan.md) for
-the original design notes and [skill.md](skill.md) for the reusable
-architecture blueprint.
+reviewed on-site and ready for manual posting anywhere you choose. See
+[plan.md](plan.md) for the original design notes and [skill.md](skill.md) for
+the reusable architecture blueprint.
 
 ## Setup
 
 ```bash
 composer install
-cp .env.example .env       # fill in DB_*, ADMIN_*, IP_SALT, FB_* vars
+cp .env.example .env       # fill in DB_*, ADMIN_*, IP_SALT, TURNSTILE_* vars
 php artisan key:generate
 php artisan migrate --seed  # creates the submissions table + seeds the admin user
 
@@ -31,14 +31,13 @@ npm run dev            # Vite dev server for HMR (pinned to port 5210, see vite.
 
 ## Notes
 
-- CAPTCHA (Cloudflare Turnstile) and Facebook posting are both skipped
-  gracefully when their env vars are left blank, so local dev works without
-  either configured. Fill in `TURNSTILE_SECRET_KEY`/`VITE_TURNSTILE_SITE_KEY`
-  and `FB_PAGE_ID`/`FB_PAGE_ACCESS_TOKEN` before deploying.
-- `FB_PAGE_ACCESS_TOKEN` must be a Facebook Page access token (or Business
-  System User token) with `pages_manage_posts` for the target Page. The old
-  `publish_actions` permission was deprecated years ago and will fail with
-  `(#200) The permission(s) publish_actions are not available`.
+- CAPTCHA (Cloudflare Turnstile) is skipped gracefully when its env vars are
+  left blank, so local dev works without it. Fill in
+  `TURNSTILE_SECRET_KEY`/`VITE_TURNSTILE_SITE_KEY` before deploying if you
+  want anti-spam protection.
+- The admin dashboard includes a manual posting workflow: approve a submission,
+  then use `Copy text` and `Download images` from the approved list when you
+  are ready to post it to Facebook or another platform.
 - Uploaded images live at `storage/app/public/uploads/`, served by the app at
   `/media/uploads/...` so shared hosting does not need `storage:link`.
 - Rate limiting (3 submissions per IP per 5 minutes) is defined in
