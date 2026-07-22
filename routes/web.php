@@ -9,9 +9,13 @@ use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\FeedController;
+use App\Http\Controllers\FriendController;
+use App\Http\Controllers\JournalController;
+use App\Http\Controllers\PostController;
 use App\Http\Controllers\PublicMediaController;
 use App\Http\Controllers\Admin\SubmissionModerationController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\SavedPostController;
 use App\Http\Controllers\SubmissionController;
 use Illuminate\Support\Facades\Route;
 
@@ -58,6 +62,22 @@ Route::middleware(['auth', 'student'])->group(function () {
         Route::get('profile/{user:username}', [ProfileController::class, 'show'])->name('profile.show');
         Route::get('settings/profile', [ProfileController::class, 'edit'])->name('profile.edit');
         Route::patch('settings/profile', [ProfileController::class, 'update'])->name('profile.update');
+
+        Route::post('posts', [PostController::class, 'store'])->name('posts.store');
+        Route::delete('posts/{post}', [PostController::class, 'destroy'])->name('posts.destroy');
+        Route::post('posts/{post}/save', [PostController::class, 'save'])->name('posts.save');
+        Route::delete('posts/{post}/save', [PostController::class, 'unsave'])->name('posts.unsave');
+        Route::get('saved', [SavedPostController::class, 'index'])->name('saved');
+
+        Route::get('friends', [FriendController::class, 'index'])->name('friends.index');
+        Route::post('friends/{user:username}', [FriendController::class, 'store'])->name('friends.store');
+        Route::post('friends/{friendship}/accept', [FriendController::class, 'accept'])->name('friends.accept');
+        Route::delete('friends/{friendship}', [FriendController::class, 'destroy'])->name('friends.destroy');
+
+        Route::get('journal', [JournalController::class, 'index'])->name('journal.index');
+        Route::post('journal', [JournalController::class, 'store'])->name('journal.store');
+        Route::patch('journal/{entry}', [JournalController::class, 'update'])->name('journal.update');
+        Route::delete('journal/{entry}', [JournalController::class, 'destroy'])->name('journal.destroy');
     });
 });
 

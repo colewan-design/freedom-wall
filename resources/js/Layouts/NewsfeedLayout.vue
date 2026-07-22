@@ -7,11 +7,12 @@ const isActive = (path) => computed(() => page.url === path || page.url.startsWi
 const isChatPage = computed(() => page.component === 'Chat');
 const isWallPage = computed(() => page.component === 'Wall');
 const isAdminPage = computed(() => page.component?.startsWith('Admin/'));
-const isStudentPage = computed(
-  () => page.component?.startsWith('Feed/') || page.component?.startsWith('Profile/'),
+const isStudentPage = computed(() =>
+  ['Feed/', 'Profile/', 'Friends/', 'Journal/', 'Saved/'].some((prefix) => page.component?.startsWith(prefix)),
 );
 const authUser = computed(() => page.props.auth?.user ?? null);
 const isStudentAuthed = computed(() => authUser.value?.role === 'student');
+const pendingRequestCount = computed(() => page.props.pendingRequestCount ?? 0);
 
 function logout() {
   router.post(route('admin.logout'));
@@ -70,6 +71,12 @@ function excerpt(text, length = 60) {
         <Link href="/chat" :class="{ active: isActive('/chat').value }">Chat</Link>
         <template v-if="isStudentAuthed">
           <Link href="/feed" :class="{ active: isActive('/feed').value }">Feed</Link>
+          <Link href="/friends" :class="{ active: page.url.startsWith('/friends') }">
+            Friends
+            <span v-if="pendingRequestCount > 0" class="nf-badge">{{ pendingRequestCount }}</span>
+          </Link>
+          <Link href="/journal" :class="{ active: page.url.startsWith('/journal') }">Journal</Link>
+          <Link href="/saved" :class="{ active: page.url.startsWith('/saved') }">Saved</Link>
           <Link :href="`/profile/${authUser.username}`" :class="{ active: page.url.startsWith('/profile') }">
             Profile
           </Link>
@@ -303,6 +310,21 @@ function excerpt(text, length = 60) {
 .nf-tabs :deep(a.active) {
   color: var(--nf-ink);
   border-bottom-color: var(--nf-accent);
+}
+
+.nf-tabs :deep(.nf-badge) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.1rem;
+  height: 1.1rem;
+  padding: 0 0.3rem;
+  margin-left: 0.35rem;
+  border-radius: 999px;
+  background: var(--nf-accent);
+  color: var(--nf-accent-contrast);
+  font-size: 0.68rem;
+  font-weight: 700;
 }
 
 .nf-admin-label {

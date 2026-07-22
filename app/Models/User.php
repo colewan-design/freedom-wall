@@ -7,6 +7,7 @@ use Illuminate\Contracts\Auth\MustVerifyEmail as MustVerifyEmailContract;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Storage;
@@ -66,5 +67,10 @@ class User extends Authenticatable implements MustVerifyEmailContract
 
             return Storage::disk('public')->url($this->avatar_path);
         });
+    }
+
+    public function savedPosts(): BelongsToMany
+    {
+        return $this->belongsToMany(Post::class, 'post_saves')->withTimestamps();
     }
 }
