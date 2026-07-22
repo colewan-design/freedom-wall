@@ -1,8 +1,7 @@
 <script setup>
-import { Link, useForm } from '@inertiajs/vue3';
-import AppLayout from '../../Layouts/AppLayout.vue';
+import { Head, Link, useForm } from '@inertiajs/vue3';
 
-defineOptions({ layout: AppLayout });
+defineOptions({ layout: null });
 
 const form = useForm({
   name: '',
@@ -18,7 +17,9 @@ function onSubmit() {
 </script>
 
 <template>
-  <section>
+  <Head title="Create an account" />
+
+  <section class="auth-shell">
     <h1>Create an account</h1>
     <form @submit.prevent="onSubmit">
       <input v-model="form.name" type="text" placeholder="Full name" autocomplete="name" />
@@ -51,6 +52,15 @@ function onSubmit() {
 </template>
 
 <style scoped>
+.auth-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+}
+
 form {
   display: flex;
   flex-direction: column;

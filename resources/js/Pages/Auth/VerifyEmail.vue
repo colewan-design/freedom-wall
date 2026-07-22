@@ -1,8 +1,7 @@
 <script setup>
-import { router, useForm, usePage } from '@inertiajs/vue3';
-import AppLayout from '../../Layouts/AppLayout.vue';
+import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 
-defineOptions({ layout: AppLayout });
+defineOptions({ layout: null });
 
 defineProps({
   email: String,
@@ -21,26 +20,39 @@ function logout() {
 </script>
 
 <template>
-  <section>
-    <h1>Verify your email</h1>
-    <p class="intro">
-      Thanks for signing up! We've sent a verification link to <strong>{{ email }}</strong>.
-      Click the link in that email to activate your account.
-    </p>
+  <Head title="Verify your email" />
 
-    <p v-if="page.props.flash?.success" class="success">{{ page.props.flash.success }}</p>
+  <div class="auth-shell">
+    <section class="card">
+      <h1>Verify your email</h1>
+      <p class="intro">
+        Thanks for signing up! We've sent a verification link to <strong>{{ email }}</strong>.
+        Click the link in that email to activate your account.
+      </p>
 
-    <div class="actions">
-      <button type="button" :disabled="form.processing" @click="resend">
-        {{ form.processing ? 'Sending…' : 'Resend verification email' }}
-      </button>
-      <button type="button" class="link-btn" @click="logout">Log out</button>
-    </div>
-  </section>
+      <p v-if="page.props.flash?.success" class="success">{{ page.props.flash.success }}</p>
+
+      <div class="actions">
+        <button type="button" :disabled="form.processing" @click="resend">
+          {{ form.processing ? 'Sending…' : 'Resend verification email' }}
+        </button>
+        <button type="button" class="link-btn" @click="logout">Log out</button>
+      </div>
+    </section>
+  </div>
 </template>
 
 <style scoped>
-section {
+.auth-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+}
+
+.card {
   max-width: 420px;
   background: var(--paper);
   border: 1px solid var(--line);
