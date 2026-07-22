@@ -519,7 +519,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
 .composer-file-list {
   margin: -0.3rem 0 0;
   padding-left: 1.1rem;
-  color: var(--nf-muted);
+  color: var(--nf-muted, #9497a6);
   font-size: 0.8rem;
 }
 
@@ -555,8 +555,8 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
 .composer-modal {
   width: 100%;
   max-width: 500px;
-  background: var(--nf-panel);
-  border: 1px solid var(--nf-line);
+  background: var(--nf-panel, #1f2027);
+  border: 1px solid var(--nf-line, #2c2d36);
   border-radius: 12px;
   padding: 0.5rem 1rem 1rem;
 }
@@ -567,7 +567,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
   justify-content: center;
   position: relative;
   padding: 0.75rem 0;
-  border-bottom: 1px solid var(--nf-line);
+  border-bottom: 1px solid var(--nf-line, #2c2d36);
   margin-bottom: 0.9rem;
 }
 
@@ -575,7 +575,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
   margin: 0;
   font-size: 1.05rem;
   font-weight: 800;
-  color: var(--nf-ink);
+  color: var(--nf-ink, #e9e9ee);
 }
 
 .composer-modal-close {
@@ -590,13 +590,13 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
   height: 2.1rem;
   border-radius: 50%;
   border: none;
-  background: var(--nf-surface-2);
-  color: var(--nf-ink);
+  background: var(--nf-surface-2, #2a2b33);
+  color: var(--nf-ink, #e9e9ee);
   cursor: pointer;
 }
 
 .composer-modal-close:hover {
-  background: var(--nf-line);
+  background: var(--nf-line, #2c2d36);
 }
 
 .composer-modal-user {
@@ -614,12 +614,12 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
 .composer-modal-name {
   font-weight: 700;
   font-size: 0.92rem;
-  color: var(--nf-ink);
+  color: var(--nf-ink, #e9e9ee);
 }
 
 .composer-modal-sub {
   font-size: 0.78rem;
-  color: var(--nf-muted);
+  color: var(--nf-muted, #9497a6);
 }
 
 .composer-modal-textarea {
@@ -630,7 +630,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
   background: transparent;
   font: inherit;
   font-size: 1.15rem;
-  color: var(--nf-ink);
+  color: var(--nf-ink, #e9e9ee);
   resize: vertical;
 }
 
@@ -639,7 +639,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
 }
 
 .composer-modal-textarea::placeholder {
-  color: var(--nf-muted);
+  color: var(--nf-muted, #9497a6);
 }
 
 .composer-attach-row {
@@ -648,16 +648,16 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
   justify-content: space-between;
   gap: 0.75rem;
   padding: 0.6rem 0.85rem;
-  border: 1px solid var(--nf-line);
+  border: 1px solid var(--nf-line, #2c2d36);
   border-radius: 10px;
   font-size: 0.88rem;
   font-weight: 600;
-  color: var(--nf-ink);
+  color: var(--nf-ink, #e9e9ee);
   cursor: pointer;
 }
 
 .composer-attach-row:hover {
-  border-color: var(--nf-accent);
+  border-color: var(--nf-accent, #0d9488);
 }
 
 .composer-attach-icon {
@@ -667,7 +667,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
   justify-content: center;
   width: 2rem;
   height: 2rem;
-  color: var(--nf-accent);
+  color: var(--nf-accent, #0d9488);
   flex-shrink: 0;
 }
 
@@ -685,8 +685,8 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
   border: none;
   border-radius: 8px;
   padding: 0.65rem 1rem;
-  background: var(--nf-accent);
-  color: var(--nf-accent-contrast);
+  background: var(--nf-accent, #0d9488);
+  color: var(--nf-accent-contrast, #ffffff);
   font-weight: 700;
   font-size: 0.95rem;
   cursor: pointer;
