@@ -7,6 +7,8 @@ const isActive = (path) => computed(() => page.url === path || page.url.startsWi
 const isChatPage = computed(() => page.component === 'Chat');
 const isWallPage = computed(() => page.component === 'Wall');
 const isAdminPage = computed(() => page.component?.startsWith('Admin/'));
+const authUser = computed(() => page.props.auth?.user ?? null);
+const isStudentAuthed = computed(() => authUser.value?.role === 'student');
 
 function logout() {
   router.post(route('admin.logout'));
@@ -87,7 +89,8 @@ function excerpt(text, length = 60) {
             />
           </svg>
         </button>
-        <Link v-if="!isAdminPage" href="/login" class="nf-login-btn">Log in</Link>
+        <Link v-if="isStudentAuthed" href="/feed" class="nf-login-btn">{{ authUser.name }}</Link>
+        <Link v-else-if="!isAdminPage" href="/login" class="nf-login-btn">Log in</Link>
         <button v-else type="button" class="nf-logout-btn" @click="logout">Log out</button>
       </div>
     </header>
