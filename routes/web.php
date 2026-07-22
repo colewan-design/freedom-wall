@@ -69,6 +69,9 @@ Route::middleware(['auth', 'student'])->group(function () {
         Route::delete('posts/{post}', [PostController::class, 'destroy'])->name('posts.destroy');
         Route::post('posts/{post}/save', [PostController::class, 'save'])->name('posts.save');
         Route::delete('posts/{post}/save', [PostController::class, 'unsave'])->name('posts.unsave');
+        Route::post('posts/{post}/react', [PostController::class, 'react'])->name('posts.react');
+        Route::delete('posts/{post}/react', [PostController::class, 'unreact'])->name('posts.unreact');
+        Route::post('posts/{post}/comments', [PostController::class, 'storeComment'])->name('posts.comments.store');
         Route::get('saved', [SavedPostController::class, 'index'])->name('saved');
 
         Route::get('friends', [FriendController::class, 'index'])->name('friends.index');

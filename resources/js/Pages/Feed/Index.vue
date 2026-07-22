@@ -1,5 +1,6 @@
 <script setup>
 import { Link, useForm } from '@inertiajs/vue3';
+import { ref } from 'vue';
 import StudentLayout from '../../Layouts/StudentLayout.vue';
 import PostCard from '../../Components/PostCard.vue';
 
@@ -9,6 +10,8 @@ const props = defineProps({
   profile: Object,
   posts: Array,
   savedPostIds: Array,
+  viewerReactions: Object,
+  sort: String,
 });
 
 const form = useForm({
@@ -35,10 +38,31 @@ function onSubmit() {
 function isSaved(postId) {
   return props.savedPostIds.includes(postId);
 }
+
+function reactionFor(postId) {
+  return props.viewerReactions?.[postId] ?? null;
+}
+
+const EMOJIS = ['😀', '😂', '😍', '🥲', '😢', '🔥', '👍', '❤️', '🎉', '😮'];
+const emojiPickerOpen = ref(false);
+
+function insertEmoji(emoji) {
+  form.content += emoji;
+  emojiPickerOpen.value = false;
+}
 </script>
 
 <template>
   <div class="feed">
+    <div class="feed-header">
+      <h2>Feeds</h2>
+      <nav class="sort-tabs">
+        <Link href="/feed?sort=recents" :class="{ active: sort === 'recents' }">Recents</Link>
+        <Link href="/feed?sort=friends" :class="{ active: sort !== 'recents' && sort !== 'popular' }">Friends</Link>
+        <Link href="/feed?sort=popular" :class="{ active: sort === 'popular' }">Popular</Link>
+      </nav>
+    </div>
+
     <form class="composer-bar" @submit.prevent="onSubmit">
       <div class="composer-row">
         <span class="composer-avatar">
@@ -51,6 +75,12 @@ function isSaved(postId) {
           class="composer-input"
           placeholder="Share something…"
         />
+        <div class="composer-emoji-wrap">
+          <button type="button" class="composer-emoji-btn" @click="emojiPickerOpen = !emojiPickerOpen">😊</button>
+          <div v-if="emojiPickerOpen" class="emoji-picker">
+            <button v-for="emoji in EMOJIS" :key="emoji" type="button" @click="insertEmoji(emoji)">{{ emoji }}</button>
+          </div>
+        </div>
         <button type="submit" class="composer-send" :disabled="form.processing || !form.content.trim()">
           {{ form.processing ? 'Posting…' : 'Send' }}
         </button>
@@ -107,11 +137,13 @@ function isSaved(postId) {
 
     <div v-if="posts.length" class="post-list">
       <PostCard
-        v-for="post in posts"
+        v-for="(post, index) in posts"
         :key="post.id"
         :post="post"
         :current-user-id="$page.props.auth.user.id"
         :saved="isSaved(post.id)"
+        :viewer-reaction="reactionFor(post.id)"
+        :tint="index % 2 === 0 ? 'blue' : 'cream'"
       />
     </div>
     <p v-else class="empty">
@@ -125,6 +157,37 @@ function isSaved(postId) {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+
+.feed-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.feed-header h2 {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--nf-ink);
+}
+
+.sort-tabs {
+  display: flex;
+  gap: 1.25rem;
+}
+
+.sort-tabs :deep(a) {
+  color: var(--nf-muted);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+
+.sort-tabs :deep(a.active) {
+  color: var(--nf-ink);
+  font-weight: 800;
 }
 
 .composer-bar {
@@ -180,6 +243,50 @@ function isSaved(postId) {
 
 .composer-input::placeholder {
   color: var(--nf-muted);
+}
+
+.composer-emoji-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.composer-emoji-btn {
+  background: var(--nf-surface-2);
+  border: 1px solid var(--nf-line);
+  border-radius: 50%;
+  width: 2.2rem;
+  height: 2.2rem;
+  font-size: 1.05rem;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.emoji-picker {
+  position: absolute;
+  bottom: calc(100% + 0.4rem);
+  right: 0;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.2rem;
+  background: var(--nf-panel);
+  border: 1px solid var(--nf-line);
+  border-radius: 12px;
+  padding: 0.5rem;
+  box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.35);
+  z-index: 10;
+}
+
+.emoji-picker button {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 6px;
+}
+
+.emoji-picker button:hover {
+  background: var(--nf-surface-2);
 }
 
 .composer-send {

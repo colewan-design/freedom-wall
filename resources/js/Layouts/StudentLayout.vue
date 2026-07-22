@@ -7,6 +7,14 @@ const page = usePage();
 const authUser = computed(() => page.props.auth?.user ?? null);
 const pendingRequestCount = computed(() => page.props.pendingRequestCount ?? 0);
 const unreadMessageCount = computed(() => page.props.unreadMessageCount ?? 0);
+const storyFriends = computed(() => page.props.storyFriends ?? []);
+const suggestedFriends = computed(() => page.props.suggestedFriends ?? []);
+const requestedIds = ref([]);
+
+function followSuggestion(user) {
+  requestedIds.value.push(user.id);
+  router.post(route('friends.store', user.username), {}, { preserveScroll: true });
+}
 
 const isActive = (prefix) => computed(() => page.url.startsWith(prefix));
 
@@ -155,23 +163,36 @@ function logout() {
       </main>
 
       <aside class="sl-sidebar sl-right">
-        <div class="sl-panel">
+        <div v-if="storyFriends.length" class="sl-panel">
           <h2>Stories</h2>
           <div class="sl-stories">
-            <div v-for="n in 3" :key="n" class="sl-story-item">
-              <span class="sl-story-ring"></span>
-              <span class="sl-story-label">Soon</span>
-            </div>
+            <Link v-for="friend in storyFriends" :key="friend.id" :href="`/profile/${friend.username}`" class="sl-story-item">
+              <span class="sl-story-ring">
+                <img v-if="friend.avatar_url" :src="friend.avatar_url" alt="" />
+                <span v-else>{{ friend.name.slice(0, 1).toUpperCase() }}</span>
+              </span>
+              <span class="sl-story-label">{{ friend.name.split(' ')[0] }}</span>
+            </Link>
           </div>
         </div>
 
-        <div class="sl-panel">
+        <div v-if="suggestedFriends.length" class="sl-panel">
           <h2>Suggestions</h2>
           <ul class="sl-suggestion-list">
-            <li v-for="n in 3" :key="n">
-              <span class="sl-avatar sl-avatar-sm"></span>
-              <span class="sl-suggestion-name">Coming soon</span>
-              <button type="button" class="sl-follow-btn" disabled>Follow</button>
+            <li v-for="person in suggestedFriends" :key="person.id">
+              <span class="sl-avatar sl-avatar-sm">
+                <img v-if="person.avatar_url" :src="person.avatar_url" alt="" />
+                <span v-else>{{ person.name.slice(0, 1).toUpperCase() }}</span>
+              </span>
+              <span class="sl-suggestion-name">{{ person.name }}</span>
+              <button
+                type="button"
+                class="sl-follow-btn"
+                :disabled="requestedIds.includes(person.id)"
+                @click="followSuggestion(person)"
+              >
+                {{ requestedIds.includes(person.id) ? 'Requested' : 'Follow' }}
+              </button>
             </li>
           </ul>
         </div>
@@ -197,10 +218,12 @@ function logout() {
   --nf-accent: #0d9488;
   --nf-accent-contrast: #ffffff;
   --nf-surface-2: #2a2b33;
+  --post-tint-blue: #1b2430;
+  --post-tint-cream: #2a2620;
 }
 
 .sl-shell.light {
-  --nf-bg: #f7f7f9;
+  --nf-bg: #f5f6fa;
   --nf-panel: #ffffff;
   --nf-line: #e7e8ec;
   --nf-ink: #16181d;
@@ -208,6 +231,8 @@ function logout() {
   --nf-accent: #0d9488;
   --nf-accent-contrast: #ffffff;
   --nf-surface-2: #f1f1f4;
+  --post-tint-blue: #eaf2ff;
+  --post-tint-cream: #fff8e6;
 }
 
 .sl-shell {
@@ -411,6 +436,7 @@ function logout() {
   flex-direction: column;
   align-items: center;
   gap: 0.35rem;
+  text-decoration: none;
 }
 
 .sl-story-ring {
@@ -418,12 +444,28 @@ function logout() {
   height: 3rem;
   border-radius: 50%;
   background: var(--nf-surface-2);
-  border: 2px dashed var(--nf-line);
+  border: 2px solid var(--nf-accent);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--nf-accent);
+  font-weight: 700;
+}
+
+.sl-story-ring img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .sl-story-label {
   font-size: 0.68rem;
   color: var(--nf-muted);
+  max-width: 3.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .sl-suggestion-list {
@@ -448,14 +490,21 @@ function logout() {
 }
 
 .sl-follow-btn {
-  background: var(--nf-surface-2);
-  color: var(--nf-muted);
-  border: 1px solid var(--nf-line);
+  background: var(--nf-accent);
+  color: var(--nf-accent-contrast);
+  border: 1px solid var(--nf-accent);
   border-radius: 999px;
   padding: 0.3rem 0.8rem;
   font-size: 0.78rem;
   font-weight: 600;
-  cursor: not-allowed;
+  cursor: pointer;
+}
+
+.sl-follow-btn:disabled {
+  background: var(--nf-surface-2);
+  color: var(--nf-muted);
+  border-color: var(--nf-line);
+  cursor: default;
 }
 
 .sl-tag-grid {

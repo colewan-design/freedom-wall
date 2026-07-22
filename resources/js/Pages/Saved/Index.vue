@@ -5,11 +5,16 @@ import PostCard from '../../Components/PostCard.vue';
 
 defineOptions({ layout: StudentLayout });
 
-defineProps({
+const props = defineProps({
   posts: Array,
+  viewerReactions: Object,
 });
 
 const page = usePage();
+
+function reactionFor(postId) {
+  return props.viewerReactions?.[postId] ?? null;
+}
 </script>
 
 <template>
@@ -18,11 +23,13 @@ const page = usePage();
 
     <div v-if="posts.length" class="post-list">
       <PostCard
-        v-for="post in posts"
+        v-for="(post, index) in posts"
         :key="post.id"
         :post="post"
         :current-user-id="page.props.auth.user.id"
         :saved="true"
+        :viewer-reaction="reactionFor(post.id)"
+        :tint="index % 2 === 0 ? 'blue' : 'cream'"
       />
     </div>
     <p v-else class="empty">

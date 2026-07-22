@@ -4,7 +4,9 @@ namespace App\Http\Middleware;
 
 use App\Models\Friendship;
 use App\Models\Message;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -55,6 +57,33 @@ class HandleInertiaRequests extends Middleware
                     })
                     ->count()
                 : 0,
+            'suggestedFriends' => fn () => $request->user()?->role === 'student'
+                ? $this->suggestedFriendsFor($request->user())
+                : [],
+            'storyFriends' => fn () => $request->user()?->role === 'student'
+                ? User::query()
+                    ->whereIn('id', Friendship::friendIdsFor($request->user()))
+                    ->limit(8)
+                    ->get(['id', 'name', 'username', 'avatar_path'])
+                : [],
         ];
+    }
+
+    private function suggestedFriendsFor(User $user): Collection
+    {
+        $excludedIds = Friendship::query()
+            ->where('requester_id', $user->id)
+            ->orWhere('addressee_id', $user->id)
+            ->get()
+            ->flatMap(fn (Friendship $f) => [$f->requester_id, $f->addressee_id])
+            ->push($user->id)
+            ->unique();
+
+        return User::query()
+            ->where('role', 'student')
+            ->whereNotIn('id', $excludedIds)
+            ->inRandomOrder()
+            ->limit(4)
+            ->get(['id', 'name', 'username', 'avatar_path']);
     }
 }
