@@ -101,7 +101,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('login', [AdminAuthController::class, 'store'])->name('login.store');
     });
 
-    Route::middleware('auth')->group(function () {
+    Route::middleware(['auth', 'admin'])->group(function () {
         Route::post('logout', [AdminAuthController::class, 'destroy'])->name('logout');
 
         Route::get('dashboard', [SubmissionModerationController::class, 'dashboard'])->name('dashboard');

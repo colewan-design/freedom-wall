@@ -40,9 +40,12 @@ function logout() {
     <div class="sl-grid">
       <aside class="sl-sidebar sl-left">
         <div class="sl-profile-card">
-          <span class="sl-avatar">
-            <img v-if="authUser?.avatar_url" :src="authUser.avatar_url" alt="" />
-            <span v-else>{{ authUser?.name?.slice(0, 1).toUpperCase() }}</span>
+          <span class="sl-profile-avatar-wrap">
+            <span class="sl-profile-splash"></span>
+            <span class="sl-avatar sl-avatar-lg">
+              <img v-if="authUser?.avatar_url" :src="authUser.avatar_url" alt="" />
+              <span v-else>{{ authUser?.name?.slice(0, 1).toUpperCase() }}</span>
+            </span>
           </span>
           <div class="sl-profile-info">
             <span class="sl-profile-name">{{ authUser?.name }}</span>
@@ -166,19 +169,28 @@ function logout() {
         <div v-if="storyFriends.length" class="sl-panel">
           <h2>Stories</h2>
           <div class="sl-stories">
-            <Link v-for="friend in storyFriends" :key="friend.id" :href="`/profile/${friend.username}`" class="sl-story-item">
-              <span class="sl-story-ring">
-                <img v-if="friend.avatar_url" :src="friend.avatar_url" alt="" />
-                <span v-else>{{ friend.name.slice(0, 1).toUpperCase() }}</span>
+            <Link
+              v-for="friend in storyFriends"
+              :key="friend.id"
+              :href="`/profile/${friend.username}`"
+              class="sl-story-card"
+              :style="friend.avatar_url ? { backgroundImage: `url(${friend.avatar_url})` } : null"
+            >
+              <span v-if="!friend.avatar_url" class="sl-story-fallback">{{ friend.name.slice(0, 1).toUpperCase() }}</span>
+              <span class="sl-story-overlay">
+                <span class="sl-story-avatar">
+                  <img v-if="friend.avatar_url" :src="friend.avatar_url" alt="" />
+                  <span v-else>{{ friend.name.slice(0, 1).toUpperCase() }}</span>
+                </span>
+                <span class="sl-story-name">{{ friend.name }}</span>
               </span>
-              <span class="sl-story-label">{{ friend.name.split(' ')[0] }}</span>
             </Link>
           </div>
         </div>
 
-        <div v-if="suggestedFriends.length" class="sl-panel">
+        <div class="sl-panel">
           <h2>Suggestions</h2>
-          <ul class="sl-suggestion-list">
+          <ul v-if="suggestedFriends.length" class="sl-suggestion-list">
             <li v-for="person in suggestedFriends" :key="person.id">
               <span class="sl-avatar sl-avatar-sm">
                 <img v-if="person.avatar_url" :src="person.avatar_url" alt="" />
@@ -191,8 +203,15 @@ function logout() {
                 :disabled="requestedIds.includes(person.id)"
                 @click="followSuggestion(person)"
               >
-                {{ requestedIds.includes(person.id) ? 'Requested' : 'Follow' }}
+                {{ requestedIds.includes(person.id) ? 'Requested' : 'Add Friend' }}
               </button>
+            </li>
+          </ul>
+          <ul v-else class="sl-suggestion-list">
+            <li v-for="n in 3" :key="n" class="placeholder">
+              <span class="sl-avatar sl-avatar-sm"></span>
+              <span class="sl-suggestion-name placeholder-text">Add Friend</span>
+              <button type="button" class="sl-follow-btn" disabled>Add Friend</button>
             </li>
           </ul>
         </div>
@@ -220,10 +239,12 @@ function logout() {
   --nf-surface-2: #2a2b33;
   --post-tint-blue: #1b2430;
   --post-tint-cream: #2a2620;
+  --nf-nav-active-bg: var(--nf-accent);
+  --nf-nav-active-fg: var(--nf-accent-contrast);
 }
 
 .sl-shell.light {
-  --nf-bg: #f5f6fa;
+  --nf-bg: #ffffff;
   --nf-panel: #ffffff;
   --nf-line: #e7e8ec;
   --nf-ink: #16181d;
@@ -233,6 +254,8 @@ function logout() {
   --nf-surface-2: #f1f1f4;
   --post-tint-blue: #eaf2ff;
   --post-tint-cream: #fff8e6;
+  --nf-nav-active-bg: #14151a;
+  --nf-nav-active-fg: #ffffff;
 }
 
 .sl-shell {
@@ -261,14 +284,38 @@ function logout() {
   top: 1.5rem;
 }
 
+.sl-right {
+  gap: 2rem;
+}
+
 .sl-profile-card {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 0.75rem;
-  background: var(--nf-panel);
-  border: 1px solid var(--nf-line);
-  border-radius: 14px;
-  padding: 1rem;
+  gap: 0.6rem;
+  text-align: center;
+  padding: 0.5rem 0 1rem;
+}
+
+.sl-profile-avatar-wrap {
+  position: relative;
+  width: 5rem;
+  height: 5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sl-profile-splash {
+  position: absolute;
+  top: -0.4rem;
+  left: -1.1rem;
+  width: 4rem;
+  height: 4rem;
+  border-radius: 50%;
+  background: conic-gradient(from 120deg, #a78bfa, #f472b6, #fb923c, #60a5fa, #a78bfa);
+  filter: blur(1px);
+  opacity: 0.9;
 }
 
 .sl-avatar {
@@ -296,15 +343,25 @@ function logout() {
   height: 2.1rem;
 }
 
+.sl-avatar-lg {
+  position: relative;
+  z-index: 1;
+  width: 4rem;
+  height: 4rem;
+  font-size: 1.5rem;
+  border: 3px solid var(--nf-bg);
+}
+
 .sl-profile-info {
   display: flex;
   flex-direction: column;
+  align-items: center;
   min-width: 0;
 }
 
 .sl-profile-name {
   font-weight: 700;
-  font-size: 0.95rem;
+  font-size: 1rem;
   color: var(--nf-ink);
 }
 
@@ -317,10 +374,6 @@ function logout() {
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
-  background: var(--nf-panel);
-  border: 1px solid var(--nf-line);
-  border-radius: 14px;
-  padding: 0.5rem;
 }
 
 .sl-nav-item {
@@ -341,8 +394,8 @@ function logout() {
 }
 
 .sl-nav-item.active {
-  background: var(--nf-accent);
-  color: var(--nf-accent-contrast);
+  background: var(--nf-nav-active-bg);
+  color: var(--nf-nav-active-fg);
 }
 
 .sl-nav-item.inert {
@@ -360,14 +413,14 @@ function logout() {
   padding: 0 0.3rem;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.9);
-  color: var(--nf-accent);
+  color: var(--nf-nav-active-bg);
   font-size: 0.7rem;
   font-weight: 700;
 }
 
 .sl-nav-item:not(.active) .sl-badge {
-  background: var(--nf-accent);
-  color: var(--nf-accent-contrast);
+  background: var(--nf-nav-active-bg);
+  color: var(--nf-nav-active-fg);
 }
 
 .sl-sidebar-footer {
@@ -411,61 +464,102 @@ function logout() {
   min-width: 0;
 }
 
-.sl-panel {
-  background: var(--nf-panel);
-  border: 1px solid var(--nf-line);
-  border-radius: 14px;
-  padding: 1rem;
-}
-
 .sl-panel h2 {
   margin: 0 0 0.85rem;
-  font-size: 0.78rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--nf-ink);
+}
+
+.sl-suggestion-list li.placeholder {
+  opacity: 0.5;
+}
+
+.placeholder-text {
   color: var(--nf-muted);
 }
 
 .sl-stories {
   display: flex;
-  gap: 0.75rem;
+  gap: 0.6rem;
+  overflow-x: auto;
 }
 
-.sl-story-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.35rem;
-  text-decoration: none;
-}
-
-.sl-story-ring {
-  width: 3rem;
-  height: 3rem;
-  border-radius: 50%;
-  background: var(--nf-surface-2);
-  border: 2px solid var(--nf-accent);
+.sl-story-card {
+  position: relative;
+  flex: 0 0 auto;
+  width: 6.5rem;
+  height: 8.5rem;
+  border-radius: 16px;
+  background-color: var(--nf-surface-2);
+  background-size: cover;
+  background-position: center;
   overflow: hidden;
+  text-decoration: none;
+  display: block;
+}
+
+.sl-story-card::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 60%;
+  background: linear-gradient(0deg, rgba(0, 0, 0, 0.75) 0%, rgba(0, 0, 0, 0) 100%);
+}
+
+.sl-story-fallback {
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--nf-accent);
+  font-size: 2rem;
   font-weight: 700;
+  color: var(--nf-accent);
 }
 
-.sl-story-ring img {
+.sl-story-overlay {
+  position: absolute;
+  left: 0.5rem;
+  right: 0.5rem;
+  bottom: 0.5rem;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.sl-story-avatar {
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  border: 2px solid #fff;
+  background: var(--nf-surface-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--nf-accent);
+}
+
+.sl-story-avatar img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.sl-story-label {
-  font-size: 0.68rem;
-  color: var(--nf-muted);
-  max-width: 3.5rem;
+.sl-story-name {
+  min-width: 0;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
 .sl-suggestion-list {
