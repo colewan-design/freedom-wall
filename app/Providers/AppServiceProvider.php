@@ -46,5 +46,9 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('register', function (Request $request) {
             return Limit::perMinutes(10, 3)->by($request->ip());
         });
+
+        RateLimiter::for('direct-message', function (Request $request) {
+            return Limit::perMinute(20)->by('dm|'.$request->user()->id);
+        });
     }
 }

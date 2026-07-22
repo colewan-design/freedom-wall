@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\Friendship;
+use App\Models\Message;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -40,6 +41,19 @@ class HandleInertiaRequests extends Middleware
             ],
             'pendingRequestCount' => fn () => $request->user()?->role === 'student'
                 ? Friendship::query()->where('addressee_id', $request->user()->id)->where('status', 'pending')->count()
+                : 0,
+            'unreadMessageCount' => fn () => $request->user()?->role === 'student'
+                ? Message::query()
+                    ->join('conversation_participants as cp', function ($join) use ($request) {
+                        $join->on('cp.conversation_id', '=', 'messages.conversation_id')
+                            ->where('cp.user_id', $request->user()->id);
+                    })
+                    ->where('messages.user_id', '!=', $request->user()->id)
+                    ->where(function ($q) {
+                        $q->whereNull('cp.last_read_at')
+                            ->orWhereColumn('messages.created_at', '>', 'cp.last_read_at');
+                    })
+                    ->count()
                 : 0,
         ];
     }

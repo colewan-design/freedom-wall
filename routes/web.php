@@ -8,6 +8,8 @@ use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\ChatController;
+use App\Http\Controllers\ConversationController;
+use App\Http\Controllers\ConversationMessageController;
 use App\Http\Controllers\FeedController;
 use App\Http\Controllers\FriendController;
 use App\Http\Controllers\JournalController;
@@ -78,6 +80,15 @@ Route::middleware(['auth', 'student'])->group(function () {
         Route::post('journal', [JournalController::class, 'store'])->name('journal.store');
         Route::patch('journal/{entry}', [JournalController::class, 'update'])->name('journal.update');
         Route::delete('journal/{entry}', [JournalController::class, 'destroy'])->name('journal.destroy');
+
+        Route::get('messages', [ConversationController::class, 'index'])->name('messages.index');
+        Route::post('messages', [ConversationController::class, 'store'])->name('conversations.store');
+        Route::get('messages/{conversation}', [ConversationController::class, 'show'])->name('conversations.show');
+        Route::delete('messages/{conversation}/leave', [ConversationController::class, 'leave'])->name('conversations.leave');
+        Route::get('messages/{conversation}/items', [ConversationMessageController::class, 'fetch'])->name('conversations.messages.fetch');
+        Route::post('messages/{conversation}/items', [ConversationMessageController::class, 'store'])
+            ->middleware('throttle:direct-message')
+            ->name('conversations.messages.store');
     });
 });
 

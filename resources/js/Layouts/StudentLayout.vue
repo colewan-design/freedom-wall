@@ -6,6 +6,7 @@ const page = usePage();
 
 const authUser = computed(() => page.props.auth?.user ?? null);
 const pendingRequestCount = computed(() => page.props.pendingRequestCount ?? 0);
+const unreadMessageCount = computed(() => page.props.unreadMessageCount ?? 0);
 
 const isActive = (prefix) => computed(() => page.url.startsWith(prefix));
 
@@ -50,13 +51,14 @@ function logout() {
             News Feed
           </Link>
 
-          <span class="sl-nav-item inert" title="Coming soon">
+          <Link href="/messages" class="sl-nav-item" :class="{ active: isActive('/messages').value }">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <rect x="3" y="5" width="18" height="14" rx="2.5" stroke="currentColor" stroke-width="1.7" />
               <path d="m4 7 8 6 8-6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
             Messages
-          </span>
+            <span v-if="unreadMessageCount > 0" class="sl-badge">{{ unreadMessageCount }}</span>
+          </Link>
 
           <Link href="/wall" class="sl-nav-item" :class="{ active: isActive('/wall').value }">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
