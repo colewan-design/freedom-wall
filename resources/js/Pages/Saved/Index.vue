@@ -1,9 +1,9 @@
 <script setup>
 import { Link, usePage } from '@inertiajs/vue3';
-import NewsfeedLayout from '../../Layouts/NewsfeedLayout.vue';
+import StudentLayout from '../../Layouts/StudentLayout.vue';
 import PostCard from '../../Components/PostCard.vue';
 
-defineOptions({ layout: NewsfeedLayout });
+defineOptions({ layout: StudentLayout });
 
 defineProps({
   posts: Array,

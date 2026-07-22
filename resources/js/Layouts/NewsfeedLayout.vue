@@ -7,19 +7,9 @@ const isActive = (path) => computed(() => page.url === path || page.url.startsWi
 const isChatPage = computed(() => page.component === 'Chat');
 const isWallPage = computed(() => page.component === 'Wall');
 const isAdminPage = computed(() => page.component?.startsWith('Admin/'));
-const isStudentPage = computed(() =>
-  ['Feed/', 'Profile/', 'Friends/', 'Journal/', 'Saved/'].some((prefix) => page.component?.startsWith(prefix)),
-);
-const authUser = computed(() => page.props.auth?.user ?? null);
-const isStudentAuthed = computed(() => authUser.value?.role === 'student');
-const pendingRequestCount = computed(() => page.props.pendingRequestCount ?? 0);
 
 function logout() {
   router.post(route('admin.logout'));
-}
-
-function logoutStudent() {
-  router.post(route('logout'));
 }
 
 const search = ref('');
@@ -69,18 +59,6 @@ function excerpt(text, length = 60) {
       <nav v-if="!isAdminPage" class="nf-tabs">
         <Link href="/wall" :class="{ active: isActive('/wall').value }">News Feed</Link>
         <Link href="/chat" :class="{ active: isActive('/chat').value }">Chat</Link>
-        <template v-if="isStudentAuthed">
-          <Link href="/feed" :class="{ active: isActive('/feed').value }">Feed</Link>
-          <Link href="/friends" :class="{ active: page.url.startsWith('/friends') }">
-            Friends
-            <span v-if="pendingRequestCount > 0" class="nf-badge">{{ pendingRequestCount }}</span>
-          </Link>
-          <Link href="/journal" :class="{ active: page.url.startsWith('/journal') }">Journal</Link>
-          <Link href="/saved" :class="{ active: page.url.startsWith('/saved') }">Saved</Link>
-          <Link :href="`/profile/${authUser.username}`" :class="{ active: page.url.startsWith('/profile') }">
-            Profile
-          </Link>
-        </template>
       </nav>
       <span v-else class="nf-admin-label">Moderation Dashboard</span>
 
@@ -109,21 +87,7 @@ function excerpt(text, length = 60) {
             />
           </svg>
         </button>
-        <template v-if="isStudentAuthed">
-          <span class="nf-avatar" :title="authUser.name">
-            <img v-if="authUser.avatar_url" :src="authUser.avatar_url" alt="" />
-            <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path
-                d="M21 11.5a8.5 8.5 0 0 1-12.36 7.58L4 20l1.02-4.55A8.5 8.5 0 1 1 21 11.5Z"
-                stroke="currentColor"
-                stroke-width="1.6"
-              />
-            </svg>
-          </span>
-          <span class="nf-greeting">{{ authUser.name }}</span>
-          <button type="button" class="nf-logout-btn" @click="logoutStudent">Log out</button>
-        </template>
-        <template v-else-if="!isAdminPage">
+        <template v-if="!isAdminPage">
           <span class="nf-avatar" title="Browsing anonymously">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path
@@ -139,8 +103,8 @@ function excerpt(text, length = 60) {
       </div>
     </header>
 
-    <div class="nf-body" :class="{ 'admin-mode': isAdminPage || isStudentPage }">
-      <aside v-if="!isAdminPage && !isStudentPage" class="nf-sidebar nf-left">
+    <div class="nf-body" :class="{ 'admin-mode': isAdminPage }">
+      <aside v-if="!isAdminPage" class="nf-sidebar nf-left">
         <label v-if="!isChatPage" class="nf-search">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8" />
@@ -203,7 +167,7 @@ function excerpt(text, length = 60) {
         <slot />
       </main>
 
-      <aside v-if="!isAdminPage && !isStudentPage" class="nf-sidebar nf-right">
+      <aside v-if="!isAdminPage" class="nf-sidebar nf-right">
         <div class="nf-panel">
           <h2>{{ isChatPage ? 'Recent Nicknames' : 'Recent Highlights' }}</h2>
           <ul v-if="isChatPage && recentChatNicknames.length" class="nf-highlights">
@@ -310,21 +274,6 @@ function excerpt(text, length = 60) {
 .nf-tabs :deep(a.active) {
   color: var(--nf-ink);
   border-bottom-color: var(--nf-accent);
-}
-
-.nf-tabs :deep(.nf-badge) {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 1.1rem;
-  height: 1.1rem;
-  padding: 0 0.3rem;
-  margin-left: 0.35rem;
-  border-radius: 999px;
-  background: var(--nf-accent);
-  color: var(--nf-accent-contrast);
-  font-size: 0.68rem;
-  font-weight: 700;
 }
 
 .nf-admin-label {

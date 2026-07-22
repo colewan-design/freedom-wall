@@ -1,9 +1,9 @@
 <script setup>
 import { router, useForm } from '@inertiajs/vue3';
 import { ref } from 'vue';
-import NewsfeedLayout from '../../Layouts/NewsfeedLayout.vue';
+import StudentLayout from '../../Layouts/StudentLayout.vue';
 
-defineOptions({ layout: NewsfeedLayout });
+defineOptions({ layout: StudentLayout });
 
 const props = defineProps({
   friends: Array,

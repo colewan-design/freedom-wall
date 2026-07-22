@@ -1,8 +1,8 @@
 <script setup>
 import { useForm } from '@inertiajs/vue3';
-import NewsfeedLayout from '../../Layouts/NewsfeedLayout.vue';
+import StudentLayout from '../../Layouts/StudentLayout.vue';
 
-defineOptions({ layout: NewsfeedLayout });
+defineOptions({ layout: StudentLayout });
 
 const props = defineProps({
   profile: Object,

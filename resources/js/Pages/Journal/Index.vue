@@ -1,10 +1,10 @@
 <script setup>
 import { router, useForm } from '@inertiajs/vue3';
 import { ref } from 'vue';
-import NewsfeedLayout from '../../Layouts/NewsfeedLayout.vue';
+import StudentLayout from '../../Layouts/StudentLayout.vue';
 import { formatDateTime } from '../../lib/date';
 
-defineOptions({ layout: NewsfeedLayout });
+defineOptions({ layout: StudentLayout });
 
 defineProps({
   entries: Array,

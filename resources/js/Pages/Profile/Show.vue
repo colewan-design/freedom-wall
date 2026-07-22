@@ -1,7 +1,7 @@
 <script setup>
-import NewsfeedLayout from '../../Layouts/NewsfeedLayout.vue';
+import StudentLayout from '../../Layouts/StudentLayout.vue';
 
-defineOptions({ layout: NewsfeedLayout });
+defineOptions({ layout: StudentLayout });
 
 defineProps({
   profile: Object,
