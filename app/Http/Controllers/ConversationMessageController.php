@@ -60,11 +60,13 @@ class ConversationMessageController extends Controller
             ]);
         }
 
-        $message = Message::create([
+        $message = new Message([
             'conversation_id' => $conversation->id,
             'user_id' => $user->id,
             'content' => $content,
         ]);
+        $message->created_at = now();
+        $message->save();
 
         $conversation->participants()->updateExistingPivot($user->id, ['last_read_at' => now()]);
 
