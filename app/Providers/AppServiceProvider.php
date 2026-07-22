@@ -27,8 +27,13 @@ class AppServiceProvider extends ServiceProvider
     {
         Vite::prefetch(concurrency: 3);
 
-        RedirectIfAuthenticated::redirectUsing(fn () => route('admin.dashboard'));
-        Authenticate::redirectUsing(fn () => route('admin.login'));
+        RedirectIfAuthenticated::redirectUsing(fn (Request $request) => $request->user()?->role === 'admin'
+            ? route('admin.dashboard')
+            : route('feed'));
+
+        Authenticate::redirectUsing(fn (Request $request) => $request->routeIs('admin.*')
+            ? route('admin.login')
+            : route('login'));
 
         RateLimiter::for('submission', function (Request $request) {
             return Limit::perMinutes(5, 3)->by($request->ip());
@@ -36,6 +41,10 @@ class AppServiceProvider extends ServiceProvider
 
         RateLimiter::for('chat-message', function (Request $request) {
             return Limit::perMinute(8)->by($request->ip().'|'.$request->session()->getId());
+        });
+
+        RateLimiter::for('register', function (Request $request) {
+            return Limit::perMinutes(10, 3)->by($request->ip());
         });
     }
 }
