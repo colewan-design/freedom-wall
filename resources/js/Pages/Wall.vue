@@ -1,13 +1,70 @@
 <script setup>
-import { Link } from '@inertiajs/vue3';
+import { useForm, usePage } from '@inertiajs/vue3';
 import { computed, inject, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import NewsfeedLayout from '../Layouts/NewsfeedLayout.vue';
+import TurnstileWidget from '../Components/TurnstileWidget.vue';
 import { timeAgo } from '../lib/date';
 
 defineOptions({ layout: NewsfeedLayout });
 
 const props = defineProps({
   posts: { type: Array, required: true },
+});
+
+const page = usePage();
+const successMessage = computed(() => page.props.flash?.success ?? null);
+const composerTextarea = ref(null);
+const fileInput = ref(null);
+const composerModalOpen = ref(false);
+
+const composerForm = useForm({
+  content: '',
+  images: [],
+  captchaToken: null,
+});
+
+function onComposerFileChange(e) {
+  composerForm.images = Array.from(e.target.files || []);
+}
+
+function onComposerSubmit() {
+  if (!composerForm.content.trim()) {
+    composerForm.setError('content', 'Please write something before submitting.');
+    return;
+  }
+  if (composerForm.captchaToken === null) {
+    composerForm.setError('captchaToken', 'Please complete the CAPTCHA challenge.');
+    return;
+  }
+
+  composerForm.post(route('submissions.store'), {
+    forceFormData: true,
+    preserveScroll: true,
+    onSuccess: () => {
+      composerForm.reset();
+      if (fileInput.value) fileInput.value.value = '';
+      closeComposerModal();
+    },
+  });
+}
+
+function openComposerModal() {
+  composerModalOpen.value = true;
+  nextTick(() => composerTextarea.value?.focus());
+}
+
+function closeComposerModal() {
+  composerModalOpen.value = false;
+}
+
+function focusComposer() {
+  openComposerModal();
+}
+
+onMounted(() => {
+  if (window.location.hash === '#composer') {
+    openComposerModal();
+  }
 });
 
 const search = inject('wallSearch', ref(''));
@@ -106,6 +163,10 @@ function prevImage() {
 }
 
 function onLightboxKeydown(e) {
+  if (e.key === 'Escape' && composerModalOpen.value) {
+    closeComposerModal();
+    return;
+  }
   if (!lightbox.open) return;
   if (e.key === 'Escape') closeLightbox();
   else if (e.key === 'ArrowRight') nextImage();
@@ -127,9 +188,21 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
       </div>
     </div>
 
+    <button id="composer" type="button" class="composer-trigger" @click="openComposerModal">
+      <img src="/images/branding/bsufw-mark-64.png" alt="" class="composer-avatar" />
+      <span class="composer-trigger-text">What's on your mind?</span>
+      <span class="composer-trigger-photo" aria-hidden="true">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <rect x="3" y="4" width="18" height="16" rx="3" stroke="currentColor" stroke-width="1.6" />
+          <circle cx="8.5" cy="10" r="1.6" fill="currentColor" />
+          <path d="m4 17 5-5 4 4 3-3 4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </span>
+    </button>
+
     <div class="feed-header">
       <h2>Latest Newsfeed</h2>
-      <Link href="/" class="start-btn">Start a Discussion</Link>
+      <button type="button" class="start-btn" @click="focusComposer">Start a Discussion</button>
     </div>
 
     <p v-if="filteredPosts.length === 0" class="hint">
@@ -138,7 +211,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
 
     <div v-else class="feed-list">
       <article v-for="post in filteredPosts" :id="`post-${post.id}`" :key="post.id" class="feed-card">
-        <div class="feed-header">
+        <div class="feed-post-header">
           <img src="/images/branding/bsufw-mark-64.png" alt="" class="feed-avatar" />
           <div class="feed-header-text">
             <div class="feed-name-row">
@@ -150,13 +223,6 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
                 />
                 <path d="m9.2 12.4 1.8 1.8 3.8-4.2" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
               </svg>
-              <span v-if="post.fb_post_id" class="fb-badge" title="Also posted on Facebook">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                  <path
-                    d="M22 12a10 10 0 1 0-11.56 9.88v-6.99H7.9V12h2.54V9.8c0-2.5 1.49-3.89 3.78-3.89 1.1 0 2.24.2 2.24.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56V12h2.78l-.44 2.89h-2.34v6.99A10 10 0 0 0 22 12Z"
-                  />
-                </svg>
-              </span>
             </div>
             <div class="feed-sub-meta">
               <span class="timestamp">{{ timeAgo(post.reviewed_at) }}</span>
@@ -274,6 +340,75 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
         </div>
       </div>
     </Teleport>
+
+    <Teleport to="body">
+      <div v-if="composerModalOpen" class="composer-modal-overlay" @click.self="closeComposerModal">
+        <div class="composer-modal">
+          <div class="composer-modal-header">
+            <h3>Create post</h3>
+            <button type="button" class="composer-modal-close" aria-label="Close" @click="closeComposerModal">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+              </svg>
+            </button>
+          </div>
+
+          <div class="composer-modal-user">
+            <img src="/images/branding/bsufw-mark-64.png" alt="" class="composer-avatar" />
+            <div class="composer-modal-user-text">
+              <span class="composer-modal-name">BSU Freedom Wall</span>
+              <span class="composer-modal-sub">Anonymous &middot; reviewed before it's posted</span>
+            </div>
+          </div>
+
+          <form class="composer-form" @submit.prevent="onComposerSubmit">
+            <textarea
+              ref="composerTextarea"
+              v-model="composerForm.content"
+              rows="5"
+              placeholder="What's on your mind?"
+              class="composer-modal-textarea"
+            ></textarea>
+
+            <label class="composer-attach-row">
+              <span>
+                {{ composerForm.images.length ? `${composerForm.images.length} image${composerForm.images.length > 1 ? 's' : ''} selected` : 'Add to your post' }}
+              </span>
+              <span class="composer-attach-icon">
+                <input
+                  ref="fileInput"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  multiple
+                  @change="onComposerFileChange"
+                />
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <rect x="3" y="4" width="18" height="16" rx="3" stroke="currentColor" stroke-width="1.6" />
+                  <circle cx="8.5" cy="10" r="1.6" fill="currentColor" />
+                  <path d="m4 17 5-5 4 4 3-3 4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </span>
+            </label>
+
+            <ul v-if="composerForm.images.length" class="composer-file-list">
+              <li v-for="image in composerForm.images" :key="`${image.name}-${image.lastModified}`">{{ image.name }}</li>
+            </ul>
+
+            <TurnstileWidget @verified="(token) => (composerForm.captchaToken = token)" />
+
+            <p v-if="composerForm.errors.content" class="composer-banner error">{{ composerForm.errors.content }}</p>
+            <p v-else-if="composerForm.errors.captchaToken" class="composer-banner error">{{ composerForm.errors.captchaToken }}</p>
+            <p v-else-if="composerForm.errors.images" class="composer-banner error">{{ composerForm.errors.images }}</p>
+            <p v-else-if="composerForm.errors['images.0']" class="composer-banner error">{{ composerForm.errors['images.0'] }}</p>
+            <p v-if="successMessage" class="composer-banner success">{{ successMessage }}</p>
+
+            <button type="submit" class="composer-modal-submit" :disabled="composerForm.processing || !composerForm.content.trim()">
+              {{ composerForm.processing ? 'Posting…' : 'Post anonymously' }}
+            </button>
+          </form>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -324,6 +459,254 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
   line-height: 1.5;
 }
 
+.composer-trigger {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  background: var(--nf-panel);
+  border: 1px solid var(--nf-line);
+  border-radius: 14px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1.5rem;
+  scroll-margin-top: 1.5rem;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  transition: border-color 0.15s ease;
+}
+
+.composer-trigger:hover {
+  border-color: var(--nf-accent);
+}
+
+.composer-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.composer-trigger-text {
+  flex: 1;
+  min-width: 0;
+  padding: 0.6rem 0.9rem;
+  border-radius: 999px;
+  background: var(--nf-surface-2);
+  color: var(--nf-muted);
+  font-size: 0.92rem;
+}
+
+.composer-trigger-photo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.2rem;
+  height: 2.2rem;
+  color: var(--nf-accent);
+  flex-shrink: 0;
+}
+
+.composer-form {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.composer-file-list {
+  margin: -0.3rem 0 0;
+  padding-left: 1.1rem;
+  color: var(--nf-muted);
+  font-size: 0.8rem;
+}
+
+.composer-banner {
+  margin: 0;
+  padding: 0.6rem 0.85rem;
+  border-radius: 10px;
+  font-size: 0.85rem;
+}
+
+.composer-banner.error {
+  color: #f87171;
+  background: rgba(220, 38, 38, 0.16);
+}
+
+.composer-banner.success {
+  color: var(--status-active-fg, #4ade80);
+  background: var(--status-active-bg, rgba(21, 128, 61, 0.18));
+}
+
+.composer-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 4vh 1rem;
+  overflow-y: auto;
+}
+
+.composer-modal {
+  width: 100%;
+  max-width: 500px;
+  background: var(--nf-panel);
+  border: 1px solid var(--nf-line);
+  border-radius: 12px;
+  padding: 0.5rem 1rem 1rem;
+}
+
+.composer-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--nf-line);
+  margin-bottom: 0.9rem;
+}
+
+.composer-modal-header h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--nf-ink);
+}
+
+.composer-modal-close {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 50%;
+  border: none;
+  background: var(--nf-surface-2);
+  color: var(--nf-ink);
+  cursor: pointer;
+}
+
+.composer-modal-close:hover {
+  background: var(--nf-line);
+}
+
+.composer-modal-user {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.85rem;
+}
+
+.composer-modal-user-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.composer-modal-name {
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: var(--nf-ink);
+}
+
+.composer-modal-sub {
+  font-size: 0.78rem;
+  color: var(--nf-muted);
+}
+
+.composer-modal-textarea {
+  width: 100%;
+  min-height: 7rem;
+  padding: 0;
+  border: none;
+  background: transparent;
+  font: inherit;
+  font-size: 1.15rem;
+  color: var(--nf-ink);
+  resize: vertical;
+}
+
+.composer-modal-textarea:focus {
+  outline: none;
+}
+
+.composer-modal-textarea::placeholder {
+  color: var(--nf-muted);
+}
+
+.composer-attach-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.6rem 0.85rem;
+  border: 1px solid var(--nf-line);
+  border-radius: 10px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--nf-ink);
+  cursor: pointer;
+}
+
+.composer-attach-row:hover {
+  border-color: var(--nf-accent);
+}
+
+.composer-attach-icon {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  color: var(--nf-accent);
+  flex-shrink: 0;
+}
+
+.composer-attach-icon input[type='file'] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.composer-modal-submit {
+  width: 100%;
+  border: none;
+  border-radius: 8px;
+  padding: 0.65rem 1rem;
+  background: var(--nf-accent);
+  color: var(--nf-accent-contrast);
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.composer-modal-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (max-width: 480px) {
+  .composer-trigger .composer-avatar {
+    display: none;
+  }
+
+  .composer-modal {
+    max-width: 100%;
+  }
+}
+
 .feed-header {
   display: flex;
   align-items: center;
@@ -341,11 +724,14 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
 .start-btn {
   background: var(--nf-accent);
   color: var(--nf-accent-contrast);
+  border: none;
   text-decoration: none;
+  font: inherit;
   font-weight: 600;
   font-size: 0.82rem;
   padding: 0.5rem 0.9rem;
   border-radius: 8px;
+  cursor: pointer;
 }
 
 .hint {
@@ -367,7 +753,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
   padding: 1rem;
 }
 
-.feed-header {
+.feed-post-header {
   display: flex;
   align-items: flex-start;
   gap: 0.6rem;
@@ -402,18 +788,6 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
 .feed-verified {
   color: var(--nf-accent);
   flex-shrink: 0;
-}
-
-.fb-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--nf-surface-2);
-  color: var(--nf-accent);
-  margin-left: 0.15rem;
 }
 
 .feed-sub-meta {

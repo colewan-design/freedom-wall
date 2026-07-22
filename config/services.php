@@ -40,12 +40,6 @@ return [
         'password' => env('ADMIN_PASSWORD'),
     ],
 
-    'facebook' => [
-        'api_version' => env('FB_API_VERSION', 'v21.0'),
-        'page_id' => env('FB_PAGE_ID'),
-        'access_token' => env('FB_PAGE_ACCESS_TOKEN'),
-    ],
-
     'turnstile' => [
         'secret' => env('TURNSTILE_SECRET_KEY'),
     ],

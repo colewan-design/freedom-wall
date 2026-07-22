@@ -121,7 +121,12 @@ onBeforeUnmount(() => {
 
     <div class="chat-shell">
       <div ref="listRef" class="chat-stream">
-        <article v-for="message in messages" :key="message.id" class="chat-bubble">
+        <article
+          v-for="message in messages"
+          :key="message.id"
+          class="chat-bubble"
+          :class="{ own: message.nickname === chatNickname }"
+        >
           <div class="chat-meta">
             <strong>{{ message.nickname }}</strong>
             <span>{{ timeAgo(message.sent_at) }}</span>
@@ -234,15 +239,22 @@ onBeforeUnmount(() => {
   padding: 1rem;
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: 0.85rem;
 }
 
 .chat-bubble {
-  max-width: min(720px, 100%);
+  max-width: min(560px, 82%);
   padding: 0.9rem 1rem;
   border-radius: 16px;
   background: var(--nf-surface-2);
   border: 1px solid color-mix(in srgb, var(--nf-line) 75%, transparent);
+}
+
+.chat-bubble.own {
+  align-self: flex-end;
+  background: var(--nf-accent);
+  border-color: var(--nf-accent);
 }
 
 .chat-meta {
@@ -262,10 +274,22 @@ onBeforeUnmount(() => {
   color: var(--nf-muted);
 }
 
+.chat-bubble.own .chat-meta strong {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.chat-bubble.own .chat-meta span {
+  color: rgba(255, 255, 255, 0.72);
+}
+
 .chat-bubble p {
   margin: 0;
   white-space: pre-wrap;
   line-height: 1.5;
+}
+
+.chat-bubble.own p {
+  color: #fff;
 }
 
 .empty-state {

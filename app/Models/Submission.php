@@ -32,11 +32,6 @@ class Submission extends Model
         $query->where('status', 'approved');
     }
 
-    public function scopeFailedFacebook(Builder $query): void
-    {
-        $query->where('status', 'approved')->whereNull('fb_post_id');
-    }
-
     protected function imageUrls(): Attribute
     {
         return Attribute::get(function (): array {

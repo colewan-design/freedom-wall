@@ -17,8 +17,8 @@ export const adminApi = {
   getPending: (page = 1, limit = 8) =>
     request(`/admin/submissions?status=pending&page=${page}&limit=${limit}`),
 
-  getFailedFacebook: (page = 1, limit = 8) =>
-    request(`/admin/submissions/failed-fb?page=${page}&limit=${limit}`),
+  getApproved: (page = 1, limit = 8) =>
+    request(`/admin/submissions?status=approved&page=${page}&limit=${limit}`),
 
   getStats: () => request('/admin/stats'),
 
@@ -26,6 +26,4 @@ export const adminApi = {
     request(`/admin/submissions/${id}/approve`, { method: 'POST', body: { content } }),
 
   reject: (id) => request(`/admin/submissions/${id}/reject`, { method: 'POST' }),
-
-  retryFacebook: (id) => request(`/admin/submissions/${id}/retry-fb`, { method: 'POST' }),
 };

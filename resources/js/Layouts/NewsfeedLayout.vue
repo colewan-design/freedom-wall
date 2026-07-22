@@ -5,6 +5,7 @@ import { computed, onMounted, provide, ref } from 'vue';
 const page = usePage();
 const isActive = (path) => computed(() => page.url === path || page.url.startsWith(`${path}?`));
 const isChatPage = computed(() => page.component === 'Chat');
+const isWallPage = computed(() => page.component === 'Wall');
 const isAdminPage = computed(() => page.component?.startsWith('Admin/'));
 const isStudentPage = computed(
   () => page.component?.startsWith('Feed/') || page.component?.startsWith('Profile/'),
@@ -65,7 +66,6 @@ function excerpt(text, length = 60) {
       </span>
 
       <nav v-if="!isAdminPage" class="nf-tabs">
-        <Link href="/" :class="{ active: isActive('/').value }">Discussions</Link>
         <Link href="/wall" :class="{ active: isActive('/wall').value }">News Feed</Link>
         <Link href="/chat" :class="{ active: isActive('/chat').value }">Chat</Link>
         <template v-if="isStudentAuthed">
@@ -220,7 +220,8 @@ function excerpt(text, length = 60) {
           <p>
             {{ isChatPage ? 'Use the moderated wall if you want a post reviewed and featured publicly.' : "Submit your own post anonymously — it'll show up here once reviewed." }}
           </p>
-          <Link href="/" class="nf-cta-btn">{{ isChatPage ? 'Open submission form' : 'Start a Discussion' }}</Link>
+          <a v-if="isWallPage" href="#composer" class="nf-cta-btn">Start a Discussion</a>
+          <Link v-else href="/wall#composer" class="nf-cta-btn">{{ isChatPage ? 'Open submission form' : 'Start a Discussion' }}</Link>
         </div>
       </aside>
     </div>
@@ -253,10 +254,7 @@ function excerpt(text, length = 60) {
 }
 
 .nf-shell {
-  width: 100vw;
-  position: relative;
-  left: 50%;
-  transform: translateX(-50%);
+  width: 100%;
   min-height: 100vh;
   background: var(--nf-bg);
   color: var(--nf-ink);
@@ -566,6 +564,55 @@ function excerpt(text, length = 60) {
 
   .nf-right {
     order: 3;
+  }
+}
+
+@media (max-width: 640px) {
+  .nf-topbar {
+    flex-wrap: wrap;
+    row-gap: 0.6rem;
+    padding: 0.7rem 1rem;
+  }
+
+  .nf-brand {
+    font-size: 0.95rem;
+    gap: 0.45rem;
+  }
+
+  .nf-brand-mark {
+    width: 1.7rem;
+    height: 1.7rem;
+  }
+
+  .nf-tabs,
+  .nf-admin-label {
+    order: 3;
+    flex-basis: 100%;
+  }
+
+  .nf-tabs {
+    gap: 1.1rem;
+    overflow-x: auto;
+  }
+
+  .nf-user {
+    gap: 0.5rem;
+    margin-left: auto;
+  }
+
+  .nf-greeting {
+    display: none;
+  }
+
+  .nf-logout-btn {
+    white-space: nowrap;
+    font-size: 0.8rem;
+    padding: 0.4rem 0.7rem;
+  }
+
+  .nf-body {
+    padding: 1rem 1rem 2.5rem;
+    gap: 1rem;
   }
 }
 </style>
