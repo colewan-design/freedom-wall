@@ -29,6 +29,8 @@ class User extends Authenticatable implements MustVerifyEmailContract
         'role',
         'bio',
         'avatar_path',
+        'google_id',
+        'email_verified_at',
     ];
 
     /**
