@@ -87,18 +87,7 @@ function excerpt(text, length = 60) {
             />
           </svg>
         </button>
-        <template v-if="!isAdminPage">
-          <span class="nf-avatar" title="Browsing anonymously">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path
-                d="M21 11.5a8.5 8.5 0 0 1-12.36 7.58L4 20l1.02-4.55A8.5 8.5 0 1 1 21 11.5Z"
-                stroke="currentColor"
-                stroke-width="1.6"
-              />
-            </svg>
-          </span>
-          <span class="nf-greeting">Hello, {{ isChatPage ? chatNickname : 'Anonymous' }}</span>
-        </template>
+        <Link v-if="!isAdminPage" href="/login" class="nf-login-btn">Log in</Link>
         <button v-else type="button" class="nf-logout-btn" @click="logout">Log out</button>
       </div>
     </header>
@@ -193,6 +182,30 @@ function excerpt(text, length = 60) {
           </p>
           <a v-if="isWallPage" href="#composer" class="nf-cta-btn">Start a Discussion</a>
           <Link v-else href="/wall#composer" class="nf-cta-btn">{{ isChatPage ? 'Open submission form' : 'Start a Discussion' }}</Link>
+        </div>
+
+        <div class="nf-panel">
+          <h2>Apps</h2>
+          <ul class="nf-app-list">
+            <li>
+              <a href="https://salidumay.com/" target="_blank" rel="noopener noreferrer" class="nf-app-link">
+                <span class="nf-app-name">Free Movie Site</span>
+                <span class="nf-app-url">salidumay.com</span>
+              </a>
+            </li>
+            <li>
+              <a href="https://bg-remover.salidumay.com/" target="_blank" rel="noopener noreferrer" class="nf-app-link">
+                <span class="nf-app-name">AI Background Remover</span>
+                <span class="nf-app-url">bg-remover.salidumay.com</span>
+              </a>
+            </li>
+            <li>
+              <a href="https://gpx2video.salidumay.com/" target="_blank" rel="noopener noreferrer" class="nf-app-link">
+                <span class="nf-app-name">GPX to Video</span>
+                <span class="nf-app-url">gpx2video.salidumay.com</span>
+              </a>
+            </li>
+          </ul>
         </div>
       </aside>
     </div>
@@ -302,22 +315,22 @@ function excerpt(text, length = 60) {
   cursor: pointer;
 }
 
-.nf-avatar {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  border-radius: 50%;
-  background: var(--nf-panel);
-  border: 1px solid var(--nf-line);
-  color: var(--nf-accent);
+.nf-login-btn {
+  background: var(--nf-accent);
+  border: 1px solid var(--nf-accent);
+  color: var(--nf-accent-contrast);
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: 8px;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.15s ease, border-color 0.15s ease;
 }
 
-.nf-greeting {
-  font-size: 0.85rem;
-  color: var(--nf-muted);
-  white-space: nowrap;
+.nf-login-btn:hover {
+  background: #0f766e;
+  border-color: #0f766e;
 }
 
 .nf-logout-btn {
@@ -520,6 +533,40 @@ function excerpt(text, length = 60) {
   font-size: 0.85rem;
 }
 
+.nf-app-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.nf-app-link {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: background 0.15s ease;
+}
+
+.nf-app-link:hover {
+  background: var(--nf-surface-2);
+}
+
+.nf-app-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--nf-ink);
+}
+
+.nf-app-url {
+  font-size: 0.75rem;
+  color: var(--nf-accent);
+}
+
 @media (max-width: 1100px) {
   .nf-body {
     grid-template-columns: 1fr;
@@ -571,10 +618,7 @@ function excerpt(text, length = 60) {
     margin-left: auto;
   }
 
-  .nf-greeting {
-    display: none;
-  }
-
+  .nf-login-btn,
   .nf-logout-btn {
     white-space: nowrap;
     font-size: 0.8rem;
