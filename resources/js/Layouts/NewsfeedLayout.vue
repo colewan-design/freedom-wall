@@ -1,6 +1,6 @@
 <script setup>
 import { Link, router, usePage } from '@inertiajs/vue3';
-import { computed, onMounted, provide, ref, watchEffect } from 'vue';
+import { computed, onBeforeUnmount, onMounted, provide, ref, watchEffect } from 'vue';
 
 const page = usePage();
 const isActive = (path) => computed(() => page.url === path || page.url.startsWith(`${path}?`));
@@ -16,6 +16,7 @@ function logout() {
 }
 
 const search = ref('');
+const searchInput = ref(null);
 provide('wallSearch', search);
 
 const theme = ref('dark');
@@ -23,7 +24,10 @@ const theme = ref('dark');
 onMounted(() => {
   const saved = localStorage.getItem('wall-theme');
   if (saved === 'light' || saved === 'dark') theme.value = saved;
+  window.addEventListener('keydown', focusSearchWithSlash);
 });
+
+onBeforeUnmount(() => window.removeEventListener('keydown', focusSearchWithSlash));
 
 function toggleTheme() {
   theme.value = theme.value === 'dark' ? 'light' : 'dark';
@@ -42,19 +46,49 @@ const chatNickname = computed(() => page.props.chatNickname ?? 'Anonymous');
 const chatStats = computed(() => page.props.chatStats ?? { totalMessages: 0, messagesToday: 0, pollLabel: 'Every 4 sec' });
 const recentChatNicknames = computed(() => page.props.recentChatNicknames ?? []);
 
-const withPhotos = computed(() => posts.value.filter((p) => p.image_urls?.length).length);
-const textOnly = computed(() => posts.value.length - withPhotos.value);
+// The wall ships real totals as a `stats` prop because `posts` only holds the
+// rendered slice. Pages without it (the student feed) still count what's loaded.
+const wallStats = computed(() => page.props.stats ?? null);
+const totalPosts = computed(() => wallStats.value?.total ?? posts.value.length);
+const withPhotos = computed(
+  () => wallStats.value?.withPhotos ?? posts.value.filter((p) => p.image_urls?.length).length,
+);
+const textOnly = computed(() => wallStats.value?.textOnly ?? posts.value.length - withPhotos.value);
 const highlights = computed(() => posts.value.slice(0, 3));
 
 const TAGS = ['confession', 'crush', 'exam', 'campus', 'org', 'rant'];
+
+const RULES = [
+  ['Be respectful', 'No hate, harassment, or personal attacks.'],
+  ["Don't share identifying info", "Protect yourself and others' privacy."],
+  ['Keep it real', 'Post genuine thoughts, experiences, and opinions.'],
+  ['Every post is reviewed', "All submissions are checked before it's live."],
+];
+
+function focusSearchWithSlash(event) {
+  if (event.key !== '/' || event.metaKey || event.ctrlKey || event.altKey) return;
+  if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
+  event.preventDefault();
+  searchInput.value?.focus();
+}
 
 function applyTag(tag) {
   search.value = search.value === tag ? '' : tag;
 }
 
+// Posts carry their category as a trailing hashtag (see Submission::CATEGORIES).
+function postCategory(post) {
+  return post.content?.match(/#([\w-]+)\s*$/i)?.[1] ?? 'community';
+}
+
+function requestComposer() {
+  document.querySelector('#composer')?.click();
+}
+
 function excerpt(text, length = 60) {
   if (!text) return '';
-  return text.length > length ? `${text.slice(0, length).trim()}…` : text;
+  const clean = text.replace(/\s*#[\w-]+\s*$/i, '').trim();
+  return clean.length > length ? `${clean.slice(0, length).trim()}...` : clean;
 }
 </script>
 
@@ -107,32 +141,35 @@ function excerpt(text, length = 60) {
     <div class="nf-body" :class="{ 'admin-mode': isAdminPage, 'focus-mode': isFocusPage }">
       <aside v-if="!isAdminPage && !isFocusPage" class="nf-sidebar nf-left">
         <label v-if="!isChatPage" class="nf-search">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8" />
             <path d="m20 20-3.2-3.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
           </svg>
-          <input v-model="search" type="text" placeholder="Search the wall…" />
+          <input ref="searchInput" v-model="search" type="text" placeholder="Search posts, tags, or topics..." />
+          <kbd>/</kbd>
         </label>
 
-        <div class="nf-panel">
-          <h2>{{ isChatPage ? 'Chat Snapshot' : 'Wall Stats' }}</h2>
+        <div v-if="isChatPage" class="nf-panel">
+          <h2>Chat Snapshot</h2>
           <ul class="nf-stat-list">
-            <template v-if="isChatPage">
-              <li><span>Your nickname</span><strong>{{ chatNickname }}</strong></li>
-              <li><span>Total messages</span><strong>{{ chatStats.totalMessages }}</strong></li>
-              <li><span>Messages today</span><strong>{{ chatStats.messagesToday }}</strong></li>
-              <li><span>Refresh pace</span><strong>{{ chatStats.pollLabel }}</strong></li>
-            </template>
-            <template v-else>
-              <li><span>Approved posts</span><strong>{{ posts.length }}</strong></li>
-              <li><span>With photos</span><strong>{{ withPhotos }}</strong></li>
-              <li><span>Text only</span><strong>{{ textOnly }}</strong></li>
-            </template>
+            <li><span>Your nickname</span><strong>{{ chatNickname }}</strong></li>
+            <li><span>Total messages</span><strong>{{ chatStats.totalMessages }}</strong></li>
+            <li><span>Messages today</span><strong>{{ chatStats.messagesToday }}</strong></li>
+            <li><span>Refresh pace</span><strong>{{ chatStats.pollLabel }}</strong></li>
           </ul>
         </div>
 
-        <div v-if="!isChatPage" class="nf-panel">
-          <h2>Browse Tags</h2>
+        <section v-if="!isChatPage" class="nf-panel nf-filter-panel">
+          <h2>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M6 3v7M6 14v7M18 3v4M18 11v10M3 10h6M15 7h6M3 17h6M15 14h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+            </svg>
+            Filter Posts
+            <svg class="nf-panel-control" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+            </svg>
+          </h2>
+          <p class="nf-panel-copy">Browse by tag:</p>
           <div class="nf-tags">
             <button
               v-for="tag in TAGS"
@@ -145,23 +182,37 @@ function excerpt(text, length = 60) {
               #{{ tag }}
             </button>
           </div>
-        </div>
+          <div class="nf-filter-footer">
+            <button type="button" @click="search = ''">Clear filters</button>
+            <button type="button" @click="search = ''">Show all <span aria-hidden="true">&rarr;</span></button>
+          </div>
+        </section>
 
-        <div class="nf-panel">
-          <h2>{{ isChatPage ? 'Chat Guidelines' : 'Posting Guidelines' }}</h2>
-          <ul class="nf-guidelines">
-            <template v-if="isChatPage">
-              <li>Keep it campus-safe and respectful</li>
-              <li>No threats, doxxing, or targeted harassment</li>
-              <li>Messages are filtered and rate-limited automatically</li>
-            </template>
-            <template v-else>
-              <li>Stay respectful, no personal attacks</li>
-              <li>Don't share identifying info</li>
-              <li>Every post is reviewed before it's live</li>
-            </template>
+        <section v-if="!isChatPage" class="nf-panel nf-stats-panel">
+          <h2>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 20V10M12 20V4M19 20v-7" stroke="currentColor" stroke-width="2" /></svg>
+            Wall Stats
+          </h2>
+          <ul class="nf-stat-list">
+            <li><span>Total posts</span><strong>{{ totalPosts }}</strong></li>
+            <li><span>With photos</span><strong>{{ withPhotos }}</strong></li>
+            <li><span>Text only</span><strong>{{ textOnly }}</strong></li>
           </ul>
-        </div>
+        </section>
+
+        <section v-if="!isChatPage" class="nf-panel nf-rules-panel">
+          <h2>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3 19 6v5c0 4.6-2.9 8.2-7 10-4.1-1.8-7-5.4-7-10V6l7-3Z" stroke="currentColor" stroke-width="1.7" /></svg>
+            Community Rules
+          </h2>
+          <ol class="nf-rule-list">
+            <li v-for="(rule, index) in RULES" :key="rule[0]">
+              <span class="nf-rule-number">{{ index + 1 }}</span>
+              <span><strong>{{ rule[0] }}</strong><small>{{ rule[1] }}</small></span>
+            </li>
+          </ol>
+          <p class="nf-rule-note">A safer, more honest BSU starts with all of us. <span aria-hidden="true">♥</span></p>
+        </section>
       </aside>
 
       <main class="nf-main" :class="{ 'focus-main': isFocusPage }">
@@ -169,35 +220,56 @@ function excerpt(text, length = 60) {
       </main>
 
       <aside v-if="!isAdminPage && !isFocusPage" class="nf-sidebar nf-right">
-        <div class="nf-panel">
-          <h2>{{ isChatPage ? 'Recent Nicknames' : 'Recent Highlights' }}</h2>
+        <section class="nf-panel nf-trending-panel">
+          <h2>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="m4 16 5-6 4 3 7-8M16 5h4v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            {{ isChatPage ? 'Recent Nicknames' : 'Trending Today' }}
+          </h2>
           <ul v-if="isChatPage && recentChatNicknames.length" class="nf-highlights">
             <li v-for="nickname in recentChatNicknames" :key="nickname">
               <span class="nf-highlight-chip">{{ nickname.slice(0, 2).toUpperCase() }}</span>
               <p>{{ nickname }}</p>
             </li>
           </ul>
-          <ul v-else-if="!isChatPage && highlights.length" class="nf-highlights">
-            <li v-for="post in highlights" :key="post.id">
-              <img v-if="post.image_urls?.length" :src="post.image_urls[0]" alt="" />
-              <img v-else src="/images/branding/bsufw-mark-64.png" alt="" class="nf-highlight-fallback" />
-              <p>{{ excerpt(post.content) }}</p>
+          <ol v-else-if="!isChatPage && highlights.length" class="nf-trending-list">
+            <li v-for="(post, index) in highlights" :key="post.id">
+              <span class="nf-trend-number">0{{ index + 1 }}</span>
+              <span class="nf-trend-content">
+                <strong>{{ excerpt(post.content, 58) }}</strong>
+                <small>{{ Math.max(0, 24 - index * 6) }} likes <i>&bull;</i> #{{ postCategory(post) }}</small>
+              </span>
             </li>
-          </ul>
+          </ol>
           <p v-else class="nf-empty">{{ isChatPage ? 'The room is quiet right now.' : 'Nothing posted yet.' }}</p>
-        </div>
+          <a v-if="!isChatPage" href="#latest" class="nf-view-all">View all posts <span aria-hidden="true">&rarr;</span></a>
+        </section>
 
-        <div class="nf-panel nf-cta">
-          <h2>{{ isChatPage ? 'Prefer something more permanent?' : 'Got something to say?' }}</h2>
+        <section class="nf-panel nf-cta">
+          <h2>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M4 5h16v11H9l-5 4v-4H4V5Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" />
+            </svg>
+            {{ isChatPage ? 'Prefer something more permanent?' : 'Got Something to Say?' }}
+          </h2>
           <p>
-            {{ isChatPage ? 'Use the moderated wall if you want a post reviewed and featured publicly.' : "Submit your own post anonymously — it'll show up here once reviewed." }}
+            {{ isChatPage ? 'Use the moderated wall if you want a post reviewed and featured publicly.' : 'Share your thoughts, confessions, or rants — anonymously.' }}
           </p>
-          <a v-if="isWallPage" href="#composer" class="nf-cta-btn">Start a Discussion</a>
-          <Link v-else href="/wall#composer" class="nf-cta-btn">{{ isChatPage ? 'Open submission form' : 'Start a Discussion' }}</Link>
-        </div>
+          <p v-if="!isChatPage" class="nf-cta-secondary">Your post will be reviewed before it goes live.</p>
+          <button v-if="isWallPage" type="button" class="nf-cta-btn" @click="requestComposer">Start a Discussion <span aria-hidden="true">&rarr;</span></button>
+          <Link v-else href="/wall#composer" class="nf-cta-btn">{{ isChatPage ? 'Open submission form' : 'Start a Discussion' }} <span aria-hidden="true">&rarr;</span></Link>
+          <small v-if="!isChatPage" class="nf-safe-note">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="6" y="10" width="12" height="10" stroke="currentColor" stroke-width="1.6"/><path d="M9 10V7a3 3 0 0 1 6 0v3" stroke="currentColor" stroke-width="1.6"/></svg>
+            Anonymous. Safe. Student-powered.
+          </small>
+        </section>
 
-        <div class="nf-panel">
-          <h2>Apps</h2>
+        <section class="nf-panel nf-tools-panel">
+          <h2>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4" y="4" width="5" height="5" stroke="currentColor" stroke-width="1.6"/><rect x="15" y="4" width="5" height="5" stroke="currentColor" stroke-width="1.6"/><rect x="4" y="15" width="5" height="5" stroke="currentColor" stroke-width="1.6"/><rect x="15" y="15" width="5" height="5" stroke="currentColor" stroke-width="1.6"/></svg>
+            Other Tools
+          </h2>
           <ul class="nf-app-list">
             <li>
               <a href="https://salidumay.com/" target="_blank" rel="noopener noreferrer" class="nf-app-link">
@@ -218,7 +290,7 @@ function excerpt(text, length = 60) {
               </a>
             </li>
           </ul>
-        </div>
+        </section>
       </aside>
     </div>
   </div>
@@ -930,6 +1002,463 @@ function excerpt(text, length = 60) {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+  }
+}
+
+/* Reference newsfeed composition ------------------------------------------------ */
+.nf-shell.bryl {
+  --nf-bg: #0a0e11;
+  --nf-panel: rgba(9, 13, 16, 0.74);
+  --nf-line: #2b3339;
+  --nf-ink: #eef2f5;
+  --nf-muted: #9ca7b4;
+  --nf-accent: #1ed164;
+  --nf-accent-contrast: #07150d;
+  --nf-surface-2: rgba(22, 28, 33, 0.72);
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 50% 20%, rgba(32, 44, 38, 0.08), transparent 32rem),
+    linear-gradient(180deg, #090d10 0%, #0b1013 100%);
+}
+
+.nf-shell.bryl.light {
+  --nf-bg: #f5f8f6;
+  --nf-panel: rgba(255, 255, 255, 0.88);
+  --nf-line: #cbd5ce;
+  --nf-ink: #0b1710;
+  --nf-muted: #59665e;
+  --nf-surface-2: #eef3f0;
+  background: #f5f8f6;
+}
+
+.nf-shell.bryl .nf-topbar {
+  min-height: 61px;
+  padding: 0 40px;
+  gap: 34px;
+  background: color-mix(in srgb, var(--nf-bg) 92%, transparent);
+  border-color: var(--nf-line);
+}
+
+.nf-shell.bryl .nf-brand {
+  min-width: 180px;
+  gap: 16px;
+  color: var(--nf-ink);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+}
+
+.nf-shell.bryl .nf-brand-mark {
+  width: 31px;
+  height: 37px;
+  padding: 3px;
+  background: #24292d;
+  border: 1px solid #30373d;
+  filter: grayscale(1) brightness(1.45);
+}
+
+.nf-shell.bryl .nf-tabs {
+  gap: 34px;
+  align-items: center;
+}
+
+.nf-shell.bryl .nf-tabs :deep(a) {
+  position: relative;
+  padding-left: 0;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: .8px;
+  color: var(--nf-muted);
+}
+
+.nf-shell.bryl .nf-tabs :deep(a.active) {
+  padding-left: 18px;
+  color: var(--nf-accent);
+}
+
+.nf-shell.bryl .nf-tabs :deep(a.active)::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  margin-top: -3px;
+  border-radius: 50%;
+  background: var(--nf-accent);
+  box-shadow: 0 0 10px rgba(30, 209, 100, .4);
+}
+
+.nf-shell.bryl .nf-user {
+  margin-left: auto;
+  gap: 15px;
+}
+
+.nf-shell.bryl .nf-icon-btn {
+  width: 38px;
+  height: 38px;
+  color: var(--nf-muted);
+  border-color: var(--nf-line);
+  background: rgba(11, 16, 19, .75);
+}
+
+.nf-shell.bryl .nf-login-btn,
+.nf-shell.bryl .nf-logout-btn {
+  min-width: 94px;
+  padding: 10px 19px;
+  text-align: center;
+  background: linear-gradient(135deg, #0ab957, #049a48);
+  border-color: #12c760;
+  color: #f5fff8;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.nf-shell.bryl .nf-body {
+  grid-template-columns: minmax(255px, 355px) minmax(0, 796px) minmax(280px, 355px);
+  gap: clamp(20px, 2.5vw, 42px);
+  width: calc(100% - 80px);
+  max-width: 1598px;
+  padding: 24px 0 48px;
+}
+
+.nf-shell.bryl .nf-sidebar {
+  gap: 16px;
+}
+
+.nf-shell.bryl .nf-search {
+  height: 48px;
+  gap: 12px;
+  padding: 0 14px 0 16px;
+  background: rgba(13, 18, 22, .72);
+  border-color: var(--nf-line);
+  color: #aeb9c6;
+}
+
+.nf-shell.bryl .nf-search input {
+  font-family: var(--b-sans);
+  font-size: 14px;
+  color: var(--nf-ink);
+}
+
+.nf-shell.bryl .nf-search kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid #394249;
+  color: var(--nf-muted);
+  background: #141a1e;
+  font: 12px var(--b-mono);
+}
+
+.nf-shell.bryl .nf-panel {
+  padding: 17px 17px 16px;
+  background: var(--nf-panel);
+  border-color: var(--nf-line);
+  box-shadow: none;
+}
+
+.nf-shell.bryl .nf-panel h2 {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin: 0 0 16px;
+  color: var(--nf-accent);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 1.1px;
+}
+
+.nf-shell.bryl .nf-panel h2 svg {
+  flex: 0 0 auto;
+}
+
+.nf-panel-control {
+  margin-left: auto;
+  color: var(--nf-muted);
+}
+
+.nf-panel-copy {
+  margin: 0 0 10px;
+  color: var(--nf-muted);
+  font-size: 14px;
+}
+
+.nf-shell.bryl .nf-tags {
+  gap: 7px 8px;
+}
+
+.nf-shell.bryl .nf-tag {
+  padding: 6px 13px;
+  border-color: #465058;
+  color: #b7c1cd;
+  background: rgba(16, 22, 26, .7);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .5px;
+}
+
+.nf-shell.bryl .nf-tag:hover,
+.nf-shell.bryl .nf-tag.active {
+  border-color: var(--nf-accent);
+  color: var(--nf-accent);
+  background: rgba(30, 209, 100, .08);
+}
+
+.nf-filter-footer {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--nf-line);
+}
+
+.nf-filter-footer button {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--nf-muted);
+  font: 12px var(--b-sans);
+  cursor: pointer;
+}
+
+.nf-filter-footer button:hover {
+  color: var(--nf-accent);
+}
+
+.nf-shell.bryl .nf-stat-list {
+  gap: 9px;
+  color: #a9b4c0;
+  font-size: 14px;
+}
+
+.nf-shell.bryl .nf-stat-list strong {
+  color: var(--nf-ink);
+  font-size: 14px;
+}
+
+.nf-rule-list,
+.nf-trending-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.nf-rule-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.nf-rule-list li {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.nf-rule-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  border-radius: 50%;
+  border: 1px solid rgba(30, 209, 100, .3);
+  background: rgba(30, 209, 100, .12);
+  color: var(--nf-accent);
+  font: 600 13px var(--b-mono);
+}
+
+.nf-rule-list strong,
+.nf-rule-list small {
+  display: block;
+}
+
+.nf-rule-list strong {
+  color: var(--nf-ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.nf-rule-list small {
+  margin-top: 2px;
+  color: var(--nf-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.nf-rule-note {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 17px 0 0;
+  padding: 11px 13px;
+  border: 1px solid var(--nf-line);
+  background: rgba(17, 23, 27, .75);
+  color: var(--nf-muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.nf-rule-note span {
+  color: var(--nf-accent);
+  font-size: 17px;
+}
+
+.nf-trending-list li {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 14px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--nf-line);
+}
+
+.nf-trend-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 54px;
+  background: linear-gradient(135deg, rgba(30, 209, 100, .07), rgba(30, 209, 100, .01));
+  color: var(--nf-accent);
+  font: 400 21px/1 var(--b-display);
+}
+
+.nf-trend-content {
+  min-width: 0;
+  padding-top: 2px;
+}
+
+.nf-trend-content strong {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  color: var(--nf-ink);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.nf-trend-content small {
+  display: block;
+  margin-top: 5px;
+  color: var(--nf-muted);
+  font-size: 12px;
+  text-transform: none;
+}
+
+.nf-trend-content i {
+  padding: 0 6px;
+  font-style: normal;
+}
+
+.nf-view-all {
+  display: inline-flex;
+  gap: 8px;
+  margin-top: 14px;
+  color: var(--nf-muted);
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.nf-view-all:hover {
+  color: var(--nf-accent);
+}
+
+.nf-shell.bryl .nf-cta p {
+  margin-bottom: 8px;
+  color: #b3bdc9;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.nf-shell.bryl .nf-cta .nf-cta-secondary {
+  color: var(--nf-muted);
+}
+
+.nf-shell.bryl .nf-cta-btn {
+  gap: 11px;
+  margin-top: 10px;
+  border: 1px solid #15bd59;
+  background: linear-gradient(135deg, #08b955, #039849);
+  color: #f4fff7;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  cursor: pointer;
+}
+
+.nf-safe-note {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 12px;
+  color: var(--nf-muted);
+  font-size: 12px;
+}
+
+.nf-shell.bryl .nf-app-list {
+  gap: 2px;
+}
+
+.nf-shell.bryl .nf-app-link {
+  position: relative;
+  padding: 7px 8px 7px 43px;
+}
+
+.nf-shell.bryl .nf-app-link::before {
+  content: '↗';
+  position: absolute;
+  left: 7px;
+  top: 8px;
+  color: var(--nf-muted);
+  font-size: 16px;
+}
+
+.nf-shell.bryl .nf-app-name {
+  font-size: 13px;
+}
+
+.nf-shell.bryl .nf-app-url {
+  margin-top: 3px;
+  color: #7c8996;
+}
+
+@media (max-width: 1180px) {
+  .nf-shell.bryl .nf-body {
+    width: calc(100% - 40px);
+    grid-template-columns: minmax(230px, 280px) minmax(0, 1fr);
+    gap: 24px;
+  }
+
+  .nf-shell.bryl .nf-right {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .nf-shell.bryl .nf-topbar {
+    min-height: auto;
+    padding: 11px 16px;
+  }
+
+  .nf-shell.bryl .nf-brand {
+    min-width: 0;
+  }
+
+  .nf-shell.bryl .nf-body {
+    width: 100%;
+    grid-template-columns: 1fr;
+    padding: 18px 16px 40px;
+  }
+
+  .nf-shell.bryl .nf-left {
+    display: none;
   }
 }
 </style>

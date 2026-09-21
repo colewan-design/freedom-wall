@@ -1,5 +1,5 @@
 <script setup>
-import { Link, useForm, usePage } from '@inertiajs/vue3';
+import { Head, useForm, usePage } from '@inertiajs/vue3';
 import { computed, inject, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import NewsfeedLayout from '../Layouts/NewsfeedLayout.vue';
 import TurnstileWidget from '../Components/TurnstileWidget.vue';
@@ -106,17 +106,27 @@ const reactions = reactive({});
 
 function reactionFor(post) {
   if (!reactions[post.id]) {
-    reactions[post.id] = { liked: false, saved: false };
+    reactions[post.id] = { liked: false, saved: false, likes: Number(post.likes_count ?? 0) };
   }
   return reactions[post.id];
 }
 
 function toggleLike(post) {
-  reactionFor(post).liked = !reactionFor(post).liked;
+  const reaction = reactionFor(post);
+  reaction.liked = !reaction.liked;
+  reaction.likes = Math.max(0, reaction.likes + (reaction.liked ? 1 : -1));
 }
 
 function toggleSave(post) {
   reactionFor(post).saved = !reactionFor(post).saved;
+}
+
+function postCategory(post) {
+  return post.content?.match(/#([\w-]+)\s*$/i)?.[1] ?? 'community';
+}
+
+function postBody(post) {
+  return post.content?.replace(/\s*#[\w-]+\s*$/i, '').trim() ?? '';
 }
 
 async function sharePost(post) {
@@ -210,54 +220,72 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
 </script>
 
 <template>
+  <Head title="News Feed" />
   <div class="wall-page">
     <header class="masthead rise" :style="riseDelay(0)">
       <span class="halftone" aria-hidden="true"></span>
       <p class="section-label">01 — bsu community</p>
       <h1>freedom wall</h1>
-      <p class="lede">
-        Confessions, rants, and stories from the BSU community. Written anonymously,
-        reviewed by a human, then posted for everyone to read.
-      </p>
-      <div class="masthead-actions">
-        <button type="button" class="btn-invert" @click="focusComposer">Start a discussion</button>
-        <Link href="/id-check" class="text-link">try id check <span aria-hidden="true">→</span></Link>
+      <div class="masthead-lower">
+        <p class="lede">
+          Confessions, rants, and stories from the BSU community.<br />
+          Written anonymously, reviewed by a human, then posted for everyone to read.
+        </p>
+        <dl class="stat-row">
+          <div class="stat">
+            <dt>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 9a4 4 0 1 1 8 0c0 3.5-4 6-4 6s-4-2.5-4-6Z" stroke="currentColor" stroke-width="1.6"/><path d="M5 11c-1.7.7-2.5 1.9-2.5 3.5 0 3 4.2 5.5 9.5 5.5s9.5-2.5 9.5-5.5c0-1.6-.8-2.8-2.5-3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+              <span>{{ totalPosts }} posts</span>
+            </dt>
+          </div>
+          <div class="stat">
+            <dt>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="4" width="18" height="16" stroke="currentColor" stroke-width="1.6"/><circle cx="8" cy="9" r="1.5" fill="currentColor"/><path d="m4 17 5-5 4 4 3-3 4 4" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+              <span>{{ withPhotos }} photo{{ withPhotos === 1 ? '' : 's' }}</span>
+            </dt>
+          </div>
+          <div class="stat">
+            <dt>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 3h8l4 4v14H6V3Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M14 3v5h4M9 12h6M9 16h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+              <span>{{ textOnly }} text only</span>
+            </dt>
+          </div>
+        </dl>
       </div>
     </header>
 
-    <!-- Hairline dividers are the design here — no gaps, no fills. -->
-    <dl class="stat-row rise" :style="riseDelay(1)">
-      <div class="stat">
-        <dt>posts</dt>
-        <dd>{{ totalPosts }}</dd>
+    <section
+      id="composer"
+      class="composer-trigger rise"
+      :style="riseDelay(2)"
+      role="button"
+      tabindex="0"
+      aria-label="Create an anonymous post"
+      @click="openComposerModal"
+      @keydown.enter="openComposerModal"
+      @keydown.space.prevent="openComposerModal"
+    >
+      <div class="composer-main-row">
+        <img src="/images/branding/bsufw-mark-64.png" alt="" class="composer-avatar" />
+        <span class="composer-trigger-text">Share something anonymously...</span>
+        <span class="composer-trigger-photo" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.5" />
+            <circle cx="8.5" cy="10" r="1.6" fill="currentColor" />
+            <path d="m4 17 5-5 4 4 3-3 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </span>
+        <span class="composer-post">Post <b aria-hidden="true">→</b></span>
       </div>
-      <div class="stat">
-        <dt>with photos</dt>
-        <dd>{{ withPhotos }}</dd>
-      </div>
-      <div class="stat">
-        <dt>text only</dt>
-        <dd>{{ textOnly }}</dd>
-      </div>
-    </dl>
-
-    <button id="composer" type="button" class="composer-trigger rise" :style="riseDelay(2)" @click="openComposerModal">
-      <img src="/images/branding/bsufw-mark-64.png" alt="" class="composer-avatar" />
-      <span class="composer-trigger-text">What's on your mind?</span>
-      <span class="composer-trigger-photo" aria-hidden="true">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <rect x="3" y="4" width="18" height="16" rx="3" stroke="currentColor" stroke-width="1.4" />
-          <circle cx="8.5" cy="10" r="1.6" fill="currentColor" />
-          <path d="m4 17 5-5 4 4 3-3 4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
+      <span class="composer-note">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 9h4l2-2h4l2 2h4l-2 7h-4l-2 2-2-2H6L4 9Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><circle cx="9" cy="12" r="1" fill="currentColor"/><circle cx="15" cy="12" r="1" fill="currentColor"/></svg>
+        Anonymous <i>•</i> Reviewed before publishing
       </span>
-    </button>
+    </section>
 
-    <div class="feed-header rise" :style="riseDelay(3)">
+    <div id="latest" class="feed-header rise" :style="riseDelay(3)">
       <h2 class="section-label">02 — latest</h2>
-      <button type="button" class="text-link" @click="focusComposer">
-        new post <span aria-hidden="true">→</span>
-      </button>
+      <span class="feed-sort">Sort: <strong>Newest</strong> <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m7 9 5 5 5-5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
     </div>
 
     <p v-if="filteredPosts.length === 0" class="hint">
@@ -286,11 +314,14 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
               </svg>
             </div>
             <div class="feed-sub-meta">
+              <span>#{{ postCategory(post) }}</span>
+              <span class="dot" aria-hidden="true">•</span>
               <span class="timestamp">{{ timeAgo(post.reviewed_at) }}</span>
-              <span class="dot" aria-hidden="true">/</span>
-              <span>public</span>
             </div>
           </div>
+          <button type="button" class="feed-more" aria-label="More options">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
+          </button>
         </div>
 
         <div class="feed-content-wrap">
@@ -298,7 +329,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
             :ref="registerContent(post.id)"
             class="feed-content"
             :class="{ clamped: !expandedPosts[post.id] }"
-          >{{ post.content }}</p>
+          >{{ postBody(post) }}</p>
           <button
             v-if="overflowingPosts[post.id] || expandedPosts[post.id]"
             type="button"
@@ -351,6 +382,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
             </svg>
             Save
           </button>
+          <span class="feed-like-count">{{ reactionFor(post).likes }} like{{ reactionFor(post).likes === 1 ? '' : 's' }}</span>
         </div>
       </article>
     </div>
@@ -1403,6 +1435,398 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
   .feed-photo-tile:hover img,
   .text-link:hover span {
     transform: none;
+  }
+}
+
+/* Reference-driven newsfeed skin ---------------------------------------------- */
+.wall-page {
+  width: 100%;
+  max-width: 796px;
+  margin: 0;
+}
+
+.masthead {
+  min-height: 150px;
+  padding: 9px 0 24px;
+  overflow: hidden;
+  border-bottom: 0;
+}
+
+.halftone {
+  top: -4px;
+  right: -4px;
+  width: 355px;
+  height: 126px;
+  opacity: .58;
+  background-image: radial-gradient(var(--b-dot) .8px, transparent .9px);
+  background-size: 9px 9px;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 45%, #000 100%);
+  mask-image: linear-gradient(90deg, transparent 0%, #000 45%, #000 100%);
+}
+
+.section-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.15px;
+  color: var(--b-green-text);
+}
+
+.masthead h1 {
+  margin-top: 17px;
+  font-size: clamp(39px, 4vw, 47px);
+  font-weight: 500;
+  letter-spacing: .02em;
+  color: var(--b-green-text);
+}
+
+.masthead-lower {
+  position: relative;
+  min-height: 43px;
+  margin-top: 13px;
+}
+
+.lede {
+  margin: 0;
+  max-width: 465px;
+  color: #aeb8c3;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.stat-row {
+  display: flex;
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  flex: 0 0 auto;
+  grid-template-columns: none;
+  margin: 0;
+  border: 1px solid #2b3339;
+}
+
+.stat {
+  padding: 0;
+  border-right: 1px solid #2b3339;
+}
+
+.stat:first-child {
+  padding-left: 0;
+}
+
+.stat dt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 14px;
+  color: #adb8c4;
+  font-family: var(--b-sans);
+  font-size: 12px;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
+}
+
+.stat dt svg {
+  color: var(--b-green-text);
+}
+
+.composer-trigger {
+  display: block;
+  min-height: 145px;
+  padding: 22px 20px 16px;
+  margin: 0 0 31px;
+  background: rgba(8, 12, 15, .6);
+  border-color: #30383f;
+  cursor: pointer;
+}
+
+.composer-main-row {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) 50px 108px;
+  align-items: center;
+  gap: 14px;
+}
+
+.composer-avatar {
+  width: 48px;
+  height: 52px;
+  padding: 4px;
+  background: #24292d;
+  border-color: #343b41;
+  filter: grayscale(1) brightness(1.42);
+}
+
+.composer-trigger-text {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  height: 52px;
+  padding: 0 17px;
+  background: rgba(12, 17, 21, .76);
+  border-color: #384149;
+  color: #909aa8;
+  font-family: var(--b-sans);
+  font-size: 14px;
+}
+
+.composer-trigger-photo {
+  width: 50px;
+  height: 52px;
+  border: 1px solid #313a41;
+  color: #aab5c1;
+}
+
+.composer-post {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 52px;
+  background: linear-gradient(135deg, #0abb56, #04994a);
+  border: 1px solid #15bd59;
+  color: #f4fff7;
+  font: 700 11px var(--b-mono);
+  letter-spacing: 1.15px;
+  text-transform: uppercase;
+}
+
+.composer-post b {
+  font-size: 18px;
+  font-weight: 400;
+}
+
+.composer-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0 0 62px;
+  color: #8e99a6;
+  font-size: 12px;
+}
+
+.composer-note svg {
+  color: #b4bfcb;
+}
+
+.composer-note i {
+  font-style: normal;
+}
+
+.feed-header {
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+  border-color: #30383f;
+}
+
+.feed-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #8f9aa8;
+  font-size: 12px;
+}
+
+.feed-sort strong {
+  color: #b8c2ce;
+  font-weight: 400;
+}
+
+.feed-list {
+  gap: 12px;
+}
+
+.feed-card {
+  padding: 20px 20px 16px;
+  background: rgba(8, 12, 15, .63);
+  border-color: #30383f;
+}
+
+.feed-card:hover {
+  border-color: #3a4741;
+  transform: none;
+}
+
+.feed-post-header {
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.feed-avatar {
+  width: 48px;
+  height: 50px;
+  padding: 4px;
+  background: #24292d;
+  border-color: #343b41;
+  filter: grayscale(1) brightness(1.42);
+}
+
+.feed-name-row {
+  margin-top: 3px;
+  gap: 7px;
+}
+
+.feed-name {
+  color: #e4e9ed;
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.feed-verified {
+  width: 15px;
+  height: 15px;
+  color: var(--b-green-text);
+}
+
+.feed-sub-meta {
+  gap: 10px;
+  margin-top: 7px;
+  color: #97a2ae;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .9px;
+}
+
+.feed-more {
+  margin-left: auto;
+  padding: 6px 0 6px 16px;
+  border: 0;
+  background: transparent;
+  color: #a5b0bc;
+  cursor: pointer;
+}
+
+.feed-content-wrap {
+  margin-bottom: 12px;
+}
+
+.feed-content {
+  color: #e4e9ee;
+  font-size: 16px;
+  line-height: 1.52;
+}
+
+.feed-actions {
+  gap: 29px;
+  padding-top: 13px;
+  border-color: #30383f;
+}
+
+.action {
+  gap: 8px;
+  color: #a8b3c0;
+  font-family: var(--b-sans);
+  font-size: 12px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.action svg {
+  width: 18px;
+  height: 18px;
+}
+
+.feed-like-count {
+  margin-left: auto;
+  color: #929eab;
+  font-size: 12px;
+}
+
+.hint {
+  padding: 30px 0;
+  text-align: center;
+}
+
+.composer-modal {
+  background: #0d1216;
+  border-color: #30383f;
+}
+
+@media (max-width: 900px) {
+  .masthead-lower {
+    display: flex;
+    align-items: flex-start;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .stat-row {
+    position: static;
+    align-self: stretch;
+  }
+
+  .stat {
+    flex: 1;
+  }
+
+  .stat dt {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 640px) {
+  .masthead {
+    padding-top: 4px;
+  }
+
+  .halftone {
+    width: 180px;
+  }
+
+  .masthead h1 {
+    font-size: 38px;
+  }
+
+  .lede br {
+    display: none;
+  }
+
+  .stat-row {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .stat {
+    border-right: 0;
+    border-bottom: 1px solid #2b3339;
+  }
+
+  .stat:last-child {
+    border-bottom: 0;
+  }
+
+  .stat dt {
+    justify-content: flex-start;
+  }
+
+  .composer-trigger {
+    padding: 14px;
+  }
+
+  .composer-main-row {
+    grid-template-columns: minmax(0, 1fr) 44px;
+    gap: 8px;
+  }
+
+  .composer-trigger .composer-avatar,
+  .composer-post {
+    display: none;
+  }
+
+  .composer-trigger-photo {
+    width: 44px;
+  }
+
+  .composer-note {
+    margin-left: 0;
+  }
+
+  .feed-card {
+    padding: 16px;
+  }
+
+  .feed-actions {
+    gap: 19px;
   }
 }
 </style>

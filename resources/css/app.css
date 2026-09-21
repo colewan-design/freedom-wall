@@ -51,16 +51,16 @@
 :root[data-theme='dark'] {
   color-scheme: dark;
 
-  --b-bg: #0c0c0f;
-  --b-ink: #f4f4f5;
-  --b-50: #18181b;
-  --b-100: #1e1e22;
-  --b-200: #2a2a30;
-  --b-300: #3a3a42;
-  --b-400: #8a8a92;
-  --b-500: #a0a0a8;
-  --b-700: #c8c8ce;
-  --b-900: #ebebef;
+  --b-bg: #0a0e11;
+  --b-ink: #eef2f5;
+  --b-50: #11171b;
+  --b-100: #172025;
+  --b-200: #2b3339;
+  --b-300: #3b464e;
+  --b-400: #7f8b98;
+  --b-500: #9ca7b4;
+  --b-700: #c5cdd5;
+  --b-900: #e6ebef;
 
   --b-dot: rgba(244, 244, 245, 0.42);
   --b-scrim: rgba(0, 0, 0, 0.55);
@@ -68,9 +68,9 @@
   /* The deep brand green is invisible on near-black (1.5:1), so dark mode
      lifts the hue: text 7.7:1 on #0c0c0f, white-on-fill 5.0:1. Hover goes
      DARKER — lighter greens drop white text below AA. */
-  --b-green-text: #3fb862;
-  --b-green: #15803d;
-  --b-green-hover: #106830;
+  --b-green-text: #27d36b;
+  --b-green: #0bb957;
+  --b-green-hover: #079849;
 }
 
 :root[data-theme='dark'] body {
