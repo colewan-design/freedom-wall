@@ -147,6 +147,10 @@ class ConversationController extends Controller
 
         $conversation->load('participants:id,name,username,avatar_path');
 
+        $other = $conversation->type === 'direct'
+            ? $conversation->participants->firstWhere('id', '!=', $user->id)
+            : null;
+
         $messages = $conversation->messages()
             ->with('user:id,name,username,avatar_path')
             ->latest('id')
@@ -160,6 +164,7 @@ class ConversationController extends Controller
                 'id' => $conversation->id,
                 'type' => $conversation->type,
                 'display_name' => $conversation->displayNameFor($user),
+                'avatar_url' => $other?->avatar_url,
                 'participants' => $conversation->participants->map(
                     fn (User $p) => $p->only(['id', 'name', 'username', 'avatar_url']),
                 ),

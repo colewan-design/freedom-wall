@@ -1,10 +1,10 @@
 <script setup>
-import { Link, router, usePage } from '@inertiajs/vue3';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
-import StudentLayout from '../../Layouts/StudentLayout.vue';
+import FeedLayout from '../../Layouts/FeedLayout.vue';
 import { timeAgo } from '../../lib/date';
 
-defineOptions({ layout: StudentLayout });
+defineOptions({ layout: FeedLayout });
 
 const props = defineProps({
   conversation: { type: Object, required: true },
@@ -110,16 +110,21 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
+  <Head :title="conversation.display_name" />
+
   <section class="thread-page">
     <header class="thread-header">
       <Link :href="route('messages.index')" class="back-btn" aria-label="Back to messages">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path d="M15 5 8 12l7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 8 12l7 7" /></svg>
       </Link>
+      <span class="thread-avatar" :class="{ group: isGroup }">
+        <img v-if="conversation.avatar_url" :src="conversation.avatar_url" alt="" />
+        <span v-else>{{ conversation.display_name.slice(0, 1).toUpperCase() }}</span>
+      </span>
       <div class="thread-title">
-        <h2>{{ conversation.display_name }}</h2>
-        <span v-if="isGroup" class="thread-sub">{{ conversation.participants.length }} members</span>
+        <h1>{{ conversation.display_name }}</h1>
+        <span v-if="isGroup">{{ conversation.participants.length }} members</span>
+        <span v-else>Direct message</span>
       </div>
       <button v-if="isGroup" type="button" class="leave-btn" @click="leaveGroup">Leave</button>
     </header>
@@ -159,173 +164,52 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .thread-page {
+  --feed-green: #075b32;
+  --feed-ink: #17211b;
+  --feed-muted: #6f7d75;
+  --feed-line: #dce5e0;
   display: flex;
   flex-direction: column;
-  gap: 0.85rem;
+  gap: 9px;
+  padding-top: 14px;
+  color: var(--feed-ink);
 }
 
-.thread-header {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  background: var(--nf-panel);
-  border: 1px solid var(--nf-line);
-  border-radius: var(--b-r-card);
-  padding: 0.75rem 1rem;
-}
+.thread-header { display: flex; align-items: center; gap: 11px; padding: 11px 16px; border: 1px solid var(--feed-line); border-radius: 10px; background: #fff; box-shadow: 0 2px 9px rgba(17,53,33,.035); }
+.back-btn { display: grid; place-items: center; width: 32px; height: 32px; flex: 0 0 32px; border-radius: 50%; background: #f2f6f4; color: #3f4c45; }
+.back-btn:hover { background: #e8f1ec; color: var(--feed-green); }
+.back-btn svg { width: 17px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.thread-avatar { width: 42px; height: 42px; flex: 0 0 42px; display: grid; place-items: center; overflow: hidden; border-radius: 50%; background: #e8f1ec; color: var(--feed-green); font-size: 17px; font-weight: 800; }
+.thread-avatar.group { border-radius: 11px; }
+.thread-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.thread-title { min-width: 0; flex: 1; display: flex; flex-direction: column; }
+.thread-title h1 { margin: 0; overflow: hidden; font-size: 15px; text-overflow: ellipsis; white-space: nowrap; }
+.thread-title span { margin-top: 2px; color: var(--feed-muted); font-size: 11px; }
+.leave-btn { padding: 8px 14px; border: 1px solid var(--feed-line); border-radius: 6px; background: #fff; color: #3f4c45; font: inherit; font-size: 11px; font-weight: 700; cursor: pointer; }
+.leave-btn:hover { border-color: #e8b4b0; color: #b42318; }
 
-.back-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.1rem;
-  height: 2.1rem;
-  border-radius: var(--b-r-pill);
-  background: var(--nf-surface-2);
-  color: var(--nf-ink);
-  flex-shrink: 0;
-}
+.thread-stream { height: min(60vh, 560px); padding: 16px; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; overflow-y: auto; border: 1px solid var(--feed-line); border-radius: 10px; background: #fff; box-shadow: 0 2px 9px rgba(17,53,33,.035); }
+.bubble { max-width: min(520px, 84%); padding: 9px 13px; border: 1px solid #e6ede9; border-radius: 12px; background: #f4f8f6; }
+.bubble.own { align-self: flex-end; border-color: transparent; background: linear-gradient(135deg, #08713e, #07562f); }
+.bubble-sender { margin-bottom: 3px; color: var(--feed-green); font-size: 10px; font-weight: 800; }
+.bubble p { margin: 0; color: var(--feed-ink); font-size: 12px; line-height: 1.5; white-space: pre-wrap; }
+.bubble.own p { color: #fff; }
+.bubble-time { display: block; margin-top: 4px; color: #87928c; font-size: 9px; }
+.bubble.own .bubble-time { color: rgba(255,255,255,.72); }
+.empty-state { margin: auto; color: var(--feed-muted); font-size: 12px; }
 
-.thread-title {
-  flex: 1;
-  min-width: 0;
-}
+.thread-composer { display: flex; align-items: flex-end; gap: 9px; padding: 11px; border: 1px solid var(--feed-line); border-radius: 10px; background: #fff; box-shadow: 0 2px 9px rgba(17,53,33,.035); }
+.thread-composer textarea { flex: 1; min-width: 0; padding: 10px 12px; border: 1px solid #d9e2dd; border-radius: 8px; outline: none; resize: none; background: #f6f8f7; color: var(--feed-ink); font: inherit; font-size: 12px; line-height: 1.45; }
+.thread-composer textarea::placeholder { color: #87928c; }
+.thread-composer textarea:focus { border-color: #69a989; box-shadow: 0 0 0 3px rgba(7,91,50,.08); }
+.send-btn { flex-shrink: 0; min-width: 84px; padding: 11px 18px; border: 0; border-radius: 6px; background: linear-gradient(135deg, #08713e, #07562f); color: #fff; font: inherit; font-size: 11px; font-weight: 700; cursor: pointer; }
+.send-btn:disabled { opacity: .45; cursor: default; }
+.thread-error { margin: 0; color: #b42318; font-size: 11px; }
 
-.thread-title h2 {
-  margin: 0;
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--nf-ink);
-}
-
-.thread-sub {
-  font-size: 0.78rem;
-  color: var(--nf-muted);
-}
-
-.leave-btn {
-  background: var(--nf-surface-2);
-  color: var(--nf-ink);
-  border: 1px solid var(--nf-line);
-  padding: 0.4rem 0.85rem;
-  border-radius: var(--b-r-sm);
-  font-weight: 600;
-  font-size: 0.8rem;
-  cursor: pointer;
-}
-
-.leave-btn:hover {
-  border-color: #dc2626;
-  color: #dc2626;
-}
-
-.thread-stream {
-  height: min(58vh, 560px);
-  overflow-y: auto;
-  padding: 1rem;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.65rem;
-  background: var(--nf-panel);
-  border: 1px solid var(--nf-line);
-  border-radius: var(--b-r-card);
-}
-
-.bubble {
-  max-width: min(520px, 84%);
-  padding: 0.65rem 0.85rem;
-  border-radius: var(--b-r-card);
-  background: var(--nf-surface-2);
-  border: 1px solid color-mix(in srgb, var(--nf-line) 75%, transparent);
-}
-
-.bubble.own {
-  align-self: flex-end;
-  background: var(--nf-accent);
-  border-color: var(--nf-accent);
-}
-
-.bubble-sender {
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: var(--nf-accent);
-  margin-bottom: 0.2rem;
-}
-
-.bubble p {
-  margin: 0;
-  white-space: pre-wrap;
-  line-height: 1.45;
-  color: var(--nf-ink);
-}
-
-.bubble.own p {
-  color: #fff;
-}
-
-.bubble-time {
-  display: block;
-  margin-top: 0.25rem;
-  font-size: 0.68rem;
-  color: var(--nf-muted);
-}
-
-.bubble.own .bubble-time {
-  color: rgba(255, 255, 255, 0.72);
-}
-
-.empty-state {
-  margin: auto;
-  color: var(--nf-muted);
-}
-
-.thread-composer {
-  display: flex;
-  gap: 0.6rem;
-  align-items: flex-end;
-  background: var(--nf-panel);
-  border: 1px solid var(--nf-line);
-  border-radius: var(--b-r-card);
-  padding: 0.75rem;
-}
-
-.thread-composer textarea {
-  flex: 1;
-  resize: none;
-  padding: 0.6rem 0.8rem;
-  border-radius: var(--b-r-thumb);
-  border: 1px solid var(--nf-line);
-  background: var(--nf-bg);
-  color: var(--nf-ink);
-  font: inherit;
-  line-height: 1.4;
-}
-
-.thread-composer textarea:focus {
-  outline: none;
-  border-color: var(--nf-accent);
-}
-
-.send-btn {
-  border: none;
-  border-radius: var(--b-r-pill);
-  padding: 0.6rem 1.2rem;
-  background: var(--nf-accent);
-  color: var(--nf-accent-contrast);
-  font-weight: 700;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-.send-btn:disabled {
-  opacity: 0.65;
-  cursor: not-allowed;
-}
-
-.thread-error {
-  margin: 0;
-  color: #f87171;
-  font-size: 0.85rem;
+@media (max-width: 760px) {
+  .thread-page { padding-top: 10px; }
+  .thread-avatar { display: none; }
+  .thread-stream { height: 58vh; padding: 12px; }
+  .bubble { max-width: 90%; }
 }
 </style>

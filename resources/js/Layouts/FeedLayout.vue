@@ -68,132 +68,134 @@ function submitSearch() {
 
 <template>
   <div class="feed-shell">
-    <aside class="feed-sidebar">
-      <Link href="/feed" class="brand-lockup" aria-label="BSU Connect home">
-        <img src="/images/branding/bsufw-mark-64.png" alt="" />
-        <span>
-          <strong>BSU Connect</strong>
-          <small>Students. Ideas. Opportunities.</small>
-        </span>
-      </Link>
-
-      <div class="sidebar-profile">
-        <Link :href="`/profile/${authUser?.username}`" class="avatar avatar-lg">
-          <img v-if="authUser?.avatar_url" :src="authUser.avatar_url" alt="" />
-          <span v-else>{{ initial }}</span>
-          <i aria-hidden="true"></i>
+    <div class="feed-frame">
+      <aside class="feed-sidebar">
+        <Link href="/feed" class="brand-lockup" aria-label="BSU Connect home">
+          <img src="/images/branding/bsufw-mark-64.png" alt="" />
+          <span>
+            <strong>BSU Connect</strong>
+            <small>Students. Ideas. Opportunities.</small>
+          </span>
         </Link>
-        <div class="sidebar-profile-copy">
-          <strong>{{ authUser?.name }}</strong>
-          <span>@{{ authUser?.username }}</span>
-          <small>BSU · Student</small>
-        </div>
-        <Link href="/settings/profile" class="edit-profile" aria-label="Edit profile">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 16-.7 4.7L8 20l11-11-4-4L4 16Z"/><path d="m13.8 6.2 4 4"/></svg>
-        </Link>
-      </div>
 
-      <nav class="primary-nav" aria-label="Student navigation">
-        <component
-          :is="item.href ? Link : 'span'"
-          v-for="item in navItems"
-          :key="item.label"
-          :href="item.href || undefined"
-          class="nav-row"
-          :class="{ active: item.href && isActive(item.href), inert: !item.href }"
-        >
-          <svg v-if="item.icon === 'home'" viewBox="0 0 24 24"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10M9 20v-6h6v6"/></svg>
-          <svg v-else-if="item.icon === 'network'" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3 2.5-5 6-5s6 2 6 5"/><circle cx="17" cy="9" r="2.5"/><path d="M15.5 15.5c3.5-.4 5.5 1.2 5.5 4.5"/></svg>
-          <svg v-else-if="item.icon === 'mail'" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/></svg>
-          <svg v-else-if="item.icon === 'community'" viewBox="0 0 24 24"><circle cx="12" cy="6" r="2.5"/><circle cx="5.5" cy="10" r="2"/><circle cx="18.5" cy="10" r="2"/><path d="M7 20c0-3 2-5 5-5s5 2 5 5M2 19c0-2.5 1.4-4 3.5-4M22 19c0-2.5-1.4-4-3.5-4"/></svg>
-          <svg v-else-if="item.icon === 'forum'" viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4v-4H4V5Z"/><circle cx="9" cy="10.5" r=".7"/><circle cx="12" cy="10.5" r=".7"/><circle cx="15" cy="10.5" r=".7"/></svg>
-          <svg v-else-if="item.icon === 'calendar'" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18"/></svg>
-          <svg v-else-if="item.icon === 'briefcase'" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V4h6v3M3 12h18"/></svg>
-          <svg v-else-if="item.icon === 'store'" viewBox="0 0 24 24"><path d="m4 9 1-5h14l1 5"/><path d="M5 12v8h14v-8M4 9c0 2 3 3 4 0 0 2 3 3 4 0 0 2 3 3 4 0 1 3 4 2 4 0"/></svg>
-          <svg v-else-if="item.icon === 'journal'" viewBox="0 0 24 24"><path d="M5 3h13a2 2 0 0 1 2 2v16H7a2 2 0 0 1-2-2V3Z"/><path d="M5 17a2 2 0 0 1 2-2h13M9 7h7M9 10h5"/></svg>
-          <svg v-else viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4V3Z"/></svg>
-          <span>{{ item.label }}</span>
-          <b v-if="item.count?.value > 0">{{ item.count.value }}</b>
-        </component>
-      </nav>
-
-      <div class="wall-nav">
-        <div class="wall-nav-title">
-          <span><svg viewBox="0 0 24 24"><path d="M4 5h16v12l-8 4-8-4V5Z"/><path d="M8 11c1.4 1.5 2.6 1.5 4 0 1.4 1.5 2.6 1.5 4 0"/></svg>Freedom Wall</span>
-          <svg viewBox="0 0 24 24" class="chevron"><path d="m8 14 4-4 4 4"/></svg>
-        </div>
-        <Link v-for="item in wallItems" :key="item.label" :href="item.href" class="nav-row nav-sub" :class="{ active: isActive(item.href) && !isActive('/feed') }">
-          <svg v-if="item.icon === 'forum'" viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4v-4H4V5Z"/><circle cx="9" cy="10.5" r=".7"/><circle cx="12" cy="10.5" r=".7"/><circle cx="15" cy="10.5" r=".7"/></svg>
-          <svg v-else-if="item.icon === 'hash'" viewBox="0 0 24 24"><path d="M9 3 7 21M17 3l-2 18M4 9h17M3 15h17"/></svg>
-          <svg v-else-if="item.icon === 'globe'" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg>
-          <svg v-else viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 3.4 8 8 10 4.6-2 8-5 8-10V6l-8-3Z"/></svg>
-          <span>{{ item.label }}</span>
-        </Link>
-      </div>
-
-      <div class="sidebar-bottom">
-        <Link href="/settings/profile" class="nav-row"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.5-2.3 1a8 8 0 0 0-2-1.2L14.3 3H9.7l-.3 2.6a8 8 0 0 0-2 1.2l-2.3-1-2 3.5 2 1.5a7 7 0 0 0 0 2.4l-2 1.5 2 3.5 2.3-1a8 8 0 0 0 2 1.2l.3 2.6h4.6l.3-2.6a8 8 0 0 0 2-1.2l2.3 1 2-3.5-2-1.5A7 7 0 0 0 19 12Z"/></svg>Settings</Link>
-        <button type="button" class="logout-link" @click="logout">Log out</button>
-      </div>
-    </aside>
-
-    <div class="feed-workspace">
-      <header class="topbar">
-        <form class="global-search" @submit.prevent="submitSearch">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
-          <input v-model="search" type="search" placeholder="Search for students, posts, events, communities..." aria-label="Search BSU Connect" />
-        </form>
-        <div class="topbar-actions">
-          <button type="button" class="icon-button" aria-label="Notifications"><svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9ZM10 21h4"/></svg><i></i></button>
-          <Link href="/messages" class="icon-button" aria-label="Messages"><svg viewBox="0 0 24 24"><path d="M4 5h16v12H8l-4 3V5Z"/><circle cx="9" cy="11" r=".7"/><circle cx="12" cy="11" r=".7"/><circle cx="15" cy="11" r=".7"/></svg></Link>
-          <Link :href="`/profile/${authUser?.username}`" class="top-avatar">{{ initial }}</Link>
-          <button type="button" class="profile-caret" aria-label="Account menu" @click="logout"><svg viewBox="0 0 24 24"><path d="m8 10 4 4 4-4"/></svg></button>
-        </div>
-      </header>
-
-      <main class="feed-main"><slot /></main>
-
-      <aside class="feed-right">
-        <section class="rail-panel stories-panel">
-          <div class="rail-heading"><h2><span>♣</span> Stories</h2><Link href="/friends">See all</Link></div>
-          <div class="story-row">
-            <button type="button" class="story-card create-story"><span class="story-add">+</span><strong>Create<br />Story</strong></button>
-            <Link v-for="friend in storyFriends.slice(0, 4)" :key="friend.id" :href="`/profile/${friend.username}`" class="story-card" :style="friend.avatar_url ? { backgroundImage: `url(${friend.avatar_url})` } : null">
-              <span class="story-ring"><img v-if="friend.avatar_url" :src="friend.avatar_url" alt="" /><span v-else>{{ friend.name.slice(0, 1) }}</span></span>
-              <strong>{{ friend.name.split(' ')[0] }}</strong>
-            </Link>
-            <div v-if="!storyFriends.length" class="story-card story-placeholder"><span class="story-ring">B</span><strong>BSU SSC</strong></div>
+        <div class="sidebar-profile">
+          <Link :href="`/profile/${authUser?.username}`" class="avatar avatar-lg">
+            <img v-if="authUser?.avatar_url" :src="authUser.avatar_url" alt="" />
+            <span v-else>{{ initial }}</span>
+            <i aria-hidden="true"></i>
+          </Link>
+          <div class="sidebar-profile-copy">
+            <strong>{{ authUser?.name }}</strong>
+            <span>@{{ authUser?.username }}</span>
+            <small>BSU · Student</small>
           </div>
-        </section>
+          <Link href="/settings/profile" class="edit-profile" aria-label="Edit profile">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 16-.7 4.7L8 20l11-11-4-4L4 16Z"/><path d="m13.8 6.2 4 4"/></svg>
+          </Link>
+        </div>
 
-        <section class="rail-panel suggestions-panel">
-          <div class="rail-heading"><h2><span>♣</span> People you may know</h2><Link href="/friends">See all</Link></div>
-          <ul class="suggestion-list">
-            <li v-for="person in suggestedFriends" :key="person.id">
-              <span class="avatar avatar-sm"><img v-if="person.avatar_url" :src="person.avatar_url" alt="" /><span v-else>{{ person.name.slice(0, 1) }}</span></span>
-              <span class="person-copy"><strong>{{ person.name }}</strong><small>@{{ person.username }}</small><em>BSU student</em></span>
-              <button type="button" :disabled="requestedIds.includes(person.id)" @click="followSuggestion(person)">{{ requestedIds.includes(person.id) ? 'Requested' : 'Connect' }}</button>
-            </li>
-            <li v-if="!suggestedFriends.length" class="suggestion-empty">Your network is all caught up.</li>
-          </ul>
-        </section>
+        <nav class="primary-nav" aria-label="Student navigation">
+          <component
+            :is="item.href ? Link : 'span'"
+            v-for="item in navItems"
+            :key="item.label"
+            :href="item.href || undefined"
+            class="nav-row"
+            :class="{ active: item.href && isActive(item.href), inert: !item.href }"
+          >
+            <svg v-if="item.icon === 'home'" viewBox="0 0 24 24"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10M9 20v-6h6v6"/></svg>
+            <svg v-else-if="item.icon === 'network'" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3 2.5-5 6-5s6 2 6 5"/><circle cx="17" cy="9" r="2.5"/><path d="M15.5 15.5c3.5-.4 5.5 1.2 5.5 4.5"/></svg>
+            <svg v-else-if="item.icon === 'mail'" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/></svg>
+            <svg v-else-if="item.icon === 'community'" viewBox="0 0 24 24"><circle cx="12" cy="6" r="2.5"/><circle cx="5.5" cy="10" r="2"/><circle cx="18.5" cy="10" r="2"/><path d="M7 20c0-3 2-5 5-5s5 2 5 5M2 19c0-2.5 1.4-4 3.5-4M22 19c0-2.5-1.4-4-3.5-4"/></svg>
+            <svg v-else-if="item.icon === 'forum'" viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4v-4H4V5Z"/><circle cx="9" cy="10.5" r=".7"/><circle cx="12" cy="10.5" r=".7"/><circle cx="15" cy="10.5" r=".7"/></svg>
+            <svg v-else-if="item.icon === 'calendar'" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18"/></svg>
+            <svg v-else-if="item.icon === 'briefcase'" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V4h6v3M3 12h18"/></svg>
+            <svg v-else-if="item.icon === 'store'" viewBox="0 0 24 24"><path d="m4 9 1-5h14l1 5"/><path d="M5 12v8h14v-8M4 9c0 2 3 3 4 0 0 2 3 3 4 0 0 2 3 3 4 0 1 3 4 2 4 0"/></svg>
+            <svg v-else-if="item.icon === 'journal'" viewBox="0 0 24 24"><path d="M5 3h13a2 2 0 0 1 2 2v16H7a2 2 0 0 1-2-2V3Z"/><path d="M5 17a2 2 0 0 1 2-2h13M9 7h7M9 10h5"/></svg>
+            <svg v-else viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4V3Z"/></svg>
+            <span>{{ item.label }}</span>
+            <b v-if="item.count?.value > 0">{{ item.count.value }}</b>
+          </component>
+        </nav>
 
-        <section class="rail-panel trending-panel">
-          <div class="rail-heading"><h2><span>🔥</span> Trending at BSU</h2><Link href="/wall">See all</Link></div>
-          <ul><li v-for="item in trending" :key="item[0]"><b>#</b><strong>{{ item[0] }}</strong><span>{{ item[1] }}</span></li></ul>
-        </section>
+        <div class="wall-nav">
+          <div class="wall-nav-title">
+            <span><svg viewBox="0 0 24 24"><path d="M4 5h16v12l-8 4-8-4V5Z"/><path d="M8 11c1.4 1.5 2.6 1.5 4 0 1.4 1.5 2.6 1.5 4 0"/></svg>Freedom Wall</span>
+            <svg viewBox="0 0 24 24" class="chevron"><path d="m8 14 4-4 4 4"/></svg>
+          </div>
+          <Link v-for="item in wallItems" :key="item.label" :href="item.href" class="nav-row nav-sub" :class="{ active: isActive(item.href) && !isActive('/feed') }">
+            <svg v-if="item.icon === 'forum'" viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4v-4H4V5Z"/><circle cx="9" cy="10.5" r=".7"/><circle cx="12" cy="10.5" r=".7"/><circle cx="15" cy="10.5" r=".7"/></svg>
+            <svg v-else-if="item.icon === 'hash'" viewBox="0 0 24 24"><path d="M9 3 7 21M17 3l-2 18M4 9h17M3 15h17"/></svg>
+            <svg v-else-if="item.icon === 'globe'" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg>
+            <svg v-else viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 3.4 8 8 10 4.6-2 8-5 8-10V6l-8-3Z"/></svg>
+            <span>{{ item.label }}</span>
+          </Link>
+        </div>
 
-        <section class="rail-panel events-panel">
-          <div class="rail-heading"><h2><span>▣</span> Upcoming Events</h2><a href="#events">See all</a></div>
-          <ul>
-            <li v-for="event in events" :key="event.title">
-              <time><b>{{ event.month }}</b><strong>{{ event.day }}</strong></time>
-              <span class="event-copy"><strong>{{ event.title }}</strong><small>⌖ {{ event.place }}</small><small>▧ {{ event.time }}</small></span>
-              <button type="button">Interested</button>
-            </li>
-          </ul>
-        </section>
+        <div class="sidebar-bottom">
+          <Link href="/settings/profile" class="nav-row"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.5-2.3 1a8 8 0 0 0-2-1.2L14.3 3H9.7l-.3 2.6a8 8 0 0 0-2 1.2l-2.3-1-2 3.5 2 1.5a7 7 0 0 0 0 2.4l-2 1.5 2 3.5 2.3-1a8 8 0 0 0 2 1.2l.3 2.6h4.6l.3-2.6a8 8 0 0 0 2-1.2l2.3 1 2-3.5-2-1.5A7 7 0 0 0 19 12Z"/></svg>Settings</Link>
+          <button type="button" class="logout-link" @click="logout">Log out</button>
+        </div>
       </aside>
+
+      <div class="feed-workspace">
+        <header class="topbar">
+          <form class="global-search" @submit.prevent="submitSearch">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+            <input v-model="search" type="search" placeholder="Search for students, posts, events, communities..." aria-label="Search BSU Connect" />
+          </form>
+          <div class="topbar-actions">
+            <button type="button" class="icon-button" aria-label="Notifications"><svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9ZM10 21h4"/></svg><i></i></button>
+            <Link href="/messages" class="icon-button" aria-label="Messages"><svg viewBox="0 0 24 24"><path d="M4 5h16v12H8l-4 3V5Z"/><circle cx="9" cy="11" r=".7"/><circle cx="12" cy="11" r=".7"/><circle cx="15" cy="11" r=".7"/></svg></Link>
+            <Link :href="`/profile/${authUser?.username}`" class="top-avatar">{{ initial }}</Link>
+            <button type="button" class="profile-caret" aria-label="Account menu" @click="logout"><svg viewBox="0 0 24 24"><path d="m8 10 4 4 4-4"/></svg></button>
+          </div>
+        </header>
+
+        <main class="feed-main"><slot /></main>
+
+        <aside class="feed-right">
+          <section class="rail-panel stories-panel">
+            <div class="rail-heading"><h2><span>♣</span> Stories</h2><Link href="/friends">See all</Link></div>
+            <div class="story-row">
+              <button type="button" class="story-card create-story"><span class="story-add">+</span><strong>Create<br />Story</strong></button>
+              <Link v-for="friend in storyFriends.slice(0, 4)" :key="friend.id" :href="`/profile/${friend.username}`" class="story-card" :style="friend.avatar_url ? { backgroundImage: `url(${friend.avatar_url})` } : null">
+                <span class="story-ring"><img v-if="friend.avatar_url" :src="friend.avatar_url" alt="" /><span v-else>{{ friend.name.slice(0, 1) }}</span></span>
+                <strong>{{ friend.name.split(' ')[0] }}</strong>
+              </Link>
+              <div v-if="!storyFriends.length" class="story-card story-placeholder"><span class="story-ring">B</span><strong>BSU SSC</strong></div>
+            </div>
+          </section>
+
+          <section class="rail-panel suggestions-panel">
+            <div class="rail-heading"><h2><span>♣</span> People you may know</h2><Link href="/friends">See all</Link></div>
+            <ul class="suggestion-list">
+              <li v-for="person in suggestedFriends" :key="person.id">
+                <span class="avatar avatar-sm"><img v-if="person.avatar_url" :src="person.avatar_url" alt="" /><span v-else>{{ person.name.slice(0, 1) }}</span></span>
+                <span class="person-copy"><strong>{{ person.name }}</strong><small>@{{ person.username }}</small><em>BSU student</em></span>
+                <button type="button" :disabled="requestedIds.includes(person.id)" @click="followSuggestion(person)">{{ requestedIds.includes(person.id) ? 'Requested' : 'Connect' }}</button>
+              </li>
+              <li v-if="!suggestedFriends.length" class="suggestion-empty">Your network is all caught up.</li>
+            </ul>
+          </section>
+
+          <section class="rail-panel trending-panel">
+            <div class="rail-heading"><h2><span>🔥</span> Trending at BSU</h2><Link href="/wall">See all</Link></div>
+            <ul><li v-for="item in trending" :key="item[0]"><b>#</b><strong>{{ item[0] }}</strong><span>{{ item[1] }}</span></li></ul>
+          </section>
+
+          <section class="rail-panel events-panel">
+            <div class="rail-heading"><h2><span>▣</span> Upcoming Events</h2><a href="#events">See all</a></div>
+            <ul>
+              <li v-for="event in events" :key="event.title">
+                <time><b>{{ event.month }}</b><strong>{{ event.day }}</strong></time>
+                <span class="event-copy"><strong>{{ event.title }}</strong><small>⌖ {{ event.place }}</small><small>▧ {{ event.time }}</small></span>
+                <button type="button">Interested</button>
+              </li>
+            </ul>
+          </section>
+        </aside>
+      </div>
     </div>
   </div>
 </template>
@@ -221,11 +223,20 @@ function submitSearch() {
   font-family: Inter, var(--b-sans);
 }
 
+.feed-frame {
+  max-width: 1728px;
+  margin: 0 auto;
+  display: flex;
+  align-items: flex-start;
+}
+
 .feed-sidebar {
-  position: fixed;
-  inset: 0 auto 0 0;
+  position: sticky;
+  top: 0;
   z-index: 20;
   width: 292px;
+  flex: 0 0 292px;
+  height: 100vh;
   padding: 14px 18px 18px 32px;
   display: flex;
   flex-direction: column;
@@ -271,7 +282,7 @@ function submitSearch() {
 .sidebar-bottom { margin-top: auto; padding-top: 14px; }
 .logout-link { margin-left: 46px; border: 0; background: none; color: #87918c; font: inherit; font-size: 12px; cursor: pointer; }
 
-.feed-workspace { min-height: 100vh; margin-left: 292px; display: grid; grid-template-columns: minmax(0, 1fr) 420px; grid-template-rows: 58px auto; max-width: 1436px; }
+.feed-workspace { min-height: 100vh; flex: 1; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr) 420px; grid-template-rows: 58px auto; }
 .topbar { grid-column: 1 / -1; position: sticky; top: 0; z-index: 15; height: 58px; display: flex; align-items: center; gap: 28px; padding: 8px 24px 8px 16px; background: rgba(255,255,255,.96); border-bottom: 1px solid #edf1ef; backdrop-filter: blur(12px); }
 .global-search { display: flex; align-items: center; flex: 1; max-width: 780px; height: 40px; padding: 0 13px; border: 1px solid #d9e1dd; border-radius: 8px; background: #f6f8f7; }
 .global-search svg { width: 19px; fill: none; stroke: #66726c; stroke-width: 1.8; stroke-linecap: round; }
@@ -328,8 +339,8 @@ function submitSearch() {
 .events-panel li button { padding: 8px 10px; border: 1px solid var(--feed-green); border-radius: 5px; background: #fff; color: var(--feed-green); font-size: 9px; font-weight: 700; }
 
 @media (max-width: 1260px) {
-  .feed-sidebar { width: 238px; padding-left: 17px; }
-  .feed-workspace { margin-left: 238px; grid-template-columns: minmax(0, 1fr) 340px; }
+  .feed-sidebar { width: 238px; flex-basis: 238px; padding-left: 17px; }
+  .feed-workspace { grid-template-columns: minmax(0, 1fr) 340px; }
   .brand-lockup strong { font-size: 18px; }
   .feed-right { padding-right: 10px; }
 }
@@ -340,7 +351,8 @@ function submitSearch() {
 }
 
 @media (max-width: 760px) {
-  .feed-sidebar { position: sticky; top: 0; width: 100%; height: auto; min-height: 62px; padding: 8px 12px; flex-direction: row; align-items: center; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--feed-line); }
+  .feed-frame { display: block; }
+  .feed-sidebar { width: 100%; height: auto; min-height: 62px; padding: 8px 12px; flex-direction: row; align-items: center; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--feed-line); }
   .brand-lockup { flex: 0 0 auto; padding: 0 14px 0 0; border: 0; }
   .brand-lockup img { width: 39px; height: 39px; }
   .brand-lockup small, .sidebar-profile, .wall-nav, .sidebar-bottom { display: none; }
@@ -348,7 +360,7 @@ function submitSearch() {
   .nav-row { min-width: 43px; min-height: 43px; justify-content: center; padding: 0 12px; }
   .nav-row span { display: none; }
   .nav-row b { position: absolute; transform: translate(12px,-12px); }
-  .feed-workspace { margin-left: 0; display: block; }
+  .feed-workspace { display: block; }
   .topbar { position: static; height: 56px; padding: 8px 12px; }
   .topbar-actions .icon-button, .profile-caret { display: none; }
   .global-search { max-width: none; }

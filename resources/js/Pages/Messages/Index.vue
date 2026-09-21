@@ -1,10 +1,10 @@
 <script setup>
-import { Link, router, useForm } from '@inertiajs/vue3';
+import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { ref } from 'vue';
-import StudentLayout from '../../Layouts/StudentLayout.vue';
+import FeedLayout from '../../Layouts/FeedLayout.vue';
 import { timeAgo } from '../../lib/date';
 
-defineOptions({ layout: StudentLayout });
+defineOptions({ layout: FeedLayout });
 
 defineProps({
   conversations: Array,
@@ -50,51 +50,57 @@ function excerpt(text, length = 46) {
 </script>
 
 <template>
-  <div class="messages-page">
-    <div class="messages-header">
-      <h2>Messages</h2>
-      <div class="messages-actions">
+  <Head title="Messages" />
+
+  <div class="msg-page">
+    <section class="msg-head">
+      <div class="msg-head-copy">
+        <h1>Messages</h1>
+        <p>Your direct chats and group threads with classmates.</p>
+      </div>
+      <div class="msg-head-actions">
         <button type="button" class="btn-primary" @click="dmModalOpen = true">New message</button>
         <button type="button" class="btn-secondary" @click="groupModalOpen = true">New group</button>
       </div>
-    </div>
+    </section>
 
-    <div v-if="conversations.length" class="conversation-list">
+    <section v-if="conversations.length" class="conversation-list">
       <Link
         v-for="conversation in conversations"
         :key="conversation.id"
         :href="route('conversations.show', conversation.id)"
         class="conversation-row"
+        :class="{ unread: conversation.unread_count > 0 }"
       >
         <span class="avatar" :class="{ group: conversation.type === 'group' }">
           <img v-if="conversation.avatar_url" :src="conversation.avatar_url" alt="" />
           <span v-else>{{ conversation.display_name.slice(0, 1).toUpperCase() }}</span>
         </span>
-        <div class="conversation-info">
+        <span class="conversation-info">
           <span class="conversation-name">
             {{ conversation.display_name }}
-            <span v-if="conversation.type === 'group'" class="member-count">
-              {{ conversation.participant_count }} members
-            </span>
+            <em v-if="conversation.type === 'group'">{{ conversation.participant_count }} members</em>
           </span>
           <span v-if="conversation.last_message" class="conversation-preview">
             {{ conversation.last_message.is_own ? 'You: ' : '' }}{{ excerpt(conversation.last_message.content) }}
           </span>
-          <span v-else class="conversation-preview empty">No messages yet</span>
-        </div>
-        <div class="conversation-meta">
+          <span v-else class="conversation-preview muted">No messages yet</span>
+        </span>
+        <span class="conversation-meta">
           <span v-if="conversation.last_message" class="conversation-time">
             {{ timeAgo(conversation.last_message.created_at) }}
           </span>
           <span v-if="conversation.unread_count > 0" class="unread-pill">{{ conversation.unread_count }}</span>
-        </div>
+        </span>
       </Link>
-    </div>
-    <p v-else class="empty">
-      No conversations yet.
-      <template v-if="friends.length">Start one with the buttons above.</template>
-      <template v-else>Add some <Link href="/friends">friends</Link> first, then message them here.</template>
-    </p>
+    </section>
+
+    <section v-else class="msg-empty">
+      <span>✉</span>
+      <h2>No conversations yet</h2>
+      <p v-if="friends.length">Start one with the buttons above and your threads will show up here.</p>
+      <p v-else>Connect with classmates on your <Link href="/friends">network</Link> first, then message them here.</p>
+    </section>
 
     <Teleport to="body">
       <div v-if="dmModalOpen" class="modal-overlay" @click.self="dmModalOpen = false">
@@ -120,7 +126,7 @@ function excerpt(text, length = 46) {
               <button type="button" class="btn-primary" @click="startDm(friend.username)">Message</button>
             </li>
           </ul>
-          <p v-else class="empty">You need accepted friends before you can message anyone.</p>
+          <p v-else class="modal-empty">You need accepted connections before you can message anyone.</p>
         </div>
       </div>
     </Teleport>
@@ -141,7 +147,7 @@ function excerpt(text, length = 46) {
             <input v-model="groupForm.name" type="text" class="group-name-input" placeholder="Group name" />
             <p v-if="groupForm.errors.name" class="error">{{ groupForm.errors.name }}</p>
 
-            <p class="picker-hint">Pick at least two friends:</p>
+            <p class="picker-hint">Pick at least two classmates:</p>
             <ul v-if="friends.length" class="friend-list picker">
               <li v-for="friend in friends" :key="friend.id">
                 <label class="picker-row">
@@ -161,7 +167,7 @@ function excerpt(text, length = 46) {
                 </label>
               </li>
             </ul>
-            <p v-else class="empty">You need accepted friends before you can create a group.</p>
+            <p v-else class="modal-empty">You need accepted connections before you can create a group.</p>
             <p v-if="groupForm.errors.participants" class="error">{{ groupForm.errors.participants }}</p>
 
             <button
@@ -179,319 +185,78 @@ function excerpt(text, length = 46) {
 </template>
 
 <style scoped>
-.messages-page {
+.msg-page {
+  --feed-green: #075b32;
+  --feed-ink: #17211b;
+  --feed-muted: #6f7d75;
+  --feed-line: #dce5e0;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 10px;
+  padding-top: 14px;
+  color: var(--feed-ink);
 }
 
-.messages-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-}
+.msg-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 15px 18px; border: 1px solid var(--feed-line); border-radius: 10px; background: #fff; box-shadow: 0 2px 9px rgba(17,53,33,.035); }
+.msg-head-copy h1 { margin: 0; font-size: 20px; letter-spacing: -.4px; }
+.msg-head-copy p { margin: 5px 0 0; color: var(--feed-muted); font-size: 12px; }
+.msg-head-actions { display: flex; gap: 8px; flex-shrink: 0; }
 
-.messages-header h2 {
-  margin: 0;
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--nf-ink);
-}
+.conversation-list { overflow: hidden; border: 1px solid var(--feed-line); border-radius: 10px; background: #fff; box-shadow: 0 2px 9px rgba(17,53,33,.035); }
+.conversation-row { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-top: 1px solid #eef3f0; text-decoration: none; transition: background .15s ease; }
+.conversation-row:first-child { border-top: 0; }
+.conversation-row:hover { background: #f4f8f6; }
+.conversation-row.unread { background: #f7fbf9; }
+.avatar { width: 46px; height: 46px; flex: 0 0 46px; display: grid; place-items: center; overflow: hidden; border-radius: 50%; background: #e8f1ec; color: var(--feed-green); font-size: 18px; font-weight: 800; }
+.avatar.group { border-radius: 12px; }
+.avatar img { width: 100%; height: 100%; object-fit: cover; }
+.conversation-info { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 3px; }
+.conversation-name { display: flex; align-items: baseline; gap: 8px; overflow: hidden; color: var(--feed-ink); font-size: 13px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.conversation-name em { color: var(--feed-muted); font-size: 10px; font-style: normal; font-weight: 500; }
+.conversation-preview { overflow: hidden; color: var(--feed-muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.conversation-row.unread .conversation-preview { color: #2b3a32; font-weight: 600; }
+.conversation-preview.muted { font-style: italic; }
+.conversation-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; flex-shrink: 0; }
+.conversation-time { color: #87928c; font-size: 10px; }
+.unread-pill { display: grid; place-items: center; min-width: 19px; height: 19px; padding: 0 6px; border-radius: 50px; background: var(--feed-green); color: #fff; font-size: 10px; font-weight: 700; }
 
-.messages-actions {
-  display: flex;
-  gap: 0.5rem;
-}
+.msg-empty { padding: 48px 25px; border: 1px solid var(--feed-line); border-radius: 10px; background: #fff; text-align: center; }
+.msg-empty > span { color: var(--feed-green); font-size: 28px; }
+.msg-empty h2 { margin: 10px 0 5px; font-size: 17px; }
+.msg-empty p { max-width: 420px; margin: 0 auto; color: var(--feed-muted); font-size: 12px; }
+.msg-empty a { color: var(--feed-green); font-weight: 700; }
 
-.conversation-list {
-  display: flex;
-  flex-direction: column;
-  background: var(--nf-panel);
-  border: 1px solid var(--nf-line);
-  border-radius: var(--b-r-card);
-  overflow: hidden;
-}
+.btn-primary, .btn-secondary { padding: 9px 15px; border-radius: 6px; font: inherit; font-size: 11px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.btn-primary { border: 0; background: linear-gradient(135deg, #08713e, #07562f); color: #fff; }
+.btn-primary:disabled { opacity: .45; cursor: default; }
+.btn-primary.full { width: 100%; margin-top: 12px; padding: 11px; }
+.btn-secondary { border: 1px solid var(--feed-line); background: #fff; color: #3f4c45; }
+.btn-secondary:hover { border-color: #a9c9b8; color: var(--feed-green); }
 
-.conversation-row {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.85rem 1rem;
-  text-decoration: none;
-  border-bottom: 1px solid var(--nf-line);
-}
+.modal-overlay { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: flex-start; justify-content: center; padding: 6vh 1rem; overflow-y: auto; background: rgba(5, 26, 16, .52); }
+.modal { width: 100%; max-width: 440px; padding: 16px; border: 1px solid #dce5e0; border-radius: 12px; background: #fff; color: #17211b; font-family: Inter, var(--b-sans); box-shadow: 0 18px 44px rgba(6, 34, 20, .22); }
+.modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; padding-bottom: 11px; border-bottom: 1px solid #eef3f0; }
+.modal-header h3 { margin: 0; font-size: 16px; font-weight: 800; }
+.modal-close { display: grid; place-items: center; width: 30px; height: 30px; border: 0; border-radius: 50%; background: #f2f6f4; color: #3f4c45; cursor: pointer; }
+.modal-close:hover { background: #e8f1ec; color: #075b32; }
 
-.conversation-row:last-child {
-  border-bottom: none;
-}
+.friend-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 9px; max-height: 320px; overflow-y: auto; }
+.friend-list li { display: flex; align-items: center; gap: 10px; }
+.friend-list .avatar { width: 38px; height: 38px; flex-basis: 38px; font-size: 15px; }
+.friend-info { display: flex; min-width: 0; flex: 1; flex-direction: column; }
+.friend-name { overflow: hidden; font-size: 12px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.friend-username { color: #7b8781; font-size: 10px; }
+.picker-row { display: flex; align-items: center; gap: 10px; width: 100%; cursor: pointer; }
+.picker-row input[type='checkbox'] { width: 15px; height: 15px; flex-shrink: 0; accent-color: #075b32; }
+.group-name-input { width: 100%; margin-bottom: 11px; padding: 10px 12px; border: 1px solid #d9e2dd; border-radius: 7px; background: #f6f8f7; color: #17211b; font: inherit; font-size: 12px; }
+.group-name-input:focus { outline: none; border-color: #69a989; box-shadow: 0 0 0 3px rgba(7,91,50,.08); }
+.picker-hint { margin: 0 0 9px; color: #7b8781; font-size: 11px; }
+.modal-empty { margin: 0; color: #7b8781; font-size: 12px; }
+.error { margin: 6px 0 0; color: #b42318; font-size: 11px; }
 
-.conversation-row:hover {
-  background: var(--nf-surface-2);
-}
-
-.avatar {
-  width: 2.6rem;
-  height: 2.6rem;
-  border-radius: var(--b-r-pill);
-  overflow: hidden;
-  flex-shrink: 0;
-  background: var(--nf-surface-2);
-  color: var(--nf-accent);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-}
-
-.avatar.group {
-  border-radius: var(--b-r-md);
-}
-
-.avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.conversation-info {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-width: 0;
-}
-
-.conversation-name {
-  font-weight: 700;
-  font-size: 0.92rem;
-  color: var(--nf-ink);
-  display: flex;
-  align-items: baseline;
-  gap: 0.5rem;
-}
-
-.member-count {
-  font-weight: 500;
-  font-size: 0.75rem;
-  color: var(--nf-muted);
-}
-
-.conversation-preview {
-  font-size: 0.82rem;
-  color: var(--nf-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.conversation-preview.empty {
-  font-style: italic;
-}
-
-.conversation-meta {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.3rem;
-  flex-shrink: 0;
-}
-
-.conversation-time {
-  font-size: 0.75rem;
-  color: var(--nf-muted);
-}
-
-.unread-pill {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 1.2rem;
-  height: 1.2rem;
-  padding: 0 0.35rem;
-  border-radius: var(--b-r-pill);
-  background: var(--nf-accent);
-  color: var(--nf-accent-contrast);
-  font-size: 0.7rem;
-  font-weight: 700;
-}
-
-.empty {
-  color: var(--nf-muted);
-  font-size: 0.9rem;
-}
-
-.empty :deep(a),
-.empty a {
-  color: var(--nf-accent);
-  font-weight: 600;
-}
-
-.btn-primary {
-  background: var(--nf-accent);
-  color: var(--nf-accent-contrast);
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: var(--b-r-sm);
-  font-weight: 600;
-  font-size: 0.85rem;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.btn-primary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.btn-primary.full {
-  width: 100%;
-  margin-top: 0.75rem;
-  padding: 0.65rem;
-}
-
-.btn-secondary {
-  background: var(--nf-surface-2);
-  color: var(--nf-ink);
-  border: 1px solid var(--nf-line);
-  padding: 0.5rem 1rem;
-  border-radius: var(--b-r-sm);
-  font-weight: 600;
-  font-size: 0.85rem;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  background: rgba(0, 0, 0, 0.6);
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding: 6vh 1rem;
-  overflow-y: auto;
-}
-
-.modal {
-  width: 100%;
-  max-width: 440px;
-  background: var(--nf-panel, #1f2027);
-  border: 1px solid var(--nf-line, #2c2d36);
-  border-radius: var(--b-r-card);
-  padding: 1rem;
-  color: var(--nf-ink, #e9e9ee);
-}
-
-.modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid var(--nf-line, #2c2d36);
-  margin-bottom: 0.9rem;
-}
-
-.modal-header h3 {
-  margin: 0;
-  font-size: 1.05rem;
-  font-weight: 800;
-  color: var(--nf-ink, #e9e9ee);
-}
-
-.modal-close {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  border-radius: var(--b-r-pill);
-  border: none;
-  background: var(--nf-surface-2, #2a2b33);
-  color: var(--nf-ink, #e9e9ee);
-  cursor: pointer;
-}
-
-.friend-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-  max-height: 320px;
-  overflow-y: auto;
-}
-
-.friend-list li {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-}
-
-.friend-list .avatar {
-  width: 2.2rem;
-  height: 2.2rem;
-}
-
-.friend-info {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-width: 0;
-}
-
-.friend-name {
-  font-weight: 600;
-  font-size: 0.88rem;
-  color: var(--nf-ink, #e9e9ee);
-}
-
-.friend-username {
-  font-size: 0.75rem;
-  color: var(--nf-muted, #9497a6);
-}
-
-.picker-row {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  width: 100%;
-  cursor: pointer;
-}
-
-.picker-row input[type='checkbox'] {
-  accent-color: var(--nf-accent, var(--b-green));
-  width: 1rem;
-  height: 1rem;
-  flex-shrink: 0;
-}
-
-.group-name-input {
-  width: 100%;
-  padding: 0.6rem 0.8rem;
-  border: 1px solid var(--nf-line, #2c2d36);
-  border-radius: var(--b-r-thumb);
-  background: var(--nf-surface-2, #2a2b33);
-  color: var(--nf-ink, #e9e9ee);
-  font: inherit;
-  margin-bottom: 0.75rem;
-}
-
-.group-name-input:focus {
-  outline: none;
-  border-color: var(--nf-accent, var(--b-green));
-}
-
-.picker-hint {
-  margin: 0 0 0.6rem;
-  font-size: 0.8rem;
-  color: var(--nf-muted, #9497a6);
-}
-
-.error {
-  margin: 0.4rem 0 0;
-  color: #f87171;
-  font-size: 0.8rem;
+@media (max-width: 760px) {
+  .msg-page { padding-top: 10px; }
+  .msg-head { flex-direction: column; align-items: flex-start; }
+  .conversation-row { padding: 11px 12px; }
 }
 </style>
