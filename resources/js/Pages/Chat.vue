@@ -1,7 +1,7 @@
 <script setup>
 import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import NewsfeedLayout from '../Layouts/NewsfeedLayout.vue';
-import { timeOfDay } from '../lib/date';
+import { dayKey, dayLabel, formatDateTime, timeOfDay } from '../lib/date';
 
 defineOptions({ layout: NewsfeedLayout });
 
@@ -31,6 +31,22 @@ const listRef = ref(null);
 
 let pollTimer = null;
 let audioContext = null;
+
+// Each message shows a wall-clock time only, so the day it belongs to has to be
+// stated somewhere or an 11 AM message reads as out of order sitting under a
+// 6 PM one from the night before. Mark every message that opens a new day.
+const rows = computed(() =>
+  messages.value.map((message, index) => {
+    const previous = messages.value[index - 1];
+
+    return {
+      message,
+      day: previous && dayKey(previous.sent_at) === dayKey(message.sent_at)
+        ? null
+        : dayLabel(message.sent_at),
+    };
+  }),
+);
 
 const latestId = computed(() => messages.value.at(-1)?.id ?? 0);
 const remaining = computed(() => MAX_LENGTH - content.value.length);
@@ -198,22 +214,23 @@ onBeforeUnmount(() => {
     </header>
 
     <div ref="listRef" class="chat-stream">
-      <article
-        v-for="message in messages"
-        :key="message.id"
-        class="chat-row"
-        :class="{ own: isOwn(message) }"
-      >
-        <span class="chat-avatar" aria-hidden="true">{{ initials(message.nickname) }}</span>
-        <div class="chat-row-body">
-          <div class="chat-row-head">
-            <strong>{{ message.nickname }}</strong>
-            <span v-if="isOwn(message)" class="chat-you">you</span>
-            <time :datetime="message.sent_at">{{ timeOfDay(message.sent_at) }}</time>
+      <template v-for="row in rows" :key="row.message.id">
+        <p v-if="row.day" class="chat-day"><span>{{ row.day }}</span></p>
+
+        <article class="chat-row" :class="{ own: isOwn(row.message) }">
+          <span class="chat-avatar" aria-hidden="true">{{ initials(row.message.nickname) }}</span>
+          <div class="chat-row-body">
+            <div class="chat-row-head">
+              <strong>{{ row.message.nickname }}</strong>
+              <span v-if="isOwn(row.message)" class="chat-you">you</span>
+              <time :datetime="row.message.sent_at" :title="formatDateTime(row.message.sent_at)">
+                {{ timeOfDay(row.message.sent_at) }}
+              </time>
+            </div>
+            <p>{{ row.message.content }}</p>
           </div>
-          <p>{{ message.content }}</p>
-        </div>
-      </article>
+        </article>
+      </template>
 
       <p v-if="messages.length === 0" class="empty-state">No messages yet. Start the room.</p>
     </div>
@@ -362,6 +379,36 @@ onBeforeUnmount(() => {
 }
 
 .chat-row:last-child {
+  border-bottom: 0;
+}
+
+.chat-day {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0.9rem 0 0.2rem;
+  color: var(--nf-muted);
+  font-family: var(--b-mono);
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.chat-day::before,
+.chat-day::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--nf-line);
+}
+
+.chat-day:first-child {
+  padding-top: 0.35rem;
+}
+
+/* The row above already draws a rule; let the day marker carry it instead. */
+.chat-row:has(+ .chat-day) {
   border-bottom: 0;
 }
 

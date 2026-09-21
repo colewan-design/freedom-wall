@@ -20,6 +20,34 @@ export function timeOfDay(value) {
   return new Date(value).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
 
+// The local calendar day a timestamp falls on, for grouping a transcript.
+export function dayKey(value) {
+  const date = new Date(value);
+
+  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+}
+
+// Heading for the marker that opens each day of the transcript. Recent days
+// read better by name than by date, and the year only earns its place once the
+// conversation is old enough to have crossed into another one.
+export function dayLabel(value) {
+  const date = new Date(value);
+  const today = new Date();
+
+  if (dayKey(date) === dayKey(today)) return 'Today';
+
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (dayKey(date) === dayKey(yesterday)) return 'Yesterday';
+
+  return date.toLocaleDateString([], {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    ...(date.getFullYear() === today.getFullYear() ? {} : { year: 'numeric' }),
+  });
+}
+
 // Compact presence label for the active-members list: "now", "4m", "2h".
 export function shortTimeAgo(value) {
   const min = Math.floor((Date.now() - new Date(value).getTime()) / 60000);
