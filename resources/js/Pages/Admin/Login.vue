@@ -80,7 +80,7 @@ function onSubmit() {
   flex-direction: column;
   justify-content: space-between;
   padding: 3rem;
-  background: linear-gradient(150deg, #042f2a 0%, #0f766e 45%, #0d9488 100%);
+  background: linear-gradient(150deg, var(--b-green-text) 0%, var(--b-green-hover) 45%, var(--b-green) 100%);
   color: #fff;
 }
 
@@ -96,7 +96,7 @@ function onSubmit() {
 .hero-mark {
   width: 2.75rem;
   height: 2.75rem;
-  border-radius: 10px;
+  border-radius: var(--b-r-thumb);
   object-fit: cover;
   position: relative;
   z-index: 1;
@@ -228,11 +228,11 @@ form {
 
 .submit-btn {
   margin-top: 0.5rem;
-  background: #16181d;
-  color: #fff;
+  background: var(--b-green);
+  color: var(--b-green-ink);
   border: none;
   padding: 0.85rem;
-  border-radius: 10px;
+  border-radius: var(--b-r-thumb);
   font-weight: 700;
   font-size: 0.95rem;
   cursor: pointer;
@@ -240,7 +240,7 @@ form {
 }
 
 .submit-btn:hover:not(:disabled) {
-  background: #000;
+  background: var(--b-green-hover);
 }
 
 .submit-btn:active:not(:disabled) {

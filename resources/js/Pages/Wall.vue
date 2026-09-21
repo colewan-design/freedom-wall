@@ -1,5 +1,5 @@
 <script setup>
-import { useForm, usePage } from '@inertiajs/vue3';
+import { Link, useForm, usePage } from '@inertiajs/vue3';
 import { computed, inject, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import NewsfeedLayout from '../Layouts/NewsfeedLayout.vue';
 import TurnstileWidget from '../Components/TurnstileWidget.vue';
@@ -9,6 +9,9 @@ defineOptions({ layout: NewsfeedLayout });
 
 const props = defineProps({
   posts: { type: Array, required: true },
+  // Hashtag list comes from Submission::CATEGORIES so the chips can never drift
+  // from what the form request accepts.
+  categories: { type: Array, default: () => [] },
 });
 
 const page = usePage();
@@ -17,19 +20,36 @@ const composerTextarea = ref(null);
 const fileInput = ref(null);
 const composerModalOpen = ref(false);
 
+const withPhotos = computed(() => props.posts.filter((post) => post.image_urls?.length).length);
+const textOnly = computed(() => props.posts.length - withPhotos.value);
+
 const composerForm = useForm({
   content: '',
+  category: '',
   images: [],
   captchaToken: null,
 });
+
+const composerReady = computed(
+  () => composerForm.content.trim().length > 0 && composerForm.category !== '',
+);
 
 function onComposerFileChange(e) {
   composerForm.images = Array.from(e.target.files || []);
 }
 
+function selectCategory(category) {
+  composerForm.category = category;
+  composerForm.clearErrors('category');
+}
+
 function onComposerSubmit() {
   if (!composerForm.content.trim()) {
     composerForm.setError('content', 'Please write something before submitting.');
+    return;
+  }
+  if (!composerForm.category) {
+    composerForm.setError('category', 'Please pick a hashtag for your post.');
     return;
   }
   if (composerForm.captchaToken === null) {
@@ -142,6 +162,11 @@ watch(
   { immediate: true },
 );
 
+// Entrance stagger caps out a few steps down the page so late cards don't crawl in.
+function riseDelay(index) {
+  return { '--i': Math.min(index, 4) };
+}
+
 const lightbox = reactive({ open: false, images: [], index: 0 });
 
 function openLightbox(post, index) {
@@ -179,30 +204,53 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
 
 <template>
   <div class="wall-page">
-    <div class="hero">
-      <div class="hero-text">
-        <img src="/images/branding/bsufw-banner.png" alt="BSU Freedom Wall" class="hero-banner" />
-        <span class="hero-eyebrow">BSU Community</span>
-        <h1>Speak freely. Stay anonymous.</h1>
-        <p>Confessions, rants, and stories from the BSU community — reviewed and posted for everyone to read.</p>
+    <header class="masthead rise" :style="riseDelay(0)">
+      <span class="halftone" aria-hidden="true"></span>
+      <p class="section-label">01 — bsu community</p>
+      <h1>freedom wall</h1>
+      <p class="lede">
+        Confessions, rants, and stories from the BSU community. Written anonymously,
+        reviewed by a human, then posted for everyone to read.
+      </p>
+      <div class="masthead-actions">
+        <button type="button" class="btn-invert" @click="focusComposer">Start a discussion</button>
+        <Link href="/id-check" class="text-link">try id check <span aria-hidden="true">→</span></Link>
       </div>
-    </div>
+    </header>
 
-    <button id="composer" type="button" class="composer-trigger" @click="openComposerModal">
+    <!-- Hairline dividers are the design here — no gaps, no fills. -->
+    <dl class="stat-row rise" :style="riseDelay(1)">
+      <div class="stat">
+        <dt>posts</dt>
+        <dd>{{ posts.length }}</dd>
+      </div>
+      <div class="stat">
+        <dt>with photos</dt>
+        <dd>{{ withPhotos }}</dd>
+      </div>
+      <div class="stat">
+        <dt>text only</dt>
+        <dd>{{ textOnly }}</dd>
+      </div>
+    </dl>
+
+    <button id="composer" type="button" class="composer-trigger rise" :style="riseDelay(2)" @click="openComposerModal">
       <img src="/images/branding/bsufw-mark-64.png" alt="" class="composer-avatar" />
       <span class="composer-trigger-text">What's on your mind?</span>
       <span class="composer-trigger-photo" aria-hidden="true">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <rect x="3" y="4" width="18" height="16" rx="3" stroke="currentColor" stroke-width="1.6" />
+          <rect x="3" y="4" width="18" height="16" rx="3" stroke="currentColor" stroke-width="1.4" />
           <circle cx="8.5" cy="10" r="1.6" fill="currentColor" />
-          <path d="m4 17 5-5 4 4 3-3 4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+          <path d="m4 17 5-5 4 4 3-3 4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
         </svg>
       </span>
     </button>
 
-    <div class="feed-header">
-      <h2>Latest Newsfeed</h2>
-      <button type="button" class="start-btn" @click="focusComposer">Start a Discussion</button>
+    <div class="feed-header rise" :style="riseDelay(3)">
+      <h2 class="section-label">02 — latest</h2>
+      <button type="button" class="text-link" @click="focusComposer">
+        new post <span aria-hidden="true">→</span>
+      </button>
     </div>
 
     <p v-if="filteredPosts.length === 0" class="hint">
@@ -210,31 +258,30 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
     </p>
 
     <div v-else class="feed-list">
-      <article v-for="post in filteredPosts" :id="`post-${post.id}`" :key="post.id" class="feed-card">
+      <article
+        v-for="(post, index) in filteredPosts"
+        :id="`post-${post.id}`"
+        :key="post.id"
+        class="feed-card rise"
+        :style="riseDelay(index + 4)"
+      >
         <div class="feed-post-header">
           <img src="/images/branding/bsufw-mark-64.png" alt="" class="feed-avatar" />
           <div class="feed-header-text">
             <div class="feed-name-row">
               <span class="feed-name">BSU Freedom Wall</span>
-              <svg class="feed-verified" width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true" title="Official page">
+              <svg class="feed-verified" width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true" title="Official page">
                 <path
                   d="M9.5 12.5 11 14l4-4.5M12 3.5l1.9 1.02 2.15-.35 1.06 1.9 1.9 1.06-.35 2.15L20.5 11l-1.02 1.9.35 2.15-1.9 1.06-1.06 1.9-2.15-.35L12 20.5l-1.9-1.02-2.15.35-1.06-1.9-1.9-1.06.35-2.15L3.5 12l1.02-1.9-.35-2.15 1.9-1.06 1.06-1.9 2.15.35L12 3.5Z"
                   fill="currentColor"
                 />
-                <path d="m9.2 12.4 1.8 1.8 3.8-4.2" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="m9.2 12.4 1.8 1.8 3.8-4.2" stroke="var(--b-bg)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
               </svg>
             </div>
             <div class="feed-sub-meta">
               <span class="timestamp">{{ timeAgo(post.reviewed_at) }}</span>
-              <span class="dot">&middot;</span>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true" title="Public post">
-                <circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.4" />
-                <path
-                  d="M3.5 12h17M12 3.5a13 13 0 0 1 3.2 8.5A13 13 0 0 1 12 20.5 13 13 0 0 1 8.8 12 13 13 0 0 1 12 3.5Z"
-                  stroke="currentColor"
-                  stroke-width="1.4"
-                />
-              </svg>
+              <span class="dot" aria-hidden="true">/</span>
+              <span>public</span>
             </div>
           </div>
         </div>
@@ -251,20 +298,20 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
             class="feed-seemore"
             @click="toggleExpand(post)"
           >
-            {{ expandedPosts[post.id] ? 'See less' : 'See more' }}
+            {{ expandedPosts[post.id] ? 'see less' : 'see more' }}
           </button>
         </div>
 
         <div v-if="post.image_urls?.length" class="feed-photo-grid" :class="`tiles-${Math.min(post.image_urls.length, 4)}`">
           <button
-            v-for="(imageUrl, index) in post.image_urls.slice(0, 4)"
-            :key="index"
+            v-for="(imageUrl, imageIndex) in post.image_urls.slice(0, 4)"
+            :key="imageIndex"
             type="button"
             class="feed-photo-tile"
-            @click="openLightbox(post, index)"
+            @click="openLightbox(post, imageIndex)"
           >
             <img :src="imageUrl" alt="" />
-            <span v-if="index === 3 && post.image_urls.length > 4" class="feed-photo-more">
+            <span v-if="imageIndex === 3 && post.image_urls.length > 4" class="feed-photo-more">
               +{{ post.image_urls.length - 4 }}
             </span>
           </button>
@@ -272,7 +319,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
 
         <div class="feed-actions">
           <button type="button" class="action" :class="{ active: reactionFor(post).liked }" @click="toggleLike(post)">
-            <svg width="15" height="15" viewBox="0 0 24 24" :fill="reactionFor(post).liked ? 'currentColor' : 'none'" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" :fill="reactionFor(post).liked ? 'currentColor' : 'none'" aria-hidden="true">
               <path
                 d="M7 10v11H4a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1h3Zm0 0 4.5-8a2 2 0 0 1 2.24.6c.5.6.7 1.4.48 2.16L13 10h5.2a2 2 0 0 1 1.96 2.4l-1.5 7A2 2 0 0 1 16.7 21H10a3 3 0 0 1-3-3"
                 stroke="currentColor"
@@ -283,7 +330,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
             Like
           </button>
           <button type="button" class="action" @click="sharePost(post)">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <circle cx="18" cy="5" r="2.4" stroke="currentColor" stroke-width="1.4" />
               <circle cx="6" cy="12" r="2.4" stroke="currentColor" stroke-width="1.4" />
               <circle cx="18" cy="19" r="2.4" stroke="currentColor" stroke-width="1.4" />
@@ -292,7 +339,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
             Share
           </button>
           <button type="button" class="action" :class="{ active: reactionFor(post).saved }" @click="toggleSave(post)">
-            <svg width="15" height="15" viewBox="0 0 24 24" :fill="reactionFor(post).saved ? 'currentColor' : 'none'" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" :fill="reactionFor(post).saved ? 'currentColor' : 'none'" aria-hidden="true">
               <path d="M6 4h12v16l-6-4-6 4V4Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" />
             </svg>
             Save
@@ -304,8 +351,8 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
     <Teleport to="body">
       <div v-if="lightbox.open" class="lightbox" @click.self="closeLightbox">
         <button type="button" class="lightbox-close" aria-label="Close" @click="closeLightbox">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
           </svg>
         </button>
 
@@ -316,8 +363,8 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
           aria-label="Previous image"
           @click.stop="prevImage"
         >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M15 5 8 12l7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M15 5 8 12l7 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
         </button>
 
@@ -330,8 +377,8 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
           aria-label="Next image"
           @click.stop="nextImage"
         >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="m9 5 7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="m9 5 7 7-7 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
         </button>
 
@@ -343,12 +390,12 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
 
     <Teleport to="body">
       <div v-if="composerModalOpen" class="composer-modal-overlay" @click.self="closeComposerModal">
-        <div class="composer-modal">
+        <div class="composer-modal" role="dialog" aria-modal="true" aria-label="Create post">
           <div class="composer-modal-header">
-            <h3>Create post</h3>
+            <h3>create post</h3>
             <button type="button" class="composer-modal-close" aria-label="Close" @click="closeComposerModal">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
               </svg>
             </button>
           </div>
@@ -357,7 +404,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
             <img src="/images/branding/bsufw-mark-64.png" alt="" class="composer-avatar" />
             <div class="composer-modal-user-text">
               <span class="composer-modal-name">BSU Freedom Wall</span>
-              <span class="composer-modal-sub">Anonymous &middot; reviewed before it's posted</span>
+              <span class="composer-modal-sub">anonymous / reviewed before posting</span>
             </div>
           </div>
 
@@ -369,6 +416,28 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
               placeholder="What's on your mind?"
               class="composer-modal-textarea"
             ></textarea>
+
+            <div class="composer-tags">
+              <p class="composer-tags-label">
+                pick a hashtag <span class="composer-tags-required">required</span>
+              </p>
+              <div class="composer-tag-row">
+                <button
+                  v-for="category in categories"
+                  :key="category"
+                  type="button"
+                  class="composer-tag"
+                  :class="{ active: composerForm.category === category }"
+                  :aria-pressed="composerForm.category === category"
+                  @click="selectCategory(category)"
+                >
+                  #{{ category }}
+                </button>
+              </div>
+              <p v-if="composerForm.category" class="composer-tags-hint">
+                #{{ composerForm.category }} will be added to the end of your post.
+              </p>
+            </div>
 
             <label class="composer-attach-row">
               <span>
@@ -382,10 +451,10 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
                   multiple
                   @change="onComposerFileChange"
                 />
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <rect x="3" y="4" width="18" height="16" rx="3" stroke="currentColor" stroke-width="1.6" />
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <rect x="3" y="4" width="18" height="16" rx="3" stroke="currentColor" stroke-width="1.4" />
                   <circle cx="8.5" cy="10" r="1.6" fill="currentColor" />
-                  <path d="m4 17 5-5 4 4 3-3 4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+                  <path d="m4 17 5-5 4 4 3-3 4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
               </span>
             </label>
@@ -397,12 +466,13 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
             <TurnstileWidget @verified="(token) => (composerForm.captchaToken = token)" />
 
             <p v-if="composerForm.errors.content" class="composer-banner error">{{ composerForm.errors.content }}</p>
+            <p v-else-if="composerForm.errors.category" class="composer-banner error">{{ composerForm.errors.category }}</p>
             <p v-else-if="composerForm.errors.captchaToken" class="composer-banner error">{{ composerForm.errors.captchaToken }}</p>
             <p v-else-if="composerForm.errors.images" class="composer-banner error">{{ composerForm.errors.images }}</p>
             <p v-else-if="composerForm.errors['images.0']" class="composer-banner error">{{ composerForm.errors['images.0'] }}</p>
             <p v-if="successMessage" class="composer-banner success">{{ successMessage }}</p>
 
-            <button type="submit" class="composer-modal-submit" :disabled="composerForm.processing || !composerForm.content.trim()">
+            <button type="submit" class="composer-modal-submit" :disabled="composerForm.processing || !composerReady">
               {{ composerForm.processing ? 'Posting…' : 'Post anonymously' }}
             </button>
           </form>
@@ -413,329 +483,258 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
 </template>
 
 <style scoped>
+/*
+ * bryl-minimal: monochrome, typography-driven. No accent colour anywhere —
+ * emphasis comes from inversion (ink fill on background), from switching to
+ * the mono register, and from the halftone dot field. Palette tokens (--b-*)
+ * are supplied by NewsfeedLayout under .nf-shell.bryl.
+ */
+
 .wall-page {
-  max-width: 100%;
+  max-width: 42rem;
+  margin: 0 auto;
+  font-family: var(--b-sans);
+  color: var(--b-ink);
 }
 
-.hero {
-  border-radius: 16px;
-  padding: 2rem;
-  margin-bottom: 1.5rem;
-  background: var(--nf-hero-grad);
-  border: 1px solid var(--nf-line);
-}
+/* --- shared type registers ---------------------------------------------- */
 
-.hero-banner {
-  display: block;
-  max-width: 320px;
-  width: 100%;
-  height: auto;
-  margin-bottom: 1rem;
-  border-radius: 8px;
-}
-
-.hero-eyebrow {
-  display: inline-block;
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--nf-accent);
-  margin-bottom: 0.5rem;
-}
-
-.hero-text h1 {
-  margin: 0 0 0.5rem;
-  font-size: 1.7rem;
-  font-weight: 800;
-  color: var(--nf-ink);
-}
-
-.hero-text p {
+/* The signature micro-label: numbered, em-dashed, display font, gray 400. */
+.section-label {
   margin: 0;
-  color: var(--nf-muted);
-  max-width: 46ch;
-  font-size: 0.92rem;
-  line-height: 1.5;
+  font-family: var(--b-display);
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--b-green-text);
 }
+
+.text-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: none;
+  background: none;
+  padding: 0;
+  font-family: var(--b-mono);
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--b-500);
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.text-link span {
+  display: inline-block;
+  transition: transform 0.2s var(--b-ease);
+}
+
+.text-link:hover {
+  color: var(--b-ink);
+}
+
+.text-link:hover span {
+  transform: translate(2px, -2px);
+}
+
+.btn-invert {
+  border: none;
+  border-radius: var(--b-r-input);
+  padding: 0.6rem 1rem;
+  background: var(--b-green);
+  color: var(--b-green-ink);
+  font-family: var(--b-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.btn-invert:hover {
+  background: var(--b-green-hover);
+}
+
+.btn-invert:disabled {
+  background: var(--b-300);
+  cursor: not-allowed;
+}
+
+/* --- masthead ------------------------------------------------------------ */
+
+.masthead {
+  position: relative;
+  overflow: hidden;
+  padding: 1rem 0 2.25rem;
+  border-bottom: 1px solid var(--b-200);
+}
+
+/* Print-style halftone: 1px dots on a 9px cell, masked so the field
+   dissolves instead of ending on a hard edge. One accent per page. */
+.halftone {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 240px;
+  height: 190px;
+  background-image: radial-gradient(var(--b-dot) 1px, transparent 1px);
+  background-size: 9px 9px;
+  /* Explicit radius: `closest-side` measured from a corner collapses to 0
+     and would hide the field entirely. */
+  -webkit-mask-image: radial-gradient(circle 230px at 100% 0%, #000 0%, transparent 100%);
+  mask-image: radial-gradient(circle 230px at 100% 0%, #000 0%, transparent 100%);
+  pointer-events: none;
+}
+
+.masthead h1 {
+  position: relative;
+  margin: 0.85rem 0 0;
+  font-family: var(--b-display);
+  font-size: clamp(2rem, 9vw, 3rem);
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  color: var(--b-green-text);
+}
+
+.lede {
+  position: relative;
+  margin: 1rem 0 0;
+  max-width: 42ch;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--b-500);
+}
+
+.masthead-actions {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.25rem;
+  margin-top: 1.75rem;
+}
+
+/* --- stat row ------------------------------------------------------------ */
+
+.stat-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin: 0 0 3.5rem;
+  border-bottom: 1px solid var(--b-200);
+}
+
+.stat {
+  padding: 1.1rem 1rem;
+  border-right: 1px solid var(--b-200);
+}
+
+.stat:first-child {
+  padding-left: 0;
+}
+
+.stat:last-child {
+  border-right: none;
+}
+
+.stat dt {
+  font-family: var(--b-mono);
+  font-size: 9px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--b-400);
+}
+
+.stat dd {
+  margin: 0.4rem 0 0;
+  font-family: var(--b-display);
+  font-size: 1.5rem;
+  line-height: 1;
+  color: var(--b-ink);
+}
+
+/* --- composer trigger ---------------------------------------------------- */
 
 .composer-trigger {
   display: flex;
   align-items: center;
   gap: 0.75rem;
   width: 100%;
-  background: var(--nf-panel);
-  border: 1px solid var(--nf-line);
-  border-radius: 14px;
-  padding: 0.75rem 1rem;
-  margin-bottom: 1.5rem;
-  scroll-margin-top: 1.5rem;
+  background: var(--b-bg);
+  border: 1px solid var(--b-200);
+  border-radius: var(--b-r-md);
+  padding: 0.75rem;
+  margin-bottom: 3.5rem;
+  scroll-margin-top: 5rem;
   cursor: pointer;
-  font: inherit;
   text-align: left;
-  transition: border-color 0.15s ease;
+  box-shadow: var(--b-shadow);
+  transition: border-color 0.2s ease, box-shadow 0.35s var(--b-ease);
 }
 
 .composer-trigger:hover {
-  border-color: var(--nf-accent);
+  border-color: var(--b-300);
+  box-shadow: var(--b-shadow-hover);
 }
 
+/* Brand chrome is desaturated to hold the monochrome rule; user-submitted
+   photos below are left exactly as they were sent. */
 .composer-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--b-r-thumb);
   object-fit: cover;
   flex-shrink: 0;
+  border: 1px solid var(--b-200);
+  filter: grayscale(1);
 }
 
 .composer-trigger-text {
   flex: 1;
   min-width: 0;
-  padding: 0.6rem 0.9rem;
-  border-radius: 999px;
-  background: var(--nf-surface-2);
-  color: var(--nf-muted);
-  font-size: 0.92rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--b-r-pill);
+  background: var(--b-50);
+  border: 1px solid var(--b-200);
+  color: var(--b-400);
+  font-family: var(--b-mono);
+  font-size: 12px;
 }
 
 .composer-trigger-photo {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.2rem;
-  height: 2.2rem;
-  color: var(--nf-accent);
-  flex-shrink: 0;
-}
-
-.composer-form {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.7rem;
-}
-
-.composer-file-list {
-  margin: -0.3rem 0 0;
-  padding-left: 1.1rem;
-  color: var(--nf-muted, #9497a6);
-  font-size: 0.8rem;
-}
-
-.composer-banner {
-  margin: 0;
-  padding: 0.6rem 0.85rem;
-  border-radius: 10px;
-  font-size: 0.85rem;
-}
-
-.composer-banner.error {
-  color: #f87171;
-  background: rgba(220, 38, 38, 0.16);
-}
-
-.composer-banner.success {
-  color: var(--status-active-fg, #4ade80);
-  background: var(--status-active-bg, rgba(21, 128, 61, 0.18));
-}
-
-.composer-modal-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  background: rgba(0, 0, 0, 0.6);
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding: 4vh 1rem;
-  overflow-y: auto;
-}
-
-.composer-modal {
-  width: 100%;
-  max-width: 500px;
-  background: var(--nf-panel, #1f2027);
-  border: 1px solid var(--nf-line, #2c2d36);
-  border-radius: 12px;
-  padding: 0.5rem 1rem 1rem;
-}
-
-.composer-modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  padding: 0.75rem 0;
-  border-bottom: 1px solid var(--nf-line, #2c2d36);
-  margin-bottom: 0.9rem;
-}
-
-.composer-modal-header h3 {
-  margin: 0;
-  font-size: 1.05rem;
-  font-weight: 800;
-  color: var(--nf-ink, #e9e9ee);
-}
-
-.composer-modal-close {
-  position: absolute;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.1rem;
-  height: 2.1rem;
-  border-radius: 50%;
-  border: none;
-  background: var(--nf-surface-2, #2a2b33);
-  color: var(--nf-ink, #e9e9ee);
-  cursor: pointer;
-}
-
-.composer-modal-close:hover {
-  background: var(--nf-line, #2c2d36);
-}
-
-.composer-modal-user {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  margin-bottom: 0.85rem;
-}
-
-.composer-modal-user-text {
-  display: flex;
-  flex-direction: column;
-}
-
-.composer-modal-name {
-  font-weight: 700;
-  font-size: 0.92rem;
-  color: var(--nf-ink, #e9e9ee);
-}
-
-.composer-modal-sub {
-  font-size: 0.78rem;
-  color: var(--nf-muted, #9497a6);
-}
-
-.composer-modal-textarea {
-  width: 100%;
-  min-height: 7rem;
-  padding: 0;
-  border: none;
-  background: transparent;
-  font: inherit;
-  font-size: 1.15rem;
-  color: var(--nf-ink, #e9e9ee);
-  resize: vertical;
-}
-
-.composer-modal-textarea:focus {
-  outline: none;
-}
-
-.composer-modal-textarea::placeholder {
-  color: var(--nf-muted, #9497a6);
-}
-
-.composer-attach-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.6rem 0.85rem;
-  border: 1px solid var(--nf-line, #2c2d36);
-  border-radius: 10px;
-  font-size: 0.88rem;
-  font-weight: 600;
-  color: var(--nf-ink, #e9e9ee);
-  cursor: pointer;
-}
-
-.composer-attach-row:hover {
-  border-color: var(--nf-accent, #0d9488);
-}
-
-.composer-attach-icon {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
   width: 2rem;
   height: 2rem;
-  color: var(--nf-accent, #0d9488);
+  color: var(--b-400);
   flex-shrink: 0;
 }
 
-.composer-attach-icon input[type='file'] {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-  cursor: pointer;
-}
-
-.composer-modal-submit {
-  width: 100%;
-  border: none;
-  border-radius: 8px;
-  padding: 0.65rem 1rem;
-  background: var(--nf-accent, #0d9488);
-  color: var(--nf-accent-contrast, #ffffff);
-  font-weight: 700;
-  font-size: 0.95rem;
-  cursor: pointer;
-}
-
-.composer-modal-submit:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-@media (max-width: 480px) {
-  .composer-trigger .composer-avatar {
-    display: none;
-  }
-
-  .composer-modal {
-    max-width: 100%;
-  }
-}
+/* --- feed ---------------------------------------------------------------- */
 
 .feed-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 1rem;
-}
-
-.feed-header h2 {
-  margin: 0;
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: var(--nf-ink);
-}
-
-.start-btn {
-  background: var(--nf-accent);
-  color: var(--nf-accent-contrast);
-  border: none;
-  text-decoration: none;
-  font: inherit;
-  font-weight: 600;
-  font-size: 0.82rem;
-  padding: 0.5rem 0.9rem;
-  border-radius: 8px;
-  cursor: pointer;
+  gap: 1rem;
+  padding-bottom: 0.75rem;
+  margin-bottom: 1.25rem;
+  border-bottom: 1px solid var(--b-200);
 }
 
 .hint {
-  color: var(--nf-muted);
+  font-family: var(--b-mono);
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--b-400);
 }
 
 .feed-list {
@@ -747,25 +746,34 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
 .feed-card {
   display: flex;
   flex-direction: column;
-  background: var(--nf-panel);
-  border: 1px solid var(--nf-line);
-  border-radius: 14px;
-  padding: 1rem;
+  background: var(--b-bg);
+  border: 1px solid var(--b-200);
+  border-radius: var(--b-r-card);
+  padding: 1.25rem;
+  box-shadow: var(--b-shadow);
+  transition: box-shadow 0.35s var(--b-ease), transform 0.42s var(--b-ease), border-color 0.2s ease;
+}
+
+.feed-card:hover {
+  border-color: var(--b-green);
+  box-shadow: var(--b-shadow-hover);
 }
 
 .feed-post-header {
   display: flex;
   align-items: flex-start;
-  gap: 0.6rem;
-  margin-bottom: 0.7rem;
+  gap: 0.65rem;
+  margin-bottom: 0.85rem;
 }
 
 .feed-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--b-r-thumb);
   object-fit: cover;
   flex-shrink: 0;
+  border: 1px solid var(--b-200);
+  filter: grayscale(1);
 }
 
 .feed-header-text {
@@ -780,34 +788,39 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
 }
 
 .feed-name {
-  font-weight: 700;
-  font-size: 0.92rem;
-  color: var(--nf-ink);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--b-ink);
 }
 
 .feed-verified {
-  color: var(--nf-accent);
+  color: var(--b-green-text);
   flex-shrink: 0;
 }
 
 .feed-sub-meta {
   display: flex;
   align-items: center;
-  gap: 0.35rem;
-  font-size: 0.76rem;
-  color: var(--nf-muted);
+  gap: 0.4rem;
+  margin-top: 0.15rem;
+  font-family: var(--b-mono);
+  font-size: 9px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--b-400);
 }
 
 .feed-content-wrap {
-  margin-bottom: 0.7rem;
+  margin-bottom: 0.85rem;
 }
 
 .feed-content {
   margin: 0;
   white-space: pre-wrap;
-  line-height: 1.5;
-  color: var(--nf-ink);
-  font-size: 0.92rem;
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--b-ink);
 }
 
 .feed-content.clamped {
@@ -821,25 +834,28 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
   display: inline-flex;
   border: none;
   background: none;
-  padding: 0.3rem 0 0;
+  padding: 0.5rem 0 0;
   margin: 0;
-  color: var(--nf-muted);
-  font-weight: 700;
-  font-size: 0.88rem;
+  font-family: var(--b-mono);
+  font-size: 9px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--b-400);
   cursor: pointer;
+  transition: color 0.2s ease;
 }
 
 .feed-seemore:hover {
-  color: var(--nf-ink);
-  text-decoration: underline;
+  color: var(--b-ink);
 }
 
 .feed-photo-grid {
   display: grid;
-  gap: 3px;
-  border-radius: 10px;
+  gap: 2px;
+  border-radius: var(--b-r-md);
   overflow: hidden;
-  margin-bottom: 0.75rem;
+  margin-bottom: 1rem;
+  border: 1px solid var(--b-200);
 }
 
 .feed-photo-grid.tiles-1 {
@@ -874,7 +890,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
 .feed-photo-tile {
   position: relative;
   overflow: hidden;
-  background: var(--nf-surface-2);
+  background: var(--b-50);
   border: none;
   padding: 0;
   margin: 0;
@@ -884,62 +900,88 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
   height: 100%;
 }
 
-.feed-photo-tile:hover img {
-  filter: brightness(0.92);
-}
-
 .feed-photo-tile img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
+  transition: transform 0.5s var(--b-ease);
+}
+
+.feed-photo-tile:hover img {
+  transform: scale(1.04);
 }
 
 .feed-photo-more {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(10, 10, 10, 0.6);
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.5rem;
-  font-weight: 700;
+  font-family: var(--b-display);
+  font-size: 1.25rem;
 }
 
 .feed-actions {
   display: flex;
-  gap: 1.25rem;
-  border-top: 1px solid var(--nf-line);
-  padding-top: 0.6rem;
+  gap: 1.5rem;
+  border-top: 1px solid var(--b-200);
+  padding-top: 0.85rem;
 }
 
 .action {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.4rem;
   background: none;
   border: none;
-  color: var(--nf-muted);
-  font-size: 0.8rem;
-  font-weight: 600;
+  padding: 0;
+  font-family: var(--b-mono);
+  font-size: 9px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--b-500);
   cursor: pointer;
-  padding: 0.2rem 0;
+  transition: color 0.2s ease;
 }
 
 .action:hover {
-  color: var(--nf-ink);
+  color: var(--b-ink);
 }
 
 .action.active {
-  color: var(--nf-accent);
+  color: var(--b-green-text);
 }
+
+/* --- entrance ------------------------------------------------------------ */
+
+.rise {
+  opacity: 0;
+  animation: rise 0.7s var(--b-ease) forwards;
+  animation-delay: calc(50ms + var(--i, 0) * 70ms);
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* --- lightbox ------------------------------------------------------------ */
 
 .lightbox {
   position: fixed;
   inset: 0;
   z-index: 1000;
-  background: rgba(0, 0, 0, 0.92);
+  background: rgba(10, 10, 10, 0.92);
+  backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -949,7 +991,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
   max-width: 90vw;
   max-height: 88vh;
   object-fit: contain;
-  border-radius: 4px;
+  border-radius: var(--b-r-sm);
 }
 
 .lightbox-close,
@@ -958,31 +1000,31 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   color: #fff;
-  border: none;
-  border-radius: 50%;
+  border-radius: var(--b-r-pill);
   cursor: pointer;
-  transition: background 0.15s ease;
+  transition: background 0.2s ease;
 }
 
 .lightbox-close:hover,
 .lightbox-nav:hover {
-  background: rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .lightbox-close {
   top: 1.25rem;
   left: 1.25rem;
-  width: 2.6rem;
-  height: 2.6rem;
+  width: 2.4rem;
+  height: 2.4rem;
 }
 
 .lightbox-nav {
   top: 50%;
   transform: translateY(-50%);
-  width: 3rem;
-  height: 3rem;
+  width: 2.8rem;
+  height: 2.8rem;
 }
 
 .lightbox-nav.prev {
@@ -998,18 +1040,362 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
   bottom: 1.5rem;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   color: #fff;
-  font-size: 0.85rem;
-  font-weight: 600;
+  font-family: var(--b-mono);
+  font-size: 10px;
+  letter-spacing: 1px;
   padding: 0.35rem 0.9rem;
+  border-radius: var(--b-r-pill);
+}
+
+/* --- composer modal ------------------------------------------------------ */
+
+.composer-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: var(--b-scrim, rgba(10, 10, 10, 0.3));
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 6vh 1rem 2rem;
+  overflow-y: auto;
+}
+
+.composer-modal {
+  width: 100%;
+  max-width: 30rem;
+  background: var(--b-bg);
+  border: 1px solid var(--b-200);
+  border-radius: var(--b-r-card);
+  padding: 1.75rem;
+  box-shadow: var(--b-shadow-modal);
+  animation: modal-in 0.2s var(--b-ease);
+}
+
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.composer-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--b-200);
+  margin-bottom: 1.25rem;
+}
+
+.composer-modal-header h3 {
+  margin: 0;
+  font-family: var(--b-display);
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--b-green-text);
+}
+
+.composer-modal-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: var(--b-r-pill);
+  border: 1px solid var(--b-200);
+  background: var(--b-bg);
+  color: var(--b-500);
+  cursor: pointer;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.composer-modal-close:hover {
+  color: var(--b-ink);
+  border-color: var(--b-300);
+}
+
+.composer-modal-user {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-bottom: 1rem;
+}
+
+.composer-modal-user-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.composer-modal-name {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--b-ink);
+}
+
+.composer-modal-sub {
+  font-family: var(--b-mono);
+  font-size: 9px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--b-400);
+}
+
+.composer-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Invisible input inside a composed widget — no border, no focus ring. */
+.composer-modal-textarea {
+  width: 100%;
+  min-height: 7rem;
+  padding: 0;
+  border: none;
+  background: transparent;
+  font-family: var(--b-sans);
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--b-ink);
+  resize: vertical;
+}
+
+.composer-modal-textarea:focus {
+  outline: none;
+}
+
+.composer-modal-textarea::placeholder {
+  color: var(--b-400);
+}
+
+/* Required hashtag picker. Selection reads as inversion, same as .btn-invert. */
+.composer-tags {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--b-200);
+}
+
+.composer-tags-label {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--b-mono);
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--b-500);
+}
+
+.composer-tags-required {
+  font-size: 9px;
+  letter-spacing: 1px;
+  color: var(--b-400);
+}
+
+.composer-tags-required::before {
+  content: '/ ';
+}
+
+.composer-tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.composer-tag {
+  padding: 0.35rem 0.7rem;
+  border: 1px solid var(--b-200);
   border-radius: 999px;
+  background: var(--b-bg);
+  font-family: var(--b-mono);
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  color: var(--b-500);
+  cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+}
+
+.composer-tag:hover {
+  border-color: var(--b-400);
+  color: var(--b-ink);
+}
+
+.composer-tag.active {
+  background: var(--b-ink);
+  border-color: var(--b-ink);
+  color: var(--b-bg);
+}
+
+.composer-tags-hint {
+  margin: 0;
+  font-family: var(--b-mono);
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  color: var(--b-400);
+}
+
+.composer-attach-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.55rem 0.75rem;
+  background: var(--b-50);
+  border: 1px solid var(--b-200);
+  border-radius: var(--b-r-input);
+  font-family: var(--b-mono);
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--b-500);
+  cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.composer-attach-row:hover {
+  border-color: var(--b-300);
+  color: var(--b-ink);
+}
+
+.composer-attach-icon {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.8rem;
+  height: 1.8rem;
+  color: var(--b-400);
+  flex-shrink: 0;
+}
+
+.composer-attach-icon input[type='file'] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.composer-file-list {
+  margin: -0.5rem 0 0;
+  padding-left: 1.1rem;
+  font-family: var(--b-mono);
+  font-size: 11px;
+  color: var(--b-500);
+}
+
+.composer-banner {
+  margin: 0;
+  padding: 0.65rem 0.85rem;
+  border-radius: var(--b-r-sm);
+  border: 1px solid var(--b-200);
+  background: var(--b-50);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--b-ink);
+}
+
+/* No red or green — errors read as ink on the ramp, marked by a mono prefix. */
+.composer-banner::before {
+  font-family: var(--b-mono);
+  font-size: 9px;
+  letter-spacing: 1px;
+  color: var(--b-400);
+  display: block;
+  margin-bottom: 0.2rem;
+}
+
+.composer-banner.error::before {
+  content: 'ERROR';
+}
+
+.composer-banner.success::before {
+  content: 'SENT';
+}
+
+.composer-banner.success {
+  border-color: var(--b-ink);
+}
+
+.composer-modal-submit {
+  width: 100%;
+  border: none;
+  border-radius: var(--b-r-input);
+  padding: 0.75rem 1rem;
+  background: var(--b-green);
+  color: var(--b-green-ink);
+  font-family: var(--b-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.composer-modal-submit:hover:not(:disabled) {
+  background: var(--b-green-hover);
+}
+
+.composer-modal-submit:disabled {
+  background: var(--b-300);
+  cursor: not-allowed;
 }
 
 @media (max-width: 640px) {
+  .composer-trigger .composer-avatar {
+    display: none;
+  }
+
+  .composer-modal {
+    padding: 1.25rem;
+  }
+
   .lightbox-nav {
     width: 2.4rem;
     height: 2.4rem;
+  }
+
+  .stat {
+    padding: 0.9rem 0.6rem;
+  }
+}
+
+/* The design has to be complete when perfectly still. */
+@media (prefers-reduced-motion: reduce) {
+  .rise {
+    opacity: 1;
+    animation: none;
+  }
+
+  .composer-modal {
+    animation: none;
+  }
+
+  .feed-card:hover {
+    transform: none;
+  }
+
+  .feed-photo-tile:hover img,
+  .text-link:hover span {
+    transform: none;
   }
 }
 </style>

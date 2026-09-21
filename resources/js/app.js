@@ -8,6 +8,16 @@ import { ZiggyVue } from '../../vendor/tightenco/ziggy';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
+// Set the palette before first paint. Layouts keep this in sync when the theme
+// is toggled, but the auth and admin-login screens render without a layout, so
+// without this they would resolve the light tokens on their dark backgrounds.
+try {
+    const saved = localStorage.getItem('wall-theme');
+    document.documentElement.setAttribute('data-theme', saved === 'light' ? 'light' : 'dark');
+} catch {
+    document.documentElement.setAttribute('data-theme', 'dark');
+}
+
 createInertiaApp({
     title: (title) => `${title} - ${appName}`,
     resolve: (name) =>

@@ -16,6 +16,7 @@
 /public/build
 /public/hot
 /public/storage
+/server-acess.md
 /storage/app/public/uploads/*
 !/storage/app/public/uploads/.gitkeep
 /storage/*.key

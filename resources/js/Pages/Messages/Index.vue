@@ -209,7 +209,7 @@ function excerpt(text, length = 46) {
   flex-direction: column;
   background: var(--nf-panel);
   border: 1px solid var(--nf-line);
-  border-radius: 14px;
+  border-radius: var(--b-r-card);
   overflow: hidden;
 }
 
@@ -233,7 +233,7 @@ function excerpt(text, length = 46) {
 .avatar {
   width: 2.6rem;
   height: 2.6rem;
-  border-radius: 50%;
+  border-radius: var(--b-r-pill);
   overflow: hidden;
   flex-shrink: 0;
   background: var(--nf-surface-2);
@@ -245,7 +245,7 @@ function excerpt(text, length = 46) {
 }
 
 .avatar.group {
-  border-radius: 12px;
+  border-radius: var(--b-r-md);
 }
 
 .avatar img {
@@ -308,7 +308,7 @@ function excerpt(text, length = 46) {
   min-width: 1.2rem;
   height: 1.2rem;
   padding: 0 0.35rem;
-  border-radius: 999px;
+  border-radius: var(--b-r-pill);
   background: var(--nf-accent);
   color: var(--nf-accent-contrast);
   font-size: 0.7rem;
@@ -331,7 +331,7 @@ function excerpt(text, length = 46) {
   color: var(--nf-accent-contrast);
   border: none;
   padding: 0.5rem 1rem;
-  border-radius: 8px;
+  border-radius: var(--b-r-sm);
   font-weight: 600;
   font-size: 0.85rem;
   cursor: pointer;
@@ -354,7 +354,7 @@ function excerpt(text, length = 46) {
   color: var(--nf-ink);
   border: 1px solid var(--nf-line);
   padding: 0.5rem 1rem;
-  border-radius: 8px;
+  border-radius: var(--b-r-sm);
   font-weight: 600;
   font-size: 0.85rem;
   cursor: pointer;
@@ -378,7 +378,7 @@ function excerpt(text, length = 46) {
   max-width: 440px;
   background: var(--nf-panel, #1f2027);
   border: 1px solid var(--nf-line, #2c2d36);
-  border-radius: 14px;
+  border-radius: var(--b-r-card);
   padding: 1rem;
   color: var(--nf-ink, #e9e9ee);
 }
@@ -405,7 +405,7 @@ function excerpt(text, length = 46) {
   justify-content: center;
   width: 2rem;
   height: 2rem;
-  border-radius: 50%;
+  border-radius: var(--b-r-pill);
   border: none;
   background: var(--nf-surface-2, #2a2b33);
   color: var(--nf-ink, #e9e9ee);
@@ -461,7 +461,7 @@ function excerpt(text, length = 46) {
 }
 
 .picker-row input[type='checkbox'] {
-  accent-color: var(--nf-accent, #0d9488);
+  accent-color: var(--nf-accent, var(--b-green));
   width: 1rem;
   height: 1rem;
   flex-shrink: 0;
@@ -471,7 +471,7 @@ function excerpt(text, length = 46) {
   width: 100%;
   padding: 0.6rem 0.8rem;
   border: 1px solid var(--nf-line, #2c2d36);
-  border-radius: 10px;
+  border-radius: var(--b-r-thumb);
   background: var(--nf-surface-2, #2a2b33);
   color: var(--nf-ink, #e9e9ee);
   font: inherit;
@@ -480,7 +480,7 @@ function excerpt(text, length = 46) {
 
 .group-name-input:focus {
   outline: none;
-  border-color: var(--nf-accent, #0d9488);
+  border-color: var(--nf-accent, var(--b-green));
 }
 
 .picker-hint {

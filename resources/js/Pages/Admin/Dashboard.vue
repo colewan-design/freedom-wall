@@ -144,10 +144,22 @@ async function reject(post) {
   }
 }
 
+// Everything that leaves here goes straight onto the page, so the copied text
+// always carries the page tag. Posts that already end with it are left alone.
+const PAGE_HASHTAG = '#bsufw';
+
+function withPageHashtag(content) {
+  const text = (content || '').trimEnd();
+
+  if (new RegExp(`(^|\\s)${PAGE_HASHTAG}\\s*$`, 'i').test(text)) return text;
+
+  return text ? `${text}\n\n${PAGE_HASHTAG}` : PAGE_HASHTAG;
+}
+
 async function copyPostText(post) {
   try {
-    await navigator.clipboard.writeText(post.content || '');
-    showBanner('Post text copied to your clipboard.', 'success');
+    await navigator.clipboard.writeText(withPageHashtag(post.content));
+    showBanner(`Post text copied with ${PAGE_HASHTAG}.`, 'success');
   } catch (err) {
     showBanner(`Copy failed: ${err.message}`, 'error');
   }
@@ -382,7 +394,10 @@ onMounted(() => {
 
     <section class="panel">
       <h2>Recently approved</h2>
-      <p class="hint">Manual posting queue. Copy the text here, then upload any downloaded images to Facebook.</p>
+      <p class="hint">
+        Manual posting queue. Copy the text here — {{ PAGE_HASHTAG }} is appended automatically — then
+        upload any downloaded images to Facebook.
+      </p>
 
       <div v-if="loadingApproved" class="skeleton-list">
         <div class="skeleton-card" v-for="n in 2" :key="n">
@@ -477,7 +492,7 @@ onMounted(() => {
   --success-bg: rgba(34, 197, 94, 0.16);
   --info: var(--nf-accent);
   --info-bg: rgba(13, 148, 136, 0.14);
-  --nf-accent-dark: #0f766e;
+  --nf-accent-dark: var(--b-green-hover);
 }
 
 .header-row {
@@ -506,14 +521,14 @@ h1 {
   padding: 0.2rem;
   background: var(--paper);
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--b-r-thumb);
 }
 
 .view-btn {
   border: none;
   background: transparent;
   padding: 0.45rem 0.8rem;
-  border-radius: 8px;
+  border-radius: var(--b-r-sm);
   color: var(--muted);
   font-size: 0.85rem;
   font-weight: 600;
@@ -535,8 +550,8 @@ h1 {
 .stat-card {
   background: var(--paper);
   border: 1px solid var(--line);
-  border-radius: 14px;
-  box-shadow: var(--shadow-card);
+  border-radius: var(--b-r-card);
+  box-shadow: none;
   padding: 1rem 1.1rem;
 }
 
@@ -556,8 +571,8 @@ h1 {
 .panel {
   background: var(--paper);
   border: 1px solid var(--line);
-  border-radius: 16px;
-  box-shadow: var(--shadow-card);
+  border-radius: var(--b-r-card);
+  box-shadow: none;
   padding: 1.5rem;
   margin-bottom: 1.5rem;
 }
@@ -574,7 +589,7 @@ h1 {
 
 .banner {
   padding: 0.75rem 1rem;
-  border-radius: 12px;
+  border-radius: var(--b-r-md);
   font-size: 0.92rem;
   margin-bottom: 1rem;
 }
@@ -617,7 +632,7 @@ h1 {
 .item {
   background: var(--paper);
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: var(--b-r-card);
   padding: 1rem;
 }
 
@@ -629,14 +644,14 @@ h1 {
   color: var(--ink);
   background: var(--page-bg);
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--b-r-thumb);
   transition: box-shadow 0.15s ease, border-color 0.15s ease;
 }
 
 .item textarea:focus {
   outline: none;
   border-color: var(--nf-accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
+  box-shadow: none;
 }
 
 .content-textarea {
@@ -669,7 +684,7 @@ h1 {
 .image-grid {
   display: grid;
   gap: 3px;
-  border-radius: 10px;
+  border-radius: var(--b-r-thumb);
   overflow: hidden;
   margin-top: 0.6rem;
 }
@@ -728,7 +743,7 @@ h1 {
   justify-content: center;
   border: none;
   padding: 0.55rem 0.95rem;
-  border-radius: 8px;
+  border-radius: var(--b-r-sm);
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
@@ -782,7 +797,7 @@ h1 {
 .table-wrap {
   overflow-x: auto;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: var(--b-r-md);
 }
 
 .data-table {
@@ -838,7 +853,7 @@ h1 {
   justify-content: center;
   width: 1.75rem;
   height: 1.75rem;
-  border-radius: 50%;
+  border-radius: var(--b-r-pill);
   background: var(--accent-soft);
   color: var(--nf-accent);
   font-size: 0.75rem;
@@ -857,7 +872,7 @@ h1 {
 .page-btn {
   min-width: 3.5rem;
   padding: 0.5rem 0.75rem;
-  border-radius: 999px;
+  border-radius: var(--b-r-pill);
   border: 1px solid var(--line);
   background: var(--paper);
   color: var(--ink);
@@ -883,7 +898,7 @@ h1 {
 .skeleton-card {
   background: var(--paper);
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: var(--b-r-card);
   padding: 1rem;
   display: flex;
   flex-direction: column;
@@ -892,7 +907,7 @@ h1 {
 
 .skeleton-line {
   height: 0.8rem;
-  border-radius: 6px;
+  border-radius: var(--b-r-input);
   background: linear-gradient(90deg, var(--nf-surface-2) 25%, var(--nf-line) 37%, var(--nf-surface-2) 63%);
   background-size: 400% 100%;
   animation: shimmer 1.4s ease infinite;

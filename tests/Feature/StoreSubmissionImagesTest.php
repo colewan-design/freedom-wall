@@ -18,6 +18,7 @@ class StoreSubmissionImagesTest extends TestCase
 
         $response = $this->post('/submissions', [
             'content' => 'A post with more than one image.',
+            'category' => 'confessions',
             'images' => [
                 UploadedFile::fake()->image('first.jpg'),
                 UploadedFile::fake()->image('second.png'),

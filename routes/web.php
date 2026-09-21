@@ -12,6 +12,7 @@ use App\Http\Controllers\ConversationController;
 use App\Http\Controllers\ConversationMessageController;
 use App\Http\Controllers\FeedController;
 use App\Http\Controllers\FriendController;
+use App\Http\Controllers\IdCheckController;
 use App\Http\Controllers\JournalController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\PublicMediaController;
@@ -34,6 +35,8 @@ Route::post('/chat/messages', [ChatController::class, 'store'])
     ->middleware('throttle:chat-message')
     ->name('chat.messages.store');
 Route::get('/wall', [SubmissionController::class, 'wall'])->name('wall');
+Route::get('/id-check', [IdCheckController::class, 'index'])->name('id-check');
+Route::redirect('/id', '/id-check');
 
 Route::middleware('guest')->group(function () {
     Route::get('register', [RegisteredUserController::class, 'create'])->name('register');

@@ -96,7 +96,7 @@ function destroyEntry(entryId) {
 .panel {
   background: var(--nf-panel);
   border: 1px solid var(--nf-line);
-  border-radius: 12px;
+  border-radius: var(--b-r-md);
   padding: 1.25rem;
 }
 
@@ -123,7 +123,7 @@ textarea {
   width: 100%;
   padding: 0.7rem 0.85rem;
   border: 1px solid var(--nf-line);
-  border-radius: 10px;
+  border-radius: var(--b-r-thumb);
   background: var(--nf-bg);
   color: var(--nf-ink);
   font: inherit;
@@ -141,7 +141,7 @@ form button[type='submit'] {
   color: #fff;
   border: none;
   padding: 0.55rem 1.1rem;
-  border-radius: 8px;
+  border-radius: var(--b-r-sm);
   font-weight: 600;
   cursor: pointer;
 }
@@ -166,7 +166,7 @@ form button[type='submit']:disabled {
 .entry {
   background: var(--nf-panel);
   border: 1px solid var(--nf-line);
-  border-radius: 12px;
+  border-radius: var(--b-r-md);
   padding: 1rem;
   display: flex;
   flex-direction: column;
@@ -202,7 +202,7 @@ form button[type='submit']:disabled {
   color: #fff;
   border: none;
   padding: 0.4rem 0.85rem;
-  border-radius: 8px;
+  border-radius: var(--b-r-sm);
   font-weight: 600;
   font-size: 0.8rem;
   cursor: pointer;
@@ -213,7 +213,7 @@ form button[type='submit']:disabled {
   color: var(--nf-ink);
   border: 1px solid var(--nf-line);
   padding: 0.4rem 0.85rem;
-  border-radius: 8px;
+  border-radius: var(--b-r-sm);
   font-weight: 600;
   font-size: 0.8rem;
   cursor: pointer;

@@ -228,7 +228,7 @@ onBeforeUnmount(() => {
 .post-card {
   background: var(--nf-panel);
   border: 1px solid var(--nf-line);
-  border-radius: 16px;
+  border-radius: var(--b-r-card);
   padding: 1rem;
   display: flex;
   flex-direction: column;
@@ -252,7 +252,7 @@ onBeforeUnmount(() => {
 .post-avatar {
   width: 2.5rem;
   height: 2.5rem;
-  border-radius: 50%;
+  border-radius: var(--b-r-pill);
   overflow: hidden;
   flex-shrink: 0;
   background: var(--nf-surface-2);
@@ -299,7 +299,7 @@ onBeforeUnmount(() => {
   color: var(--nf-muted);
   cursor: pointer;
   padding: 0.3rem;
-  border-radius: 6px;
+  border-radius: var(--b-r-input);
 }
 
 .post-menu-btn:hover {
@@ -312,8 +312,8 @@ onBeforeUnmount(() => {
   top: calc(100% + 0.25rem);
   background: var(--nf-panel);
   border: 1px solid var(--nf-line);
-  border-radius: 10px;
-  box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.35);
+  border-radius: var(--b-r-thumb);
+  box-shadow: none;
   overflow: hidden;
   z-index: 10;
   min-width: 140px;
@@ -366,7 +366,7 @@ onBeforeUnmount(() => {
   height: 100%;
   max-height: 420px;
   object-fit: cover;
-  border-radius: 10px;
+  border-radius: var(--b-r-thumb);
 }
 
 .post-images.count-3 img {
@@ -403,7 +403,7 @@ onBeforeUnmount(() => {
   font-weight: 600;
   cursor: pointer;
   padding: 0.3rem 0.5rem;
-  border-radius: 6px;
+  border-radius: var(--b-r-input);
 }
 
 .action:hover {
@@ -428,9 +428,9 @@ onBeforeUnmount(() => {
   gap: 0.15rem;
   background: var(--nf-panel);
   border: 1px solid var(--nf-line);
-  border-radius: 999px;
+  border-radius: var(--b-r-pill);
   padding: 0.35rem 0.5rem;
-  box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.35);
+  box-shadow: none;
   z-index: 10;
 }
 
@@ -441,7 +441,7 @@ onBeforeUnmount(() => {
   line-height: 1;
   cursor: pointer;
   padding: 0.2rem;
-  border-radius: 50%;
+  border-radius: var(--b-r-pill);
   transition: transform 0.1s ease;
 }
 
@@ -455,7 +455,7 @@ onBeforeUnmount(() => {
   color: var(--nf-muted);
   width: 1.4rem;
   height: 1.4rem;
-  border-radius: 50%;
+  border-radius: var(--b-r-pill);
   font-size: 0.7rem;
   cursor: pointer;
   margin-left: 0.2rem;
@@ -470,9 +470,9 @@ onBeforeUnmount(() => {
   font-weight: 700;
   font-size: 0.78rem;
   padding: 0.35rem 0.85rem;
-  border-radius: 999px;
+  border-radius: var(--b-r-pill);
   white-space: nowrap;
-  box-shadow: 0 8px 20px -6px rgba(236, 72, 153, 0.55);
+  box-shadow: none;
 }
 
 .comments-section {
@@ -498,7 +498,7 @@ onBeforeUnmount(() => {
 .comment-avatar {
   width: 1.9rem;
   height: 1.9rem;
-  border-radius: 50%;
+  border-radius: var(--b-r-pill);
   overflow: hidden;
   flex-shrink: 0;
   background: var(--nf-surface-2);
@@ -518,7 +518,7 @@ onBeforeUnmount(() => {
 
 .comment-bubble {
   background: var(--nf-surface-2);
-  border-radius: 12px;
+  border-radius: var(--b-r-md);
   padding: 0.5rem 0.75rem;
   flex: 1;
   min-width: 0;
@@ -560,7 +560,7 @@ onBeforeUnmount(() => {
   flex: 1;
   padding: 0.5rem 0.75rem;
   border: 1px solid var(--nf-line);
-  border-radius: 999px;
+  border-radius: var(--b-r-pill);
   background: var(--nf-bg);
   color: var(--nf-ink);
   font: inherit;
@@ -577,7 +577,7 @@ onBeforeUnmount(() => {
   color: var(--nf-accent-contrast);
   border: none;
   padding: 0.5rem 1rem;
-  border-radius: 999px;
+  border-radius: var(--b-r-pill);
   font-weight: 600;
   font-size: 0.82rem;
   cursor: pointer;

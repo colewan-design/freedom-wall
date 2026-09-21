@@ -160,7 +160,7 @@ function onSubmit() {
 }
 
 .auth-subtext :deep(a) {
-  color: #2dd4bf;
+  color: var(--b-green-text);
   font-weight: 600;
   text-decoration: none;
 }
@@ -196,7 +196,7 @@ form {
 input {
   padding: 0.7rem 0.85rem;
   border: 1px solid #2c2d36;
-  border-radius: 10px;
+  border-radius: var(--b-r-thumb);
   background: #1c1e25;
   color: #f2f3f5;
   font: inherit;
@@ -209,8 +209,8 @@ input::placeholder {
 
 input:focus {
   outline: none;
-  border-color: #0d9488;
-  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.25);
+  border-color: var(--b-green);
+  box-shadow: none;
 }
 
 .password-input {
@@ -238,11 +238,11 @@ input:focus {
 
 .submit-btn {
   margin-top: 0.25rem;
-  background: #0d9488;
+  background: var(--b-green);
   color: #fff;
   border: none;
   padding: 0.8rem;
-  border-radius: 10px;
+  border-radius: var(--b-r-thumb);
   font-weight: 700;
   font-size: 0.95rem;
   cursor: pointer;
@@ -250,7 +250,7 @@ input:focus {
 }
 
 .submit-btn:hover:not(:disabled) {
-  background: #0f766e;
+  background: var(--b-green-hover);
 }
 
 .submit-btn:disabled {
@@ -288,7 +288,7 @@ input:focus {
   gap: 0.6rem;
   width: 100%;
   border: 1px solid #2c2d36;
-  border-radius: 10px;
+  border-radius: var(--b-r-thumb);
   padding: 0.7rem;
   background: #1c1e25;
   color: #f2f3f5;

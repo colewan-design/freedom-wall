@@ -173,7 +173,7 @@ onBeforeUnmount(() => {
   gap: 1rem;
   padding: 1.5rem;
   border: 1px solid var(--nf-line);
-  border-radius: 18px;
+  border-radius: var(--b-r-sm);
   background: var(--nf-hero-grad);
 }
 
@@ -208,7 +208,7 @@ onBeforeUnmount(() => {
   padding: 1rem;
   background: color-mix(in srgb, var(--nf-panel) 84%, transparent);
   border: 1px solid var(--nf-line);
-  border-radius: 16px;
+  border-radius: var(--b-r-card);
 }
 
 .chat-nickname-card .label,
@@ -231,7 +231,7 @@ onBeforeUnmount(() => {
 .chat-composer {
   background: var(--nf-panel);
   border: 1px solid var(--nf-line);
-  border-radius: 18px;
+  border-radius: var(--b-r-sm);
 }
 
 .chat-stream {
@@ -246,7 +246,7 @@ onBeforeUnmount(() => {
 .chat-bubble {
   max-width: min(560px, 82%);
   padding: 0.9rem 1rem;
-  border-radius: 16px;
+  border-radius: var(--b-r-card);
   background: var(--nf-surface-2);
   border: 1px solid color-mix(in srgb, var(--nf-line) 75%, transparent);
 }
@@ -306,7 +306,7 @@ onBeforeUnmount(() => {
   min-height: 110px;
   resize: vertical;
   padding: 0.9rem 1rem;
-  border-radius: 14px;
+  border-radius: var(--b-r-card);
   border: 1px solid var(--nf-line);
   background: var(--nf-bg);
   color: var(--nf-ink);
@@ -317,7 +317,7 @@ onBeforeUnmount(() => {
 .chat-composer textarea:focus {
   outline: none;
   border-color: var(--nf-accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--nf-accent) 20%, transparent);
+  box-shadow: none;
 }
 
 .composer-footer {
@@ -336,7 +336,7 @@ onBeforeUnmount(() => {
 
 .send-btn {
   border: none;
-  border-radius: 999px;
+  border-radius: var(--b-r-pill);
   padding: 0.7rem 1.1rem;
   background: var(--nf-accent);
   color: var(--nf-accent-contrast);

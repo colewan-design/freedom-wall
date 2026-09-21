@@ -126,7 +126,7 @@ function avatarLetter(name) {
 .panel {
   background: var(--nf-panel);
   border: 1px solid var(--nf-line);
-  border-radius: 12px;
+  border-radius: var(--b-r-md);
   padding: 1.25rem;
 }
 
@@ -147,7 +147,7 @@ function avatarLetter(name) {
   flex: 1;
   padding: 0.6rem 0.8rem;
   border: 1px solid var(--nf-line);
-  border-radius: 8px;
+  border-radius: var(--b-r-sm);
   background: var(--nf-bg);
   color: var(--nf-ink);
   font: inherit;
@@ -158,7 +158,7 @@ function avatarLetter(name) {
   color: #fff;
   border: none;
   padding: 0 1.1rem;
-  border-radius: 8px;
+  border-radius: var(--b-r-sm);
   font-weight: 600;
   cursor: pointer;
 }
@@ -181,7 +181,7 @@ function avatarLetter(name) {
 .avatar {
   width: 2.4rem;
   height: 2.4rem;
-  border-radius: 50%;
+  border-radius: var(--b-r-pill);
   overflow: hidden;
   flex-shrink: 0;
   background: var(--nf-surface-2);
@@ -221,7 +221,7 @@ function avatarLetter(name) {
   color: #fff;
   border: none;
   padding: 0.45rem 0.9rem;
-  border-radius: 8px;
+  border-radius: var(--b-r-sm);
   font-weight: 600;
   font-size: 0.82rem;
   cursor: pointer;
@@ -233,7 +233,7 @@ function avatarLetter(name) {
   color: var(--nf-ink);
   border: 1px solid var(--nf-line);
   padding: 0.45rem 0.9rem;
-  border-radius: 8px;
+  border-radius: var(--b-r-sm);
   font-weight: 600;
   font-size: 0.82rem;
   cursor: pointer;

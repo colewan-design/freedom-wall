@@ -36,6 +36,8 @@ class SubmissionController extends Controller
             ]);
         }
 
+        $content = $this->withCategoryHashtag($content, $request->string('category')->toString());
+
         $imageUrls = [];
         foreach ($request->file('images', []) as $image) {
             $filename = Str::uuid().'.'.$image->getClientOriginalExtension();
@@ -63,6 +65,24 @@ class SubmissionController extends Controller
 
         return Inertia::render('Wall', [
             'posts' => $posts,
+            'categories' => Submission::CATEGORIES,
         ]);
+    }
+
+    /**
+     * Stamp the chosen category hashtag onto the end of the post. Posts that
+     * already end with it (a resubmit, or someone who typed it themselves) are
+     * left alone so the tag never doubles up.
+     */
+    private function withCategoryHashtag(string $content, string $category): string
+    {
+        $hashtag = '#'.$category;
+        $content = rtrim($content);
+
+        if (preg_match('/(^|\s)'.preg_quote($hashtag, '/').'\s*$/i', $content) === 1) {
+            return $content;
+        }
+
+        return $content === '' ? $hashtag : $content."\n\n".$hashtag;
     }
 }

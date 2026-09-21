@@ -1,6 +1,6 @@
 <script setup>
 import { Link, router, usePage } from '@inertiajs/vue3';
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watchEffect } from 'vue';
 
 const page = usePage();
 
@@ -29,6 +29,13 @@ function toggleTheme() {
   theme.value = theme.value === 'dark' ? 'light' : 'dark';
   localStorage.setItem('wall-theme', theme.value);
 }
+
+// Palette tokens live at :root in app.css; mirror the theme onto <html> so
+// they resolve here and inside anything teleported to <body>.
+watchEffect(() => {
+  if (typeof document === 'undefined') return;
+  document.documentElement.setAttribute('data-theme', theme.value);
+});
 
 function logout() {
   router.post(route('logout'));
@@ -228,34 +235,22 @@ function logout() {
 </template>
 
 <style scoped>
-.sl-shell.dark {
-  --nf-bg: #17181d;
-  --nf-panel: #1f2027;
-  --nf-line: #2c2d36;
-  --nf-ink: #e9e9ee;
-  --nf-muted: #9497a6;
-  --nf-accent: #0d9488;
-  --nf-accent-contrast: #ffffff;
-  --nf-surface-2: #2a2b33;
-  --post-tint-blue: #1b2430;
-  --post-tint-cream: #2a2620;
-  --nf-nav-active-bg: var(--nf-accent);
-  --nf-nav-active-fg: var(--nf-accent-contrast);
-}
-
+/* Remapped onto the app-wide bryl ramp (tokens live at :root in app.css).
+   Emphasis is BSU green; the grays carry everything else. */
+.sl-shell.dark,
 .sl-shell.light {
-  --nf-bg: #ffffff;
-  --nf-panel: #ffffff;
-  --nf-line: #e7e8ec;
-  --nf-ink: #16181d;
-  --nf-muted: #6b7280;
-  --nf-accent: #0d9488;
-  --nf-accent-contrast: #ffffff;
-  --nf-surface-2: #f1f1f4;
-  --post-tint-blue: #eaf2ff;
-  --post-tint-cream: #fff8e6;
-  --nf-nav-active-bg: #14151a;
-  --nf-nav-active-fg: #ffffff;
+  --nf-bg: var(--b-bg);
+  --nf-panel: var(--b-bg);
+  --nf-line: var(--b-200);
+  --nf-ink: var(--b-ink);
+  --nf-muted: var(--b-500);
+  --nf-accent: var(--b-green);
+  --nf-accent-contrast: var(--b-green-ink);
+  --nf-surface-2: var(--b-50);
+  --post-tint-blue: var(--b-50);
+  --post-tint-cream: var(--b-50);
+  --nf-nav-active-bg: var(--b-green);
+  --nf-nav-active-fg: var(--b-green-ink);
 }
 
 .sl-shell {
@@ -312,8 +307,8 @@ function logout() {
   left: -1.1rem;
   width: 4rem;
   height: 4rem;
-  border-radius: 50%;
-  background: conic-gradient(from 120deg, #a78bfa, #f472b6, #fb923c, #60a5fa, #a78bfa);
+  border-radius: var(--b-r-pill);
+  background: conic-gradient(from 120deg, var(--b-green-text), var(--b-green), var(--b-green-hover), var(--b-green-text));
   filter: blur(1px);
   opacity: 0.9;
 }
@@ -321,7 +316,7 @@ function logout() {
 .sl-avatar {
   width: 2.75rem;
   height: 2.75rem;
-  border-radius: 50%;
+  border-radius: var(--b-r-pill);
   overflow: hidden;
   flex-shrink: 0;
   background: var(--nf-surface-2);
@@ -381,7 +376,7 @@ function logout() {
   align-items: center;
   gap: 0.7rem;
   padding: 0.6rem 0.75rem;
-  border-radius: 10px;
+  border-radius: var(--b-r-thumb);
   color: var(--nf-muted);
   text-decoration: none;
   font-weight: 600;
@@ -411,7 +406,7 @@ function logout() {
   min-width: 1.2rem;
   height: 1.2rem;
   padding: 0 0.3rem;
-  border-radius: 999px;
+  border-radius: var(--b-r-pill);
   background: rgba(255, 255, 255, 0.9);
   color: var(--nf-nav-active-bg);
   font-size: 0.7rem;
@@ -435,7 +430,7 @@ function logout() {
   width: 2.4rem;
   height: 2.4rem;
   flex-shrink: 0;
-  border-radius: 10px;
+  border-radius: var(--b-r-thumb);
   border: 1px solid var(--nf-line);
   background: var(--nf-panel);
   color: var(--nf-muted);
@@ -450,7 +445,7 @@ function logout() {
   font-weight: 600;
   font-size: 0.85rem;
   padding: 0.5rem 0.9rem;
-  border-radius: 10px;
+  border-radius: var(--b-r-thumb);
   cursor: pointer;
   transition: border-color 0.15s ease, color 0.15s ease;
 }
@@ -464,11 +459,20 @@ function logout() {
   min-width: 0;
 }
 
+/* Page headings inside the slot are green too. Colour only — each page keeps
+   its own type treatment. */
+.sl-main :deep(h1),
+.sl-main :deep(h2),
+.sl-main :deep(h3) {
+  color: var(--b-green-text);
+}
+
 .sl-panel h2 {
+  font-family: var(--b-mono);
   margin: 0 0 0.85rem;
   font-size: 1.05rem;
   font-weight: 800;
-  color: var(--nf-ink);
+  color: var(--b-green-text);
 }
 
 .sl-suggestion-list li.placeholder {
@@ -490,7 +494,7 @@ function logout() {
   flex: 0 0 auto;
   width: 6.5rem;
   height: 8.5rem;
-  border-radius: 16px;
+  border-radius: var(--b-r-card);
   background-color: var(--nf-surface-2);
   background-size: cover;
   background-position: center;
@@ -532,7 +536,7 @@ function logout() {
 .sl-story-avatar {
   width: 1.6rem;
   height: 1.6rem;
-  border-radius: 50%;
+  border-radius: var(--b-r-pill);
   overflow: hidden;
   flex-shrink: 0;
   border: 2px solid #fff;
@@ -587,7 +591,7 @@ function logout() {
   background: var(--nf-accent);
   color: var(--nf-accent-contrast);
   border: 1px solid var(--nf-accent);
-  border-radius: 999px;
+  border-radius: var(--b-r-pill);
   padding: 0.3rem 0.8rem;
   font-size: 0.78rem;
   font-weight: 600;
@@ -611,7 +615,7 @@ function logout() {
   background: var(--nf-surface-2);
   border: 1px solid var(--nf-line);
   color: var(--nf-muted);
-  border-radius: 999px;
+  border-radius: var(--b-r-pill);
   padding: 0.35rem 0.75rem;
   font-size: 0.78rem;
   font-weight: 600;

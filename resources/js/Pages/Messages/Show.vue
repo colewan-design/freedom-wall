@@ -170,7 +170,7 @@ onBeforeUnmount(() => {
   gap: 0.75rem;
   background: var(--nf-panel);
   border: 1px solid var(--nf-line);
-  border-radius: 14px;
+  border-radius: var(--b-r-card);
   padding: 0.75rem 1rem;
 }
 
@@ -180,7 +180,7 @@ onBeforeUnmount(() => {
   justify-content: center;
   width: 2.1rem;
   height: 2.1rem;
-  border-radius: 50%;
+  border-radius: var(--b-r-pill);
   background: var(--nf-surface-2);
   color: var(--nf-ink);
   flex-shrink: 0;
@@ -208,7 +208,7 @@ onBeforeUnmount(() => {
   color: var(--nf-ink);
   border: 1px solid var(--nf-line);
   padding: 0.4rem 0.85rem;
-  border-radius: 8px;
+  border-radius: var(--b-r-sm);
   font-weight: 600;
   font-size: 0.8rem;
   cursor: pointer;
@@ -229,13 +229,13 @@ onBeforeUnmount(() => {
   gap: 0.65rem;
   background: var(--nf-panel);
   border: 1px solid var(--nf-line);
-  border-radius: 14px;
+  border-radius: var(--b-r-card);
 }
 
 .bubble {
   max-width: min(520px, 84%);
   padding: 0.65rem 0.85rem;
-  border-radius: 14px;
+  border-radius: var(--b-r-card);
   background: var(--nf-surface-2);
   border: 1px solid color-mix(in srgb, var(--nf-line) 75%, transparent);
 }
@@ -286,7 +286,7 @@ onBeforeUnmount(() => {
   align-items: flex-end;
   background: var(--nf-panel);
   border: 1px solid var(--nf-line);
-  border-radius: 14px;
+  border-radius: var(--b-r-card);
   padding: 0.75rem;
 }
 
@@ -294,7 +294,7 @@ onBeforeUnmount(() => {
   flex: 1;
   resize: none;
   padding: 0.6rem 0.8rem;
-  border-radius: 10px;
+  border-radius: var(--b-r-thumb);
   border: 1px solid var(--nf-line);
   background: var(--nf-bg);
   color: var(--nf-ink);
@@ -309,7 +309,7 @@ onBeforeUnmount(() => {
 
 .send-btn {
   border: none;
-  border-radius: 999px;
+  border-radius: var(--b-r-pill);
   padding: 0.6rem 1.2rem;
   background: var(--nf-accent);
   color: var(--nf-accent-contrast);

@@ -66,7 +66,7 @@ function onSubmit() {
 .edit-card {
   background: var(--nf-panel);
   border: 1px solid var(--nf-line);
-  border-radius: 12px;
+  border-radius: var(--b-r-md);
   padding: 2rem;
   max-width: 480px;
 }
@@ -74,7 +74,7 @@ function onSubmit() {
 .current-avatar img {
   width: 64px;
   height: 64px;
-  border-radius: 50%;
+  border-radius: var(--b-r-pill);
   object-fit: cover;
   margin-bottom: 1rem;
 }
@@ -97,7 +97,7 @@ input,
 textarea {
   padding: 0.6rem 0.75rem;
   border: 1px solid var(--nf-line);
-  border-radius: 8px;
+  border-radius: var(--b-r-sm);
   background: var(--nf-bg);
   color: var(--nf-ink);
   font: inherit;
@@ -108,7 +108,7 @@ button {
   color: #fff;
   border: none;
   padding: 0.7rem;
-  border-radius: 8px;
+  border-radius: var(--b-r-sm);
   font-weight: 600;
   cursor: pointer;
 }

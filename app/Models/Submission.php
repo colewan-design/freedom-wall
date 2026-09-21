@@ -9,6 +9,13 @@ use Illuminate\Support\Facades\Storage;
 
 class Submission extends Model
 {
+    /**
+     * Every submission has to carry exactly one of these hashtags. The list is
+     * the single source of truth: the form request validates against it and the
+     * wall page renders the composer chips from it.
+     */
+    public const CATEGORIES = ['confessions', 'rant', 'kilig', 'question', 'announcement'];
+
     public $timestamps = false;
 
     protected $fillable = ['content', 'image_url', 'images', 'ip_hash'];

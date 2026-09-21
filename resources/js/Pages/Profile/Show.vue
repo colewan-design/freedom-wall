@@ -29,14 +29,14 @@ defineProps({
   align-items: flex-start;
   background: var(--nf-panel);
   border: 1px solid var(--nf-line);
-  border-radius: 12px;
+  border-radius: var(--b-r-md);
   padding: 2rem;
 }
 
 .avatar {
   width: 80px;
   height: 80px;
-  border-radius: 50%;
+  border-radius: var(--b-r-pill);
   object-fit: cover;
   flex-shrink: 0;
 }

@@ -161,7 +161,7 @@ function insertEmoji(emoji) {
 
 .feed-header {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
   gap: 1rem;
 }
@@ -193,7 +193,7 @@ function insertEmoji(emoji) {
 .composer-bar {
   background: var(--nf-panel);
   border: 1px solid var(--nf-line);
-  border-radius: 14px;
+  border-radius: var(--b-r-card);
   padding: 1rem;
   display: flex;
   flex-direction: column;
@@ -209,7 +209,7 @@ function insertEmoji(emoji) {
 .composer-avatar {
   width: 2.4rem;
   height: 2.4rem;
-  border-radius: 50%;
+  border-radius: var(--b-r-pill);
   overflow: hidden;
   flex-shrink: 0;
   background: var(--nf-surface-2);
@@ -230,7 +230,7 @@ function insertEmoji(emoji) {
   flex: 1;
   border: 1px solid var(--nf-line);
   background: var(--nf-surface-2);
-  border-radius: 999px;
+  border-radius: var(--b-r-pill);
   padding: 0.6rem 1rem;
   color: var(--nf-ink);
   font: inherit;
@@ -253,7 +253,7 @@ function insertEmoji(emoji) {
 .composer-emoji-btn {
   background: var(--nf-surface-2);
   border: 1px solid var(--nf-line);
-  border-radius: 50%;
+  border-radius: var(--b-r-pill);
   width: 2.2rem;
   height: 2.2rem;
   font-size: 1.05rem;
@@ -270,9 +270,9 @@ function insertEmoji(emoji) {
   gap: 0.2rem;
   background: var(--nf-panel);
   border: 1px solid var(--nf-line);
-  border-radius: 12px;
+  border-radius: var(--b-r-md);
   padding: 0.5rem;
-  box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.35);
+  box-shadow: none;
   z-index: 10;
 }
 
@@ -282,7 +282,7 @@ function insertEmoji(emoji) {
   font-size: 1.2rem;
   cursor: pointer;
   padding: 0.25rem;
-  border-radius: 6px;
+  border-radius: var(--b-r-input);
 }
 
 .emoji-picker button:hover {
@@ -294,7 +294,7 @@ function insertEmoji(emoji) {
   color: var(--nf-accent-contrast);
   border: none;
   padding: 0.6rem 1.2rem;
-  border-radius: 999px;
+  border-radius: var(--b-r-pill);
   font-weight: 700;
   font-size: 0.88rem;
   cursor: pointer;

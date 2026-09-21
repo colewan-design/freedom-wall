@@ -91,7 +91,7 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   margin: 1rem;
   padding: 2rem;
-  border-radius: 20px;
+  border-radius: var(--b-r-card);
   color: #fff;
   position: relative;
   overflow: hidden;
@@ -148,7 +148,7 @@ onBeforeUnmount(() => {
 .hero-brand-mark {
   width: 1.9rem;
   height: 1.9rem;
-  border-radius: 6px;
+  border-radius: var(--b-r-input);
   object-fit: cover;
 }
 
@@ -163,7 +163,7 @@ onBeforeUnmount(() => {
   font-size: 0.82rem;
   font-weight: 600;
   padding: 0.45rem 0.9rem;
-  border-radius: 999px;
+  border-radius: var(--b-r-pill);
 }
 
 .hero-copy h1 {
@@ -182,7 +182,7 @@ onBeforeUnmount(() => {
 .hero-dot {
   width: 1.5rem;
   height: 0.3rem;
-  border-radius: 999px;
+  border-radius: var(--b-r-pill);
   background: rgba(255, 255, 255, 0.3);
   border: none;
   padding: 0;

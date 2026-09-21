@@ -1,12 +1,13 @@
 <script setup>
 import { Link, router, usePage } from '@inertiajs/vue3';
-import { computed, onMounted, provide, ref } from 'vue';
+import { computed, onMounted, provide, ref, watchEffect } from 'vue';
 
 const page = usePage();
 const isActive = (path) => computed(() => page.url === path || page.url.startsWith(`${path}?`));
 const isChatPage = computed(() => page.component === 'Chat');
 const isWallPage = computed(() => page.component === 'Wall');
 const isAdminPage = computed(() => page.component?.startsWith('Admin/'));
+const isFocusPage = computed(() => page.component === 'IdCheck/Index');
 const authUser = computed(() => page.props.auth?.user ?? null);
 const isStudentAuthed = computed(() => authUser.value?.role === 'student');
 
@@ -28,6 +29,13 @@ function toggleTheme() {
   theme.value = theme.value === 'dark' ? 'light' : 'dark';
   localStorage.setItem('wall-theme', theme.value);
 }
+
+// Mirror the theme onto <html>: the palette tokens live at :root in app.css,
+// so overlays teleported to <body> resolve the same values as in-shell content.
+watchEffect(() => {
+  if (typeof document === 'undefined') return;
+  document.documentElement.setAttribute('data-theme', theme.value);
+});
 
 const posts = computed(() => page.props.posts ?? []);
 const chatNickname = computed(() => page.props.chatNickname ?? 'Anonymous');
@@ -51,7 +59,7 @@ function excerpt(text, length = 60) {
 </script>
 
 <template>
-  <div class="nf-shell" :class="theme">
+  <div class="nf-shell" :class="[theme, 'bryl']">
     <header class="nf-topbar">
       <span class="nf-brand">
         <img src="/images/branding/bsufw-mark-64.png" alt="BSU Freedom Wall" class="nf-brand-mark" />
@@ -61,6 +69,7 @@ function excerpt(text, length = 60) {
       <nav v-if="!isAdminPage" class="nf-tabs">
         <Link href="/wall" :class="{ active: isActive('/wall').value }">News Feed</Link>
         <Link href="/chat" :class="{ active: isActive('/chat').value }">Chat</Link>
+        <Link href="/id-check" :class="{ active: isActive('/id-check').value }">ID Check</Link>
       </nav>
       <span v-else class="nf-admin-label">Moderation Dashboard</span>
 
@@ -95,8 +104,8 @@ function excerpt(text, length = 60) {
       </div>
     </header>
 
-    <div class="nf-body" :class="{ 'admin-mode': isAdminPage }">
-      <aside v-if="!isAdminPage" class="nf-sidebar nf-left">
+    <div class="nf-body" :class="{ 'admin-mode': isAdminPage, 'focus-mode': isFocusPage }">
+      <aside v-if="!isAdminPage && !isFocusPage" class="nf-sidebar nf-left">
         <label v-if="!isChatPage" class="nf-search">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8" />
@@ -155,11 +164,11 @@ function excerpt(text, length = 60) {
         </div>
       </aside>
 
-      <main class="nf-main">
+      <main class="nf-main" :class="{ 'focus-main': isFocusPage }">
         <slot />
       </main>
 
-      <aside v-if="!isAdminPage" class="nf-sidebar nf-right">
+      <aside v-if="!isAdminPage && !isFocusPage" class="nf-sidebar nf-right">
         <div class="nf-panel">
           <h2>{{ isChatPage ? 'Recent Nicknames' : 'Recent Highlights' }}</h2>
           <ul v-if="isChatPage && recentChatNicknames.length" class="nf-highlights">
@@ -216,28 +225,18 @@ function excerpt(text, length = 60) {
 </template>
 
 <style scoped>
-.nf-shell.dark {
-  --nf-bg: #17181d;
-  --nf-panel: #1f2027;
-  --nf-line: #2c2d36;
-  --nf-ink: #e9e9ee;
-  --nf-muted: #9497a6;
-  --nf-accent: #0d9488;
-  --nf-accent-contrast: #ffffff;
-  --nf-surface-2: #2a2b33;
-  --nf-hero-grad: linear-gradient(135deg, #23242c 0%, #16302e 60%, #0f3d38 100%);
-}
-
+/* Base palette, remapped onto the app-wide ramp in app.css. */
+.nf-shell.dark,
 .nf-shell.light {
-  --nf-bg: #f7f7f9;
-  --nf-panel: #ffffff;
-  --nf-line: #e7e8ec;
-  --nf-ink: #16181d;
-  --nf-muted: #6b7280;
-  --nf-accent: #0d9488;
-  --nf-accent-contrast: #ffffff;
-  --nf-surface-2: #f1f1f4;
-  --nf-hero-grad: linear-gradient(135deg, #ecfdf9 0%, #d3f6ee 60%, #b8ede1 100%);
+  --nf-bg: var(--b-bg);
+  --nf-panel: var(--b-bg);
+  --nf-line: var(--b-200);
+  --nf-ink: var(--b-ink);
+  --nf-muted: var(--b-500);
+  --nf-accent: var(--b-green);
+  --nf-accent-contrast: var(--b-green-ink);
+  --nf-surface-2: var(--b-50);
+  --nf-hero-grad: linear-gradient(180deg, var(--b-50) 0%, var(--b-bg) 100%);
 }
 
 .nf-shell {
@@ -267,7 +266,7 @@ function excerpt(text, length = 60) {
 .nf-brand-mark {
   width: 2rem;
   height: 2rem;
-  border-radius: 8px;
+  border-radius: var(--b-r-sm);
   object-fit: cover;
   flex-shrink: 0;
 }
@@ -311,7 +310,7 @@ function excerpt(text, length = 60) {
   justify-content: center;
   width: 2rem;
   height: 2rem;
-  border-radius: 8px;
+  border-radius: var(--b-r-sm);
   border: 1px solid var(--nf-line);
   background: var(--nf-panel);
   color: var(--nf-muted);
@@ -325,15 +324,15 @@ function excerpt(text, length = 60) {
   font-weight: 600;
   font-size: 0.85rem;
   padding: 0.45rem 0.9rem;
-  border-radius: 8px;
+  border-radius: var(--b-r-sm);
   text-decoration: none;
   white-space: nowrap;
   transition: background 0.15s ease, border-color 0.15s ease;
 }
 
 .nf-login-btn:hover {
-  background: #0f766e;
-  border-color: #0f766e;
+  background: var(--b-green-hover);
+  border-color: var(--b-green-hover);
 }
 
 .nf-logout-btn {
@@ -343,7 +342,7 @@ function excerpt(text, length = 60) {
   font-weight: 600;
   font-size: 0.85rem;
   padding: 0.45rem 0.9rem;
-  border-radius: 8px;
+  border-radius: var(--b-r-sm);
   cursor: pointer;
   transition: border-color 0.15s ease, color 0.15s ease;
 }
@@ -367,10 +366,21 @@ function excerpt(text, length = 60) {
   max-width: 1160px;
 }
 
+.nf-body.focus-mode {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 1360px;
+}
+
 .nf-sidebar {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+
+.nf-main.focus-main {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
 }
 
 .nf-search {
@@ -379,7 +389,7 @@ function excerpt(text, length = 60) {
   gap: 0.5rem;
   background: var(--nf-panel);
   border: 1px solid var(--nf-line);
-  border-radius: 10px;
+  border-radius: var(--b-r-thumb);
   padding: 0.55rem 0.75rem;
   color: var(--nf-muted);
 }
@@ -396,7 +406,7 @@ function excerpt(text, length = 60) {
 .nf-panel {
   background: var(--nf-panel);
   border: 1px solid var(--nf-line);
-  border-radius: 12px;
+  border-radius: var(--b-r-md);
   padding: 1rem;
 }
 
@@ -438,7 +448,7 @@ function excerpt(text, length = 60) {
   background: var(--nf-surface-2);
   border: 1px solid var(--nf-line);
   color: var(--nf-muted);
-  border-radius: 999px;
+  border-radius: var(--b-r-pill);
   padding: 0.3rem 0.65rem;
   font-size: 0.78rem;
   cursor: pointer;
@@ -479,7 +489,7 @@ function excerpt(text, length = 60) {
 .nf-highlight-chip {
   width: 40px;
   height: 40px;
-  border-radius: 8px;
+  border-radius: var(--b-r-sm);
   flex-shrink: 0;
 }
 
@@ -528,7 +538,7 @@ function excerpt(text, length = 60) {
   justify-content: center;
   width: 100%;
   padding: 0.55rem;
-  border-radius: 8px;
+  border-radius: var(--b-r-sm);
   background: var(--nf-accent);
   color: #fff;
   text-decoration: none;
@@ -550,7 +560,7 @@ function excerpt(text, length = 60) {
   flex-direction: column;
   gap: 0.1rem;
   padding: 0.55rem 0.65rem;
-  border-radius: 8px;
+  border-radius: var(--b-r-sm);
   text-decoration: none;
   transition: background 0.15s ease;
 }
@@ -631,6 +641,295 @@ function excerpt(text, length = 60) {
   .nf-body {
     padding: 1rem 1rem 2.5rem;
     gap: 1rem;
+  }
+}
+
+/* ==========================================================================
+   bryl-minimal — scoped to the landing page (/wall).
+   Monochrome ramp, typography-driven hierarchy, hairline borders, no accent
+   colour. The --nf-* tokens are re-mapped onto the ramp so every existing
+   component rule above inherits the palette without being rewritten.
+   ========================================================================== */
+
+.nf-shell.bryl {
+  font-family: var(--b-sans);
+  font-size: 15px;
+  transition: background 0.5s ease, color 0.5s ease, border-color 0.5s ease;
+}
+
+/* Re-map the legacy palette onto the ramp. Emphasis = inversion, so the
+   "accent" is simply ink on background. */
+.nf-shell.bryl {
+  --nf-bg: var(--b-bg);
+  --nf-panel: var(--b-bg);
+  --nf-line: var(--b-200);
+  --nf-ink: var(--b-ink);
+  --nf-muted: var(--b-500);
+  --nf-accent: var(--b-green);
+  --nf-accent-contrast: var(--b-green-ink);
+  --nf-surface-2: var(--b-50);
+  --nf-hero-grad: linear-gradient(180deg, var(--b-50) 0%, var(--b-bg) 100%);
+}
+
+/* --- top bar ------------------------------------------------------------ */
+
+.nf-shell.bryl .nf-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: color-mix(in srgb, var(--b-bg) 90%, transparent);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--b-200);
+}
+
+.nf-shell.bryl .nf-brand {
+  font-family: var(--b-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--b-ink);
+}
+
+/* Brand marks are desaturated so the chrome stays monochrome; user-submitted
+   photos keep their own colour. */
+.nf-shell.bryl .nf-brand-mark,
+.nf-shell.bryl .nf-highlight-fallback {
+  filter: grayscale(1);
+}
+
+.nf-shell.bryl .nf-brand-mark {
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: var(--b-r-thumb);
+}
+
+.nf-shell.bryl .nf-tabs :deep(a) {
+  font-family: var(--b-mono);
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--b-400);
+  border-bottom: none;
+  padding-bottom: 0;
+  transition: color 0.2s ease;
+}
+
+.nf-shell.bryl .nf-tabs :deep(a:hover) {
+  color: var(--b-ink);
+}
+
+.nf-shell.bryl .nf-tabs :deep(a.active) {
+  color: var(--b-ink);
+}
+
+.nf-shell.bryl .nf-tabs :deep(a.active)::before {
+  content: '→ ';
+}
+
+.nf-shell.bryl .nf-icon-btn {
+  border-radius: var(--b-r-input);
+  border-color: var(--b-200);
+  background: var(--b-bg);
+  color: var(--b-500);
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.nf-shell.bryl .nf-icon-btn:hover {
+  color: var(--b-ink);
+  border-color: var(--b-300);
+}
+
+.nf-shell.bryl .nf-login-btn,
+.nf-shell.bryl .nf-logout-btn {
+  font-family: var(--b-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  border-radius: var(--b-r-input);
+  padding: 0.5rem 0.8rem;
+}
+
+.nf-shell.bryl .nf-login-btn {
+  background: var(--b-green);
+  border-color: var(--b-green);
+  color: var(--b-green-ink);
+}
+
+.nf-shell.bryl .nf-login-btn:hover {
+  background: var(--b-green-hover);
+  border-color: var(--b-green-hover);
+}
+
+/* --- sidebars ----------------------------------------------------------- */
+
+/* Page headings inside the slot are green too. Colour only — each page keeps
+   its own type treatment. */
+.nf-shell.bryl .nf-main :deep(h1),
+.nf-shell.bryl .nf-main :deep(h2),
+.nf-shell.bryl .nf-main :deep(h3) {
+  color: var(--b-green-text);
+}
+
+.nf-shell.bryl .nf-panel {
+  background: var(--b-bg);
+  border: 1px solid var(--b-200);
+  border-radius: var(--b-r-md);
+  padding: 1.25rem;
+  box-shadow: var(--b-shadow);
+}
+
+.nf-shell.bryl .nf-panel h2 {
+  font-family: var(--b-mono);
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--b-green-text);
+  margin-bottom: 0.9rem;
+}
+
+.nf-shell.bryl .nf-search {
+  background: var(--b-50);
+  border: 1px solid var(--b-200);
+  border-radius: var(--b-r-input);
+  color: var(--b-400);
+}
+
+.nf-shell.bryl .nf-search input {
+  font-family: var(--b-mono);
+  font-size: 13px;
+  color: var(--b-ink);
+}
+
+.nf-shell.bryl .nf-search input::placeholder {
+  color: var(--b-400);
+}
+
+.nf-shell.bryl .nf-stat-list {
+  font-size: 13px;
+  color: var(--b-500);
+}
+
+.nf-shell.bryl .nf-stat-list strong {
+  font-family: var(--b-mono);
+  font-weight: 500;
+  color: var(--b-ink);
+}
+
+.nf-shell.bryl .nf-tag {
+  background: transparent;
+  border: 1px solid var(--b-300);
+  border-radius: var(--b-r-pill);
+  padding: 2px 8px;
+  font-family: var(--b-mono);
+  font-size: 9px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--b-500);
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.nf-shell.bryl .nf-tag:hover {
+  color: var(--b-green-text);
+  border-color: var(--b-green);
+}
+
+/* The one loud element: an inverted chip. */
+.nf-shell.bryl .nf-tag.active {
+  background: var(--b-green);
+  border-color: var(--b-green);
+  color: var(--b-green-ink);
+}
+
+.nf-shell.bryl .nf-guidelines {
+  font-size: 13px;
+  color: var(--b-500);
+  line-height: 1.6;
+}
+
+.nf-shell.bryl .nf-highlights img,
+.nf-shell.bryl .nf-highlight-chip {
+  border-radius: var(--b-r-thumb);
+}
+
+.nf-shell.bryl .nf-highlight-chip {
+  background: var(--b-50);
+  border: 1px solid var(--b-200);
+  font-family: var(--b-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 1px;
+  color: var(--b-500);
+}
+
+.nf-shell.bryl .nf-highlights p,
+.nf-shell.bryl .nf-cta p,
+.nf-shell.bryl .nf-empty {
+  font-size: 13px;
+  color: var(--b-500);
+  line-height: 1.6;
+}
+
+.nf-shell.bryl .nf-highlights p {
+  color: var(--b-ink);
+}
+
+.nf-shell.bryl .nf-cta-btn {
+  background: var(--b-green);
+  color: var(--b-green-ink);
+  border-radius: var(--b-r-input);
+  padding: 0.65rem;
+  font-family: var(--b-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  transition: background 0.2s ease;
+}
+
+.nf-shell.bryl .nf-cta-btn:hover {
+  background: var(--b-green-hover);
+}
+
+.nf-shell.bryl .nf-app-link {
+  border-radius: var(--b-r-sm);
+  border: 1px solid transparent;
+  transition: border-color 0.2s ease;
+}
+
+.nf-shell.bryl .nf-app-link:hover {
+  background: var(--b-50);
+  border-color: var(--b-200);
+}
+
+.nf-shell.bryl .nf-app-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--b-ink);
+}
+
+.nf-shell.bryl .nf-app-name::after {
+  content: ' ↗';
+  color: var(--b-400);
+}
+
+.nf-shell.bryl .nf-app-url {
+  font-family: var(--b-mono);
+  font-size: 9px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--b-400);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nf-shell.bryl,
+  .nf-shell.bryl :deep(*) {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
   }
 }
 </style>

@@ -56,8 +56,8 @@ function logout() {
   max-width: 420px;
   background: var(--paper);
   border: 1px solid var(--line);
-  border-radius: 14px;
-  box-shadow: var(--shadow-card);
+  border-radius: var(--b-r-card);
+  box-shadow: none;
   padding: 1.5rem;
 }
 
@@ -83,7 +83,7 @@ button {
   color: #fff;
   border: none;
   padding: 0.7rem;
-  border-radius: 8px;
+  border-radius: var(--b-r-sm);
   font-weight: 600;
   cursor: pointer;
   transition: background 0.15s ease;
