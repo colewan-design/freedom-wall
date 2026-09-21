@@ -29,6 +29,12 @@ const approvingId = ref(null);
 const rejectingId = ref(null);
 const viewMode = ref('card');
 
+// Threads post straight to the forum with no queue in front of them, so what
+// lands here is what readers flagged after the fact.
+const reports = ref([]);
+const loadingReports = ref(true);
+const actingReportId = ref(null);
+
 const banner = reactive({ message: '', tone: 'info' });
 
 function showBanner(message, tone = 'info') {
@@ -235,10 +241,53 @@ function onContentInput(post) {
   }
 }
 
+async function loadReports() {
+  loadingReports.value = true;
+
+  try {
+    const data = await adminApi.getThreadReports();
+    reports.value = data.items;
+  } catch (err) {
+    showBanner(err.message, 'error');
+  } finally {
+    loadingReports.value = false;
+  }
+}
+
+// Every action on a report — taking the content down, putting it back, or
+// deciding it was fine — closes the report and drops it off the queue.
+async function actOnReport(report, action) {
+  actingReportId.value = report.id;
+
+  try {
+    if (action === 'dismiss') {
+      await adminApi.dismissThreadReport(report.id);
+      showBanner('Report dismissed.', 'info');
+    } else if (report.target === 'reply') {
+      await adminApi.hideThreadReply(report.reply.id);
+      showBanner('Reply hidden from the thread.', 'info');
+    } else {
+      await adminApi.hideThread(report.thread.id);
+      showBanner('Thread hidden from the forum.', 'info');
+    }
+
+    await loadReports();
+  } catch (err) {
+    showBanner(err.message, 'error');
+  } finally {
+    actingReportId.value = null;
+  }
+}
+
+function reportedText(report) {
+  return report.target === 'reply' ? report.reply?.body : report.thread?.title;
+}
+
 onMounted(() => {
   loadStats();
   loadPending();
   loadApproved();
+  loadReports();
 });
 </script>
 
@@ -477,6 +526,62 @@ onMounted(() => {
         </button>
       </div>
     </section>
+
+    <section class="panel">
+      <h2>Reported threads</h2>
+      <p class="hint">
+        Forum posts go live without review, so this is the takedown queue. Hiding never deletes —
+        a hidden thread or reply can be restored from the database if the call was wrong.
+      </p>
+
+      <div v-if="loadingReports" class="skeleton-list">
+        <div class="skeleton-card" v-for="n in 2" :key="n">
+          <div class="skeleton-line skeleton-line--full"></div>
+          <div class="skeleton-line skeleton-line--half"></div>
+        </div>
+      </div>
+
+      <p v-else-if="reports.length === 0" class="hint">Nothing reported. The forum is quiet.</p>
+
+      <ul v-else class="queue">
+        <li v-for="report in reports" :key="report.id" class="item">
+          <p class="report-meta">
+            <span class="report-tag">{{ report.target }}</span>
+            <span class="report-reason">{{ report.reason.replace('-', ' ') }}</span>
+            <span v-if="report.thread">in &ldquo;{{ report.thread.title }}&rdquo;</span>
+            <time :datetime="report.created_at">{{ formatDateTime(report.created_at) }}</time>
+          </p>
+
+          <p class="static-content">{{ reportedText(report) }}</p>
+
+          <div class="actions">
+            <a
+              v-if="report.thread"
+              class="btn btn-secondary btn-sm"
+              :href="`/threads/${report.thread.id}`"
+              target="_blank"
+              rel="noopener"
+            >
+              Open thread
+            </a>
+            <button
+              class="btn btn-reject btn-sm"
+              :disabled="actingReportId === report.id"
+              @click="actOnReport(report, 'hide')"
+            >
+              Hide {{ report.target }}
+            </button>
+            <button
+              class="btn btn-approve btn-sm"
+              :disabled="actingReportId === report.id"
+              @click="actOnReport(report, 'dismiss')"
+            >
+              Looks fine
+            </button>
+          </div>
+        </li>
+      </ul>
+    </section>
   </section>
 </template>
 
@@ -587,6 +692,31 @@ h1 {
 .panel h2 {
   margin: 0 0 0.25rem;
   font-size: 1.15rem;
+}
+
+.report-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin: 0 0 0.6rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.report-tag,
+.report-reason {
+  padding: 1px 7px;
+  border: 1px solid var(--line);
+  border-radius: var(--b-r-pill);
+  font-size: 0.7rem;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+
+.report-reason {
+  border-color: var(--danger);
+  color: var(--danger);
 }
 
 .hint {

@@ -26,4 +26,16 @@ export const adminApi = {
     request(`/admin/submissions/${id}/approve`, { method: 'POST', body: { content } }),
 
   reject: (id) => request(`/admin/submissions/${id}/reject`, { method: 'POST' }),
+
+  getThreadReports: (limit = 10) => request(`/admin/thread-reports?limit=${limit}`),
+
+  hideThread: (id) => request(`/admin/threads/${id}/hide`, { method: 'POST' }),
+
+  restoreThread: (id) => request(`/admin/threads/${id}/restore`, { method: 'POST' }),
+
+  hideThreadReply: (id) => request(`/admin/thread-replies/${id}/hide`, { method: 'POST' }),
+
+  restoreThreadReply: (id) => request(`/admin/thread-replies/${id}/restore`, { method: 'POST' }),
+
+  dismissThreadReport: (id) => request(`/admin/thread-reports/${id}/resolve`, { method: 'POST' }),
 };

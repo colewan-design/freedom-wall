@@ -1,11 +1,12 @@
 <script setup>
 import { Link, router, usePage } from '@inertiajs/vue3';
 import { computed, onBeforeUnmount, onMounted, provide, ref, watch, watchEffect } from 'vue';
-import { shortTimeAgo } from '../lib/date';
+import { shortTimeAgo, timeAgo } from '../lib/date';
 
 const page = usePage();
 const isActive = (path) => computed(() => page.url === path || page.url.startsWith(`${path}?`));
 const isChatPage = computed(() => page.component === 'Chat');
+const isThreadsPage = computed(() => page.component === 'Threads/Index');
 const isWallPage = computed(() => page.component === 'Wall');
 const isAdminPage = computed(() => page.component?.startsWith('Admin/'));
 const isFocusPage = computed(() => page.component === 'IdCheck/Index');
@@ -27,6 +28,8 @@ onMounted(() => {
   if (saved === 'light' || saved === 'dark') theme.value = saved;
   autoScroll.value = localStorage.getItem('chat-auto-scroll') !== 'off';
   soundAlerts.value = localStorage.getItem('chat-sound-alerts') === 'on';
+  savedThreads.value = readThreadList('thread-saved');
+  followedThreads.value = readThreadList('thread-followed');
   window.addEventListener('keydown', focusSearchWithSlash);
 });
 
@@ -147,6 +150,74 @@ const withPhotos = computed(
 const textOnly = computed(() => wallStats.value?.textOnly ?? posts.value.length - withPhotos.value);
 const highlights = computed(() => posts.value.slice(0, 3));
 
+// --- Forum state -----------------------------------------------------------
+// The thread list and the topic filter live in this sidebar but the Save and
+// Follow buttons are on the thread itself, so the kept-thread lists are held
+// here and provided down — the same shape as the chat room's controls.
+const threads = computed(() => page.props.threads ?? []);
+const threadTrending = computed(() => page.props.trending ?? []);
+const threadTopics = computed(() => page.props.topics ?? []);
+const threadActiveTags = computed(() => page.props.activeTags ?? []);
+const openThreadId = computed(() => page.props.thread?.id ?? null);
+
+const threadTopic = ref('');
+const savedThreads = ref([]);
+const followedThreads = ref([]);
+
+const visibleThreads = computed(() => {
+  const term = search.value.trim().toLowerCase().replace(/^#/, '');
+
+  return threads.value.filter((thread) => {
+    if (threadTopic.value && thread.topic !== threadTopic.value) return false;
+    if (!term) return true;
+
+    return thread.title.toLowerCase().includes(term) || thread.topic.toLowerCase().includes(term);
+  });
+});
+
+function readThreadList(key) {
+  try {
+    const stored = JSON.parse(localStorage.getItem(key) ?? '[]');
+    return Array.isArray(stored) ? stored : [];
+  } catch {
+    return [];
+  }
+}
+
+// Save and Follow are personal bookmarks with no account behind them, so they
+// stay on the device rather than pretending to be server-side subscriptions.
+function toggleThreadList(list, key, id) {
+  list.value = list.value.includes(id) ? list.value.filter((item) => item !== id) : [...list.value, id];
+
+  try {
+    localStorage.setItem(key, JSON.stringify(list.value));
+  } catch {
+    // A browser with storage blocked still gets the in-page state.
+  }
+}
+
+provide('threadRoom', {
+  isSaved: (id) => savedThreads.value.includes(id),
+  isFollowed: (id) => followedThreads.value.includes(id),
+  toggleSave: (id) => toggleThreadList(savedThreads, 'thread-saved', id),
+  toggleFollow: (id) => toggleThreadList(followedThreads, 'thread-followed', id),
+});
+
+function applyThreadTopic(topic) {
+  threadTopic.value = threadTopic.value === topic ? '' : topic;
+}
+
+function clearThreadFilters() {
+  threadTopic.value = '';
+  search.value = '';
+}
+
+const THREAD_GUIDELINES = [
+  'Stay respectful and open-minded.',
+  'No personal attacks or harassment.',
+  'Keep it anonymous and on-topic.',
+];
+
 const TAGS = ['confession', 'crush', 'exam', 'campus', 'org', 'rant'];
 
 const RULES = [
@@ -193,6 +264,7 @@ function excerpt(text, length = 60) {
 
       <nav v-if="!isAdminPage" class="nf-tabs">
         <Link href="/wall" :class="{ active: isActive('/wall').value }">News Feed</Link>
+        <Link href="/threads" :class="{ active: isActive('/threads').value || isThreadsPage }">Threads</Link>
         <Link href="/chat" :class="{ active: isActive('/chat').value }">Chat</Link>
         <Link href="/id-check" :class="{ active: isActive('/id-check').value }">ID Check</Link>
       </nav>
@@ -236,7 +308,12 @@ function excerpt(text, length = 60) {
             <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8" />
             <path d="m20 20-3.2-3.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
           </svg>
-          <input ref="searchInput" v-model="search" type="text" placeholder="Search posts, tags, or topics..." />
+          <input
+            ref="searchInput"
+            v-model="search"
+            type="text"
+            :placeholder="isThreadsPage ? 'Search threads...' : 'Search posts, tags, or topics...'"
+          />
           <kbd>/</kbd>
         </label>
 
@@ -344,7 +421,58 @@ function excerpt(text, length = 60) {
           <p class="nf-room-note">These settings only apply to your current session in this room.</p>
         </section>
 
-        <section v-if="!isChatPage" class="nf-panel nf-filter-panel">
+        <section v-if="isThreadsPage" id="thread-topics" class="nf-panel nf-filter-panel">
+          <h2>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M6 3v7M6 14v7M18 3v4M18 11v10M3 10h6M15 7h6M3 17h6M15 14h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+            </svg>
+            Filter Topics
+          </h2>
+          <p class="nf-panel-copy">Browse by topic:</p>
+          <div class="nf-tags">
+            <button
+              v-for="topic in threadTopics"
+              :key="topic"
+              type="button"
+              class="nf-tag"
+              :class="{ active: threadTopic === topic }"
+              @click="applyThreadTopic(topic)"
+            >
+              #{{ topic }}
+            </button>
+          </div>
+          <div class="nf-filter-footer">
+            <button type="button" @click="clearThreadFilters">Clear filters</button>
+            <button type="button" @click="clearThreadFilters">Show all <span aria-hidden="true">&rarr;</span></button>
+          </div>
+        </section>
+
+        <section v-if="isThreadsPage" class="nf-panel nf-threadlist-panel">
+          <h2>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M4 6h16M4 12h16M4 18h10" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+            </svg>
+            Thread List
+          </h2>
+          <ul v-if="visibleThreads.length" class="nf-threadlist">
+            <li v-for="item in visibleThreads" :key="item.id" :class="{ active: item.id === openThreadId }">
+              <Link :href="`/threads/${item.id}`">
+                <strong>{{ item.title }}</strong>
+                <small>
+                  {{ item.reply_count }} {{ item.reply_count === 1 ? 'reply' : 'replies' }}
+                  <i aria-hidden="true">&bull;</i>
+                  {{ timeAgo(item.last_activity_at) }}
+                  <em v-if="savedThreads.includes(item.id)">saved</em>
+                  <em v-else-if="followedThreads.includes(item.id)">following</em>
+                </small>
+              </Link>
+            </li>
+          </ul>
+          <p v-else class="nf-empty">No threads match that filter.</p>
+          <Link href="/threads" class="nf-view-all">View all threads <span aria-hidden="true">&rarr;</span></Link>
+        </section>
+
+        <section v-if="!isChatPage && !isThreadsPage" class="nf-panel nf-filter-panel">
           <h2>
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path d="M6 3v7M6 14v7M18 3v4M18 11v10M3 10h6M15 7h6M3 17h6M15 14h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
@@ -373,7 +501,7 @@ function excerpt(text, length = 60) {
           </div>
         </section>
 
-        <section v-if="!isChatPage" class="nf-panel nf-stats-panel">
+        <section v-if="!isChatPage && !isThreadsPage" class="nf-panel nf-stats-panel">
           <h2>
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 20V10M12 20V4M19 20v-7" stroke="currentColor" stroke-width="2" /></svg>
             Wall Stats
@@ -385,7 +513,7 @@ function excerpt(text, length = 60) {
           </ul>
         </section>
 
-        <section v-if="!isChatPage" class="nf-panel nf-rules-panel">
+        <section v-if="!isChatPage && !isThreadsPage" class="nf-panel nf-rules-panel">
           <h2>
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3 19 6v5c0 4.6-2.9 8.2-7 10-4.1-1.8-7-5.4-7-10V6l7-3Z" stroke="currentColor" stroke-width="1.7" /></svg>
             Community Rules
@@ -405,7 +533,65 @@ function excerpt(text, length = 60) {
       </main>
 
       <aside v-if="!isAdminPage && !isFocusPage" class="nf-sidebar nf-right">
-        <section class="nf-panel nf-trending-panel">
+        <section v-if="isThreadsPage" class="nf-panel nf-trending-panel">
+          <h2>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="m4 16 5-6 4 3 7-8M16 5h4v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            Trending Threads
+          </h2>
+          <ol v-if="threadTrending.length" class="nf-trending-list">
+            <li v-for="(item, index) in threadTrending" :key="item.id">
+              <span class="nf-trend-number">{{ String(index + 1).padStart(2, '0') }}</span>
+              <Link class="nf-trend-content" :href="`/threads/${item.id}`">
+                <strong>{{ item.title }}</strong>
+                <small>
+                  {{ item.views_count }} views <i>&bull;</i>
+                  {{ item.reply_count }} {{ item.reply_count === 1 ? 'reply' : 'replies' }}
+                </small>
+              </Link>
+            </li>
+          </ol>
+          <p v-else class="nf-empty">Nothing trending yet.</p>
+          <Link href="/threads" class="nf-view-all">View all threads <span aria-hidden="true">&rarr;</span></Link>
+        </section>
+
+        <section v-if="isThreadsPage" class="nf-panel nf-rules-panel">
+          <h2>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3 19 6v5c0 4.6-2.9 8.2-7 10-4.1-1.8-7-5.4-7-10V6l7-3Z" stroke="currentColor" stroke-width="1.7" /></svg>
+            Thread Guidelines
+          </h2>
+          <ol class="nf-rule-list">
+            <li v-for="(guideline, index) in THREAD_GUIDELINES" :key="guideline">
+              <span class="nf-rule-number">{{ String(index + 1).padStart(2, '0') }}</span>
+              <span><strong>{{ guideline }}</strong></span>
+            </li>
+          </ol>
+        </section>
+
+        <section v-if="isThreadsPage" class="nf-panel nf-filter-panel">
+          <h2>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M4 10h16M4 14h16M10 4 8 20M16 4l-2 16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+            </svg>
+            Active Tags
+          </h2>
+          <div v-if="threadActiveTags.length" class="nf-tags">
+            <button
+              v-for="tag in threadActiveTags"
+              :key="tag"
+              type="button"
+              class="nf-tag"
+              :class="{ active: threadTopic === tag }"
+              @click="applyThreadTopic(tag)"
+            >
+              #{{ tag }}
+            </button>
+          </div>
+          <p v-else class="nf-empty">No tags in use yet.</p>
+        </section>
+
+        <section v-if="!isThreadsPage" class="nf-panel nf-trending-panel">
           <h2>
             <svg v-if="isChatPage" width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path d="M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM2.5 20a6.5 6.5 0 0 1 13 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
@@ -440,7 +626,7 @@ function excerpt(text, length = 60) {
           <a v-if="!isChatPage" href="#latest" class="nf-view-all">View all posts <span aria-hidden="true">&rarr;</span></a>
         </section>
 
-        <section class="nf-panel nf-cta">
+        <section v-if="!isThreadsPage" class="nf-panel nf-cta">
           <h2>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path d="M4 5h16v11H9l-5 4v-4H4V5Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" />
@@ -459,7 +645,7 @@ function excerpt(text, length = 60) {
           </small>
         </section>
 
-        <section class="nf-panel nf-tools-panel">
+        <section v-if="!isThreadsPage" class="nf-panel nf-tools-panel">
           <h2>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4" y="4" width="5" height="5" stroke="currentColor" stroke-width="1.6"/><rect x="15" y="4" width="5" height="5" stroke="currentColor" stroke-width="1.6"/><rect x="4" y="15" width="5" height="5" stroke="currentColor" stroke-width="1.6"/><rect x="15" y="15" width="5" height="5" stroke="currentColor" stroke-width="1.6"/></svg>
             Other Tools
@@ -1032,10 +1218,11 @@ function excerpt(text, length = 60) {
 /* --- sidebars ----------------------------------------------------------- */
 
 /* Page headings inside the slot are green too. Colour only — each page keeps
-   its own type treatment. */
-.nf-shell.bryl .nf-main :deep(h1),
-.nf-shell.bryl .nf-main :deep(h2),
-.nf-shell.bryl .nf-main :deep(h3) {
+   its own type treatment. A heading that is someone's content rather than a
+   heading for the page — a thread's title — opts out with .is-content. */
+.nf-shell.bryl .nf-main :deep(h1:not(.is-content)),
+.nf-shell.bryl .nf-main :deep(h2:not(.is-content)),
+.nf-shell.bryl .nf-main :deep(h3:not(.is-content)) {
   color: var(--b-green-text);
 }
 
@@ -1564,6 +1751,76 @@ function excerpt(text, length = 60) {
 
 .nf-view-all:hover {
   color: var(--nf-accent);
+}
+
+/* The forum's trending entries link through to the thread, so the block that
+   used to be a plain span now has to shed the anchor's default styling. */
+.nf-trending-list a.nf-trend-content {
+  display: block;
+  text-decoration: none;
+}
+
+.nf-threadlist {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nf-threadlist li {
+  border-bottom: 1px solid var(--nf-line);
+}
+
+.nf-threadlist li:last-child {
+  border-bottom: 0;
+}
+
+.nf-threadlist a {
+  display: block;
+  padding: 11px 10px 11px 12px;
+  border-left: 2px solid transparent;
+  text-decoration: none;
+}
+
+.nf-threadlist a:hover {
+  background: var(--b-50);
+}
+
+.nf-threadlist li.active a {
+  border-left-color: var(--nf-accent);
+  background: color-mix(in srgb, var(--nf-accent) 8%, transparent);
+}
+
+.nf-threadlist strong {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  color: var(--nf-ink);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.nf-threadlist small {
+  display: block;
+  margin-top: 5px;
+  color: var(--nf-muted);
+  font-size: 12px;
+}
+
+.nf-threadlist small i {
+  padding: 0 5px;
+  font-style: normal;
+}
+
+.nf-threadlist small em {
+  margin-left: 7px;
+  color: var(--nf-accent);
+  font-family: var(--b-mono);
+  font-size: 10px;
+  font-style: normal;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
 }
 
 .nf-shell.bryl .nf-cta p {

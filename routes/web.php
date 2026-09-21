@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Admin\AuthController as AdminAuthController;
+use App\Http\Controllers\Admin\SubmissionModerationController;
+use App\Http\Controllers\Admin\ThreadModerationController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\EmailVerificationNotificationController;
 use App\Http\Controllers\Auth\EmailVerificationPromptController;
@@ -15,11 +17,11 @@ use App\Http\Controllers\FriendController;
 use App\Http\Controllers\IdCheckController;
 use App\Http\Controllers\JournalController;
 use App\Http\Controllers\PostController;
-use App\Http\Controllers\PublicMediaController;
-use App\Http\Controllers\Admin\SubmissionModerationController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\PublicMediaController;
 use App\Http\Controllers\SavedPostController;
 use App\Http\Controllers\SubmissionController;
+use App\Http\Controllers\ThreadController;
 use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/wall');
@@ -38,6 +40,26 @@ Route::post('/chat/nickname', [ChatController::class, 'updateNickname'])
     ->middleware('throttle:chat-nickname')
     ->name('chat.nickname.update');
 Route::get('/wall', [SubmissionController::class, 'wall'])->name('wall');
+
+// Community forum. Public and anonymous like the wall and the chat room, so
+// these sit outside the student auth group on purpose.
+Route::get('/threads', [ThreadController::class, 'index'])->name('threads.index');
+Route::post('/threads', [ThreadController::class, 'store'])
+    ->middleware('throttle:thread')
+    ->name('threads.store');
+Route::get('/threads/{thread}', [ThreadController::class, 'show'])->name('threads.show');
+Route::post('/threads/{thread}/replies', [ThreadController::class, 'storeReply'])
+    ->middleware('throttle:thread-reply')
+    ->name('threads.replies.store');
+Route::post('/threads/{thread}/report', [ThreadController::class, 'reportThread'])
+    ->middleware('throttle:thread-report')
+    ->name('threads.report');
+Route::post('/thread-replies/{reply}/vote', [ThreadController::class, 'vote'])
+    ->middleware('throttle:thread-vote')
+    ->name('threads.replies.vote');
+Route::post('/thread-replies/{reply}/report', [ThreadController::class, 'reportReply'])
+    ->middleware('throttle:thread-report')
+    ->name('threads.replies.report');
 Route::get('/id-check', [IdCheckController::class, 'index'])->name('id-check');
 Route::redirect('/id', '/id-check');
 
@@ -115,5 +137,12 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('stats', [SubmissionModerationController::class, 'stats'])->name('stats');
         Route::post('submissions/{submission}/approve', [SubmissionModerationController::class, 'approve'])->name('submissions.approve');
         Route::post('submissions/{submission}/reject', [SubmissionModerationController::class, 'reject'])->name('submissions.reject');
+
+        Route::get('thread-reports', [ThreadModerationController::class, 'reports'])->name('threads.reports');
+        Route::post('thread-reports/{report}/resolve', [ThreadModerationController::class, 'resolve'])->name('threads.reports.resolve');
+        Route::post('threads/{thread}/hide', [ThreadModerationController::class, 'hideThread'])->name('threads.hide');
+        Route::post('threads/{thread}/restore', [ThreadModerationController::class, 'restoreThread'])->name('threads.restore');
+        Route::post('thread-replies/{reply}/hide', [ThreadModerationController::class, 'hideReply'])->name('threads.replies.hide');
+        Route::post('thread-replies/{reply}/restore', [ThreadModerationController::class, 'restoreReply'])->name('threads.replies.restore');
     });
 });

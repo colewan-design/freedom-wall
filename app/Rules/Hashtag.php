@@ -21,6 +21,13 @@ class Hashtag implements ValidationRule
 
     public const MAX_LENGTH = 30;
 
+    /**
+     * @param  list<string>  $allowed  The curated chips that bypass the spelling
+     *                                 rules. Defaults to the wall's categories;
+     *                                 threads pass their own topic list.
+     */
+    public function __construct(private readonly array $allowed = Submission::CATEGORIES) {}
+
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
         if (! is_string($value) || $value === '') {
@@ -30,7 +37,7 @@ class Hashtag implements ValidationRule
         }
 
         // The curated chips are always fine, whatever else the rules say.
-        if (in_array($value, Submission::CATEGORIES, true)) {
+        if (in_array($value, $this->allowed, true)) {
             return;
         }
 

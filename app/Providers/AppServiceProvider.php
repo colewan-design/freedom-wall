@@ -54,5 +54,24 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('direct-message', function (Request $request) {
             return Limit::perMinute(20)->by('dm|'.$request->user()->id);
         });
+
+        // The forum is public and unmoderated up front, so the write paths are
+        // held tighter than the read ones. Starting a thread is the loudest
+        // action on the site; replying is a conversation and gets more room.
+        RateLimiter::for('thread', function (Request $request) {
+            return Limit::perMinutes(10, 3)->by($request->ip());
+        });
+
+        RateLimiter::for('thread-reply', function (Request $request) {
+            return Limit::perMinute(10)->by($request->ip().'|'.$request->session()->getId());
+        });
+
+        RateLimiter::for('thread-vote', function (Request $request) {
+            return Limit::perMinute(60)->by($request->ip().'|'.$request->session()->getId());
+        });
+
+        RateLimiter::for('thread-report', function (Request $request) {
+            return Limit::perMinutes(10, 6)->by($request->ip());
+        });
     }
 }
