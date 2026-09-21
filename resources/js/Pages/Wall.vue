@@ -1882,6 +1882,14 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
   color: var(--nf-ink);
 }
 
+/* The composer is teleported to <body>, outside .wall-page. Theme it from the
+   document root so light mode reaches the actual rendered dialog. */
+:global(:root[data-theme='light'] .composer-modal) {
+  background: #ffffff;
+  border-color: var(--b-300);
+  color: var(--b-ink);
+}
+
 @media (max-width: 900px) {
   .masthead-lower {
     display: flex;
