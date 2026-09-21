@@ -12,6 +12,12 @@ const props = defineProps({
   // Hashtag list comes from Submission::CATEGORIES so the chips can never drift
   // from what the form request accepts.
   categories: { type: Array, default: () => [] },
+  // Totals for the whole wall, counted in SQL. Deriving them from `posts` would
+  // only ever describe the most recent 50 rows the page actually renders.
+  stats: {
+    type: Object,
+    default: () => ({ total: 0, withPhotos: 0, textOnly: 0 }),
+  },
 });
 
 const page = usePage();
@@ -20,8 +26,9 @@ const composerTextarea = ref(null);
 const fileInput = ref(null);
 const composerModalOpen = ref(false);
 
-const withPhotos = computed(() => props.posts.filter((post) => post.image_urls?.length).length);
-const textOnly = computed(() => props.posts.length - withPhotos.value);
+const totalPosts = computed(() => props.stats.total ?? 0);
+const withPhotos = computed(() => props.stats.withPhotos ?? 0);
+const textOnly = computed(() => props.stats.textOnly ?? 0);
 
 const composerForm = useForm({
   content: '',
@@ -222,7 +229,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
     <dl class="stat-row rise" :style="riseDelay(1)">
       <div class="stat">
         <dt>posts</dt>
-        <dd>{{ posts.length }}</dd>
+        <dd>{{ totalPosts }}</dd>
       </div>
       <div class="stat">
         <dt>with photos</dt>

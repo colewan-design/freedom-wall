@@ -7,6 +7,7 @@ use App\Models\Submission;
 use App\Services\ContentFilterService;
 use App\Services\IpHasher;
 use App\Services\TurnstileService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -16,6 +17,8 @@ use Inertia\Response;
 
 class SubmissionController extends Controller
 {
+    private const WALL_POST_LIMIT = 50;
+
     public function store(
         StoreSubmissionRequest $request,
         ContentFilterService $contentFilter,
@@ -60,13 +63,42 @@ class SubmissionController extends Controller
         $posts = Submission::query()
             ->approved()
             ->orderByDesc('reviewed_at')
-            ->limit(50)
+            ->limit(self::WALL_POST_LIMIT)
             ->get(['id', 'content', 'image_url', 'images', 'reviewed_at']);
 
         return Inertia::render('Wall', [
             'posts' => $posts,
             'categories' => Submission::CATEGORIES,
+            'stats' => $this->wallStats(),
         ]);
+    }
+
+    /**
+     * Counted straight from the database rather than from $posts, which only
+     * holds the most recent WALL_POST_LIMIT rows — the totals describe the whole
+     * wall, not the slice currently rendered.
+     */
+    private function wallStats(): array
+    {
+        $total = Submission::query()->approved()->count();
+
+        $withPhotos = Submission::query()
+            ->approved()
+            ->where(function (Builder $query) {
+                $query
+                    ->whereJsonLength('images', '>', 0)
+                    ->orWhere(function (Builder $legacy) {
+                        // Rows predating the images column still carry a single image_url.
+                        $legacy->whereNotNull('image_url')->where('image_url', '!=', '');
+                    });
+            })
+            ->count();
+
+        return [
+            'total' => $total,
+            'withPhotos' => $withPhotos,
+            'textOnly' => $total - $withPhotos,
+        ];
     }
 
     /**
