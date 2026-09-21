@@ -468,7 +468,9 @@ function excerpt(text, length = 60) {
               </Link>
             </li>
           </ul>
-          <p v-else class="nf-empty">No threads match that filter.</p>
+          <p v-else class="nf-empty">
+            {{ threads.length ? 'No threads match that filter.' : 'No threads yet.' }}
+          </p>
           <Link href="/threads" class="nf-view-all">View all threads <span aria-hidden="true">&rarr;</span></Link>
         </section>
 
