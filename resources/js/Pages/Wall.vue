@@ -11,6 +11,7 @@ import {
   MAX_VIDEO_SECONDS,
   validateAttachments,
 } from '../lib/media';
+import { hashtagError, MAX_HASHTAG_LENGTH, normalizeHashtag } from '../lib/hashtag';
 
 defineOptions({ layout: NewsfeedLayout });
 
@@ -44,8 +45,16 @@ const composerForm = useForm({
   captchaToken: null,
 });
 
+const customTagOpen = ref(false);
+const customTag = ref('');
+const customTagInput = ref(null);
+const customTagError = computed(() => hashtagError(customTag.value));
+
 const composerReady = computed(
-  () => composerForm.content.trim().length > 0 && composerForm.category !== '',
+  () =>
+    composerForm.content.trim().length > 0 &&
+    composerForm.category !== '' &&
+    customTagError.value === null,
 );
 
 const attachmentSummary = computed(() => describeAttachments(composerForm.images));
@@ -67,6 +76,28 @@ async function onComposerFileChange(e) {
 
 function selectCategory(category) {
   composerForm.category = category;
+  customTagOpen.value = false;
+  customTag.value = '';
+  composerForm.clearErrors('category');
+}
+
+function toggleCustomTag() {
+  customTagOpen.value = !customTagOpen.value;
+  // Opening deselects whichever chip was active, so the two never disagree
+  // about which single tag the post is going out with.
+  composerForm.category = customTagOpen.value ? normalizeHashtag(customTag.value) : '';
+  composerForm.clearErrors('category');
+
+  if (customTagOpen.value) {
+    nextTick(() => customTagInput.value?.focus());
+  } else {
+    customTag.value = '';
+  }
+}
+
+function onCustomTagInput() {
+  customTag.value = normalizeHashtag(customTag.value);
+  composerForm.category = customTag.value;
   composerForm.clearErrors('category');
 }
 
@@ -76,7 +107,11 @@ function onComposerSubmit() {
     return;
   }
   if (!composerForm.category) {
-    composerForm.setError('category', 'Please pick a hashtag for your post.');
+    composerForm.setError('category', 'Please pick or write a hashtag for your post.');
+    return;
+  }
+  if (customTagError.value) {
+    composerForm.setError('category', customTagError.value);
     return;
   }
   if (composerForm.captchaToken === null) {
@@ -89,6 +124,8 @@ function onComposerSubmit() {
     preserveScroll: true,
     onSuccess: () => {
       composerForm.reset();
+      customTag.value = '';
+      customTagOpen.value = false;
       if (fileInput.value) fileInput.value.value = '';
       closeComposerModal();
     },
@@ -494,7 +531,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
 
             <div class="composer-tags">
               <p class="composer-tags-label">
-                pick a hashtag <span class="composer-tags-required">required</span>
+                pick a hashtag or write your own <span class="composer-tags-required">required</span>
               </p>
               <div class="composer-tag-row">
                 <button
@@ -508,8 +545,34 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
                 >
                   #{{ category }}
                 </button>
+                <button
+                  type="button"
+                  class="composer-tag composer-tag-custom"
+                  :class="{ active: customTagOpen }"
+                  :aria-pressed="customTagOpen"
+                  @click="toggleCustomTag"
+                >
+                  + your own
+                </button>
               </div>
-              <p v-if="composerForm.category" class="composer-tags-hint">
+
+              <div v-if="customTagOpen" class="composer-custom-tag">
+                <span class="composer-custom-tag-hash" aria-hidden="true">#</span>
+                <input
+                  ref="customTagInput"
+                  v-model="customTag"
+                  type="text"
+                  class="composer-custom-tag-input"
+                  :maxlength="MAX_HASHTAG_LENGTH"
+                  placeholder="your-hashtag"
+                  aria-label="Write your own hashtag"
+                  autocomplete="off"
+                  @input="onCustomTagInput"
+                />
+              </div>
+
+              <p v-if="customTagError" class="composer-tags-error">{{ customTagError }}</p>
+              <p v-else-if="composerForm.category" class="composer-tags-hint">
                 #{{ composerForm.category }} will be added to the end of your post.
               </p>
             </div>
@@ -1344,12 +1407,60 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
   color: var(--b-bg);
 }
 
+.composer-tag-custom {
+  border-style: dashed;
+}
+
+.composer-custom-tag {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.35rem 0.7rem;
+  border: 1px solid var(--b-400);
+  border-radius: 999px;
+  background: var(--b-bg);
+  max-width: 16rem;
+}
+
+.composer-custom-tag-hash {
+  font-family: var(--b-mono);
+  font-size: 11px;
+  color: var(--b-400);
+}
+
+.composer-custom-tag-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: none;
+  font-family: var(--b-mono);
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  color: var(--b-ink);
+}
+
+.composer-custom-tag-input:focus {
+  outline: none;
+}
+
+.composer-custom-tag-input::placeholder {
+  color: var(--b-400);
+}
+
 .composer-tags-hint {
   margin: 0;
   font-family: var(--b-mono);
   font-size: 10px;
   letter-spacing: 0.5px;
   color: var(--b-400);
+}
+
+.composer-tags-error {
+  margin: 0;
+  font-family: var(--b-mono);
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  color: #b4413c;
 }
 
 .composer-attach-row {
@@ -1513,6 +1624,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
   width: 100%;
   max-width: 796px;
   margin: 0;
+  container: wall / inline-size;
 }
 
 .masthead {
@@ -1551,12 +1663,17 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
 
 .masthead-lower {
   position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 24px;
   min-height: 43px;
   margin-top: 13px;
 }
 
 .lede {
   margin: 0;
+  min-width: 0;
   max-width: 465px;
   color: #aeb8c3;
   font-size: 13px;
@@ -1565,9 +1682,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
 
 .stat-row {
   display: flex;
-  position: absolute;
-  right: 0;
-  bottom: 0;
+  position: static;
   flex: 0 0 auto;
   grid-template-columns: none;
   margin: 0;
@@ -1900,6 +2015,29 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
 
   .stat-row {
     position: static;
+    align-self: stretch;
+  }
+
+  .stat {
+    flex: 1;
+  }
+
+  .stat dt {
+    justify-content: center;
+  }
+}
+
+/* The sidebars can narrow the feed before the viewport breakpoint is reached.
+   Stack from the actual feed width so the intro never gets squeezed by stats. */
+@container wall (max-width: 720px) {
+  .masthead-lower {
+    display: flex;
+    align-items: flex-start;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .stat-row {
     align-self: stretch;
   }
 

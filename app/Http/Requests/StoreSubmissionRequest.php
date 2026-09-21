@@ -3,9 +3,8 @@
 namespace App\Http\Requests;
 
 use App\Http\Requests\Concerns\ValidatesAttachments;
-use App\Models\Submission;
+use App\Rules\Hashtag;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class StoreSubmissionRequest extends FormRequest
 {
@@ -16,11 +15,25 @@ class StoreSubmissionRequest extends FormRequest
         return true;
     }
 
+    /**
+     * Take the hashtag however someone typed it — with or without the #, in any
+     * casing — and settle on one spelling before it is validated or stored, so
+     * the wall does not end up with #Rant sitting next to #rant.
+     */
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('category')) {
+            $this->merge([
+                'category' => strtolower(ltrim(trim((string) $this->input('category')), '#')),
+            ]);
+        }
+    }
+
     public function rules(): array
     {
         return [
             'content' => ['required', 'string'],
-            'category' => ['required', 'string', Rule::in(Submission::CATEGORIES)],
+            'category' => ['required', 'string', new Hashtag],
             'captchaToken' => ['nullable', 'string'],
             ...$this->attachmentRules(),
         ];
@@ -29,8 +42,7 @@ class StoreSubmissionRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'category.required' => 'Please pick a hashtag for your post.',
-            'category.in' => 'Please pick a hashtag from the list.',
+            'category.required' => 'Please pick or write a hashtag for your post.',
             ...$this->attachmentMessages(),
         ];
     }
