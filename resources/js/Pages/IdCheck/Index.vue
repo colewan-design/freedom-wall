@@ -16,52 +16,75 @@ const CARD_W = 1050;
 const CARD_H = 1650;
 const STORY_W = 1080;
 const STORY_H = 1920;
-const FRAME = { x: 248, y: 448, w: 532, h: 590, r: 4 };
+const SQUARE_W = 1080;
+const SQUARE_H = 1080;
+const FRAME = { x: 246, y: 320, w: 558, h: 548, r: 6 };
 
 const THEMES = {
   olive: {
-    label: 'Classic',
-    band: ['#4f6440', '#91a36f'],
-    accent: '#335228',
+    label: 'Forest',
+    band: ['#075c3b', '#183d2e'],
+    accent: '#0a5035',
     paper: ['#e4e7ba', '#c9d48d'],
     panel: '#edf0ce',
     ink: '#21301d',
     sub: '#536141',
-    story: ['#5c7050', '#283123'],
+    story: ['#123e2c', '#07271c'],
     banner: ['#c8b087', '#5f4f34'],
     stripe: ['#ff8a68', '#d83c4e'],
     line: '#35452b',
     chip: '#f7f3ea',
   },
   maroon: {
-    label: 'Maroon',
-    band: ['#4e3b39', '#9f7a64'],
+    label: 'Moss',
+    band: ['#89946d', '#4c5d42'],
     accent: '#612f32',
     paper: ['#ece2c3', '#d7c291'],
     panel: '#f3ead1',
     ink: '#301f1f',
     sub: '#71574b',
-    story: ['#5b463d', '#271a17'],
+    story: ['#53634a', '#283529'],
     banner: ['#c29f6d', '#5c4330'],
     stripe: ['#ff9467', '#b92f43'],
     line: '#5e453c',
     chip: '#f9f3ea',
   },
   night: {
-    label: 'Night',
-    band: ['#2e453f', '#748d7f'],
+    label: 'Earth',
+    band: ['#6d4129', '#3b261c'],
     accent: '#20352e',
     paper: ['#dfe4c2', '#bcc792'],
     panel: '#e8edd0',
     ink: '#172621',
     sub: '#4d6257',
-    story: ['#40574e', '#17201c'],
+    story: ['#563521', '#261a15'],
     banner: ['#b5a07b', '#4f4331'],
     stripe: ['#ff8964', '#cc3a4b'],
     line: '#284038',
     chip: '#f7f4ec',
   },
+  slate: {
+    label: 'Slate',
+    band: ['#173f48', '#10252d'],
+    accent: '#173f48',
+    paper: ['#e3e6d9', '#c3cbb5'],
+    panel: '#eef0e6',
+    ink: '#14292c',
+    sub: '#516368',
+    story: ['#173f48', '#0d242b'],
+    banner: ['#b8aa8c', '#4a4a3d'],
+    stripe: ['#d96d42', '#a82935'],
+    line: '#294a50',
+    chip: '#f6f4ed',
+  },
 };
+
+const TEMPLATES = [
+  { key: 'classic', label: 'Classic', tone: 'olive' },
+  { key: 'minimal', label: 'Minimal', tone: 'maroon' },
+  { key: 'cordillera', label: 'Cordillera', tone: 'slate' },
+  { key: 'retro', label: 'Retro', tone: 'night' },
+];
 
 const YEAR_LEVELS = ['1st Year', '2nd Year', '3rd Year', '4th Year', '5th Year', 'Irregular', 'Graduating', 'Alumni'];
 
@@ -71,15 +94,16 @@ const schoolYear = `S.Y. ${syStart}-${syStart + 1}`;
 const validUntil = `JUN ${syStart + 1}`;
 
 const form = reactive({
-  name: props.defaults.name ?? '',
-  course: '',
+  name: props.defaults.name || 'Rublyn C. Galuludan',
+  course: 'BSED — VALUES EDUCATION',
   year: '1st Year',
-  campus: props.campuses[0] ?? '',
-  tagline: '',
-  handle: props.defaults.handle ?? '',
+  campus: props.campuses[0] || 'Alangilan',
+  tagline: 'Awan ag klase no awan students.',
+  handle: props.defaults.handle || '@yourhandle',
 });
 
 const themeKey = ref('olive');
+const templateKey = ref('classic');
 const format = ref('story');
 const seed = ref(1);
 const zoom = ref(1);
@@ -121,6 +145,11 @@ const cropHint = computed(() => {
   if (cropSource.value === 'skin') return 'Auto-framed around your portrait. Drag if you want.';
   return 'Auto-framed. Drag the photo to fine-tune it.';
 });
+
+function selectTemplate(template) {
+  templateKey.value = template.key;
+  themeKey.value = template.tone;
+}
 
 function hash(value) {
   let h = 2166136261;
@@ -553,51 +582,134 @@ function drawSchoolBanner(ctx, t) {
   ctx.restore();
 }
 
+function drawMountainMark(ctx, x, y, scale = 1) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(scale, scale);
+  ctx.strokeStyle = 'rgba(225, 222, 184, .3)';
+  ctx.lineWidth = 7;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(0, 82);
+  ctx.lineTo(62, 0);
+  ctx.lineTo(118, 82);
+  ctx.moveTo(40, 82);
+  ctx.lineTo(82, 34);
+  ctx.lineTo(138, 82);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawQr(ctx, x, y, size) {
+  ctx.save();
+  ctx.fillStyle = '#f0efe3';
+  ctx.fillRect(x, y, size, size);
+  const cells = 11;
+  const unit = size / (cells + 2);
+  ctx.fillStyle = '#0a3023';
+  const finder = (cx, cy) => {
+    ctx.fillRect(x + (cx + 1) * unit, y + (cy + 1) * unit, unit * 3, unit * 3);
+    ctx.fillStyle = '#f0efe3';
+    ctx.fillRect(x + (cx + 1.65) * unit, y + (cy + 1.65) * unit, unit * 1.7, unit * 1.7);
+    ctx.fillStyle = '#0a3023';
+    ctx.fillRect(x + (cx + 2.15) * unit, y + (cy + 2.15) * unit, unit * .7, unit * .7);
+  };
+  finder(0, 0);
+  finder(7, 0);
+  finder(0, 7);
+  for (let row = 1; row < cells - 1; row += 1) {
+    for (let col = 1; col < cells - 1; col += 1) {
+      if ((row < 4 && col < 4) || (row < 4 && col > 6) || (row > 6 && col < 4)) continue;
+      if ((hash(`${idNumber.value}-${row}-${col}`) + row + col) % 3 === 0) {
+        ctx.fillRect(x + (col + 1) * unit, y + (row + 1) * unit, unit, unit);
+      }
+    }
+  }
+  ctx.restore();
+}
+
 function drawCard(ctx) {
   const t = theme.value;
+  const selectedTemplate = templateKey.value;
+  const nameText = displayName.value.trim().toUpperCase();
+  const courseText = (form.course.trim() || 'YOUR PROGRAM HERE').toUpperCase();
+  const handleText = form.handle.trim() || '@yourhandle';
+  const taglineText = form.tagline.trim() || 'Awan ag klase no awan students.';
 
   ctx.save();
-  rr(ctx, 0, 0, CARD_W, CARD_H, 18);
+  rr(ctx, 0, 0, CARD_W, CARD_H, 26);
   ctx.clip();
 
-  const paper = ctx.createLinearGradient(0, 0, 0, CARD_H);
-  paper.addColorStop(0, t.paper[0]);
-  paper.addColorStop(1, t.paper[1]);
-  ctx.fillStyle = paper;
+  const base = ctx.createLinearGradient(0, 0, CARD_W, CARD_H);
+  base.addColorStop(0, t.story[0]);
+  base.addColorStop(1, t.story[1]);
+  ctx.fillStyle = base;
+  ctx.fillRect(0, 0, CARD_W, CARD_H);
+
+  const glow = ctx.createRadialGradient(520, 510, 20, 520, 510, 760);
+  glow.addColorStop(0, 'rgba(29, 103, 68, .32)');
+  glow.addColorStop(1, 'rgba(4, 24, 17, 0)');
+  ctx.fillStyle = glow;
   ctx.fillRect(0, 0, CARD_W, CARD_H);
 
   ctx.save();
-  ctx.globalAlpha = 0.18;
-  ctx.fillStyle = '#ffffff';
+  ctx.globalAlpha = selectedTemplate === 'minimal' ? .05 : .13;
+  ctx.fillStyle = '#d7dfbf';
   ctx.beginPath();
-  ctx.arc(146, 252, 220, 0, Math.PI * 2);
-  ctx.arc(224, 930, 170, 0, Math.PI * 2);
-  ctx.arc(742, 1356, 240, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
-
-  drawPosterWatermark(ctx);
-  drawSchoolBanner(ctx, t);
-  drawDecorativeStrip(ctx, 856, 0, 76, CARD_H, t.stripe);
-
-  ctx.save();
-  ctx.fillStyle = 'rgba(255,255,255,0.22)';
-  ctx.beginPath();
-  ctx.moveTo(0, 216);
-  ctx.lineTo(632, 0);
-  ctx.lineTo(726, 0);
-  ctx.lineTo(0, 288);
+  ctx.moveTo(0, 430);
+  ctx.lineTo(170, 300);
+  ctx.lineTo(278, 404);
+  ctx.lineTo(400, 250);
+  ctx.lineTo(610, 430);
   ctx.closePath();
   ctx.fill();
   ctx.restore();
 
+  if (selectedTemplate !== 'minimal') drawMountainMark(ctx, 54, 90, 1.05);
+  drawDecorativeStrip(ctx, 944, 0, 74, CARD_H, t.stripe);
+  ctx.fillStyle = 'rgba(246, 241, 218, .75)';
+  ctx.fillRect(922, 0, 4, CARD_H);
+
+  ctx.textAlign = 'left';
+  setFont(ctx, 750, 27);
+  ctx.fillStyle = '#f4f1df';
+  ctx.fillText('BSUkol', 276, 78);
+  ctx.font = '900 82px "Arial Narrow", Impact, sans-serif';
+  drawTracked(ctx, 'ID CHECK', 276, 174, 3);
+  setFont(ctx, 600, 25);
+  drawTracked(ctx, 'BENGUET STATE UNIVERSITY', 278, 236, 4);
+  ctx.textAlign = 'right';
+  setFont(ctx, 800, 28);
+  ctx.fillText('2026', 870, 236);
+  ctx.strokeStyle = '#e6e0c8';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(788, 252);
+  ctx.lineTo(872, 252);
+  ctx.stroke();
+
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#e7e5d5';
+  setFont(ctx, 650, 22);
+  drawTracked(ctx, 'SAME\nCAMPUS\nDIFFERENT\nSTORIES'.split('\n')[0], 55, 520, 3);
+  ctx.fillText('CAMPUS', 55, 554);
+  ctx.fillText('DIFFERENT', 55, 588);
+  ctx.fillText('STORIES', 55, 622);
+  ctx.fillRect(55, 653, 28, 3);
+
+  ctx.textAlign = 'right';
+  ctx.fillText('GOOD', 888, 520);
+  ctx.fillText('PEOPLE', 888, 554);
+  ctx.fillText('GREAT', 888, 588);
+  ctx.fillText('STORIES', 888, 622);
+  ctx.fillRect(860, 653, 28, 3);
+
   ctx.save();
-  ctx.fillStyle = '#111315';
-  ctx.fillRect(FRAME.x - 12, FRAME.y - 12, FRAME.w + 24, FRAME.h + 24);
-  rr(ctx, FRAME.x, FRAME.y, FRAME.w, FRAME.h, FRAME.r);
-  ctx.fillStyle = '#1d1e22';
+  rr(ctx, FRAME.x - 8, FRAME.y - 8, FRAME.w + 16, FRAME.h + 16, 8);
+  ctx.fillStyle = '#eeeadd';
   ctx.fill();
-  ctx.save();
+  rr(ctx, FRAME.x, FRAME.y, FRAME.w, FRAME.h, FRAME.r);
   ctx.clip();
   if (photo.value) {
     const img = photo.value;
@@ -613,82 +725,61 @@ function drawCard(ctx) {
     drawPlaceholder(ctx);
   }
   ctx.restore();
-  ctx.strokeStyle = '#f5f2e6';
-  ctx.lineWidth = 3;
-  ctx.strokeRect(FRAME.x - 8, FRAME.y - 8, FRAME.w + 16, FRAME.h + 16);
-  ctx.restore();
-
-  const nameText = displayName.value.trim();
-  const courseText = form.course.trim() || 'YOUR PROGRAM HERE';
-  const handleText = form.handle.trim();
-  const taglineText = form.tagline.trim() || 'Awan ag klase no awan students';
-
-  ctx.textAlign = 'center';
-  const nameSize = fitFont(ctx, nameText, 610, 700, 54, 28);
-  setFont(ctx, 700, nameSize);
-  ctx.fillStyle = '#f3f1ea';
-  ctx.shadowColor = 'rgba(53,59,34,0.28)';
-  ctx.shadowBlur = 10;
-  ctx.fillText(nameText, CARD_W / 2, 1120);
-  ctx.shadowBlur = 0;
-
-  ctx.strokeStyle = t.line;
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.moveTo(154, 1142);
-  ctx.lineTo(786, 1142);
-  ctx.stroke();
-  setFont(ctx, 500, 17);
-  ctx.fillStyle = t.sub;
-  ctx.fillText('Name', CARD_W / 2, 1168);
-
-  const courseSize = fitFont(ctx, courseText.toUpperCase(), 610, 700, 38, 21);
-  setFont(ctx, 700, courseSize);
-  ctx.fillStyle = '#efe6d8';
-  ctx.fillText(courseText.toUpperCase(), CARD_W / 2, 1238);
-  ctx.beginPath();
-  ctx.moveTo(146, 1262);
-  ctx.lineTo(794, 1262);
-  ctx.stroke();
-  setFont(ctx, 500, 18);
-  ctx.fillStyle = t.ink;
-  ctx.fillText('Program & Course', CARD_W / 2, 1292);
-
-  ctx.textAlign = 'left';
-  setFont(ctx, 600, 22);
-  ctx.fillStyle = t.ink;
-  ctx.fillText(`ID ${idNumber.value}`, 122, 1388);
-  ctx.fillText(form.year.toUpperCase(), 122, 1424);
-  ctx.fillText((form.campus.trim() || 'MAIN CAMPUS').toUpperCase(), 122, 1460);
-
-  setFont(ctx, 700, 15);
-  ctx.fillStyle = t.sub;
-  ctx.fillText(schoolYear, 122, 1494);
-  ctx.fillText(`VALID ${validUntil}`, 122, 1518);
-  if (handleText) {
-    ctx.fillText(handleText, 122, 1542);
-  }
-
-  setFont(ctx, 600, 26);
-  ctx.fillStyle = '#f4f3ed';
-  ctx.fillText(taglineText, 116, 1460);
-  setFont(ctx, 700, 16);
-  ctx.fillStyle = '#283720';
-  ctx.fillText('MOST SAID LINE', 116, 1492);
 
   ctx.save();
-  rr(ctx, 632, 1496, 466, 108, 26);
-  ctx.fillStyle = t.chip;
-  ctx.shadowColor = 'rgba(0,0,0,0.14)';
-  ctx.shadowBlur = 16;
-  ctx.shadowOffsetY = 6;
+  rr(ctx, 54, 842, 846, 268, 10);
+  ctx.fillStyle = '#eeeee2';
   ctx.fill();
   ctx.restore();
-  ctx.shadowBlur = 0;
+
   ctx.textAlign = 'center';
-  setFont(ctx, 800, 28);
-  ctx.fillStyle = '#181d18';
-  ctx.fillText('BSUkol ID CHECK', 862, 1562);
+  const nameSize = fitFont(ctx, nameText, 760, 800, 61, 34);
+  setFont(ctx, 800, nameSize);
+  ctx.fillStyle = '#0b3325';
+  ctx.fillText(nameText, 477, 944);
+  ctx.strokeStyle = '#163d2e';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(180, 966);
+  ctx.lineTo(774, 966);
+  ctx.stroke();
+  const courseSize = fitFont(ctx, courseText, 680, 650, 29, 19);
+  setFont(ctx, 650, courseSize);
+  ctx.fillText(courseText, 477, 1010);
+  setFont(ctx, 650, 24);
+  ctx.fillText(`${form.year.toUpperCase()}   |   ${String(form.campus || 'MAIN CAMPUS').toUpperCase()}`, 477, 1070);
+
+  ctx.save();
+  rr(ctx, 54, 1146, 846, 238, 10);
+  ctx.strokeStyle = 'rgba(226, 224, 195, .36)';
+  ctx.lineWidth = 4;
+  ctx.stroke();
+  ctx.restore();
+  ctx.fillStyle = '#ece9d9';
+  setFont(ctx, 600, 21);
+  drawTracked(ctx, 'MOST SAID LINE', 477, 1132, 3, 'center');
+  const taglineSize = fitFont(ctx, `“ ${taglineText} ”`, 700, 700, 42, 25, true);
+  setFont(ctx, 700, taglineSize, true);
+  ctx.fillText(`“ ${taglineText} ”`, 477, 1265);
+
+  drawQr(ctx, 54, 1460, 118);
+  ctx.textAlign = 'left';
+  setFont(ctx, 650, 21);
+  ctx.fillText(`ID No. ${idNumber.value}`, 205, 1502);
+  ctx.fillText(handleText, 205, 1542);
+  ctx.textAlign = 'right';
+  ctx.fillText('BSU FREEDOM WALL', 882, 1502);
+  setFont(ctx, 600, 17);
+  ctx.fillStyle = 'rgba(238, 235, 217, .72)';
+  ctx.fillText('BSUKOL ID CHECK', 882, 1540);
+
+  if (selectedTemplate === 'retro') {
+    ctx.save();
+    ctx.globalAlpha = .08;
+    ctx.fillStyle = '#f7efcf';
+    for (let y = 0; y < CARD_H; y += 8) ctx.fillRect(0, y, CARD_W, 1);
+    ctx.restore();
+  }
 
   ctx.restore();
 }
@@ -701,8 +792,8 @@ function drawStoryBackdrop(ctx) {
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, STORY_W, STORY_H);
 
-  const glow = ctx.createRadialGradient(STORY_W * 0.52, 260, 70, STORY_W * 0.52, 260, 980);
-  glow.addColorStop(0, 'rgba(244,236,188,0.28)');
+  const glow = ctx.createRadialGradient(STORY_W * 0.52, 360, 70, STORY_W * 0.52, 360, 980);
+  glow.addColorStop(0, 'rgba(36, 117, 78, .24)');
   glow.addColorStop(1, 'rgba(244,236,188,0)');
   ctx.fillStyle = glow;
   ctx.fillRect(0, 0, STORY_W, STORY_H);
@@ -727,23 +818,12 @@ function drawStoryBackdrop(ctx) {
 }
 
 function drawStoryChrome(ctx) {
-  if (logoReady.value) {
-    ctx.drawImage(logo, 22, 108, 270, 270);
-  }
-
   ctx.textAlign = 'center';
-  ctx.font = '900 106px Inter, system-ui, sans-serif';
-  drawOutlinedText(ctx, 'ID CHECK', 672, 198, '#f3f6d3', '#18392a', 18);
-
-  setFont(ctx, 800, 34);
-  ctx.fillStyle = '#f3f6d3';
-  ctx.fillText('BSUkol', 352, 112);
-
-  setFont(ctx, 600, 32);
+  setFont(ctx, 600, 26);
   ctx.fillStyle = 'rgba(243,246,211,0.84)';
-  ctx.fillText('Drop your photo, match the batch-pic vibe, then post it.', STORY_W / 2, 1818);
+  ctx.fillText('SAME CAMPUS. DIFFERENT STORIES.', STORY_W / 2, 1816);
 
-  setFont(ctx, 600, 24);
+  setFont(ctx, 600, 20);
   ctx.fillStyle = 'rgba(243,246,211,0.68)';
   ctx.fillText(siteLabel.value.toUpperCase(), STORY_W / 2, 1868);
   ctx.textAlign = 'left';
@@ -754,8 +834,8 @@ function render() {
   if (!canvas) return;
 
   const story = format.value === 'story';
-  const width = story ? STORY_W : CARD_W;
-  const height = story ? STORY_H : CARD_H;
+  const width = story ? STORY_W : SQUARE_W;
+  const height = story ? STORY_H : SQUARE_H;
 
   if (canvas.width !== width) canvas.width = width;
   if (canvas.height !== height) canvas.height = height;
@@ -768,18 +848,25 @@ function render() {
   ctx.textAlign = 'left';
 
   if (!story) {
-    cardTransform.x = 0;
+    const scale = SQUARE_H / CARD_H;
+    const x = (SQUARE_W - CARD_W * scale) / 2;
+    cardTransform.x = x;
     cardTransform.y = 0;
-    cardTransform.s = 1;
+    cardTransform.s = scale;
+    drawStoryBackdrop(ctx);
+    ctx.save();
+    ctx.translate(x, 0);
+    ctx.scale(scale, scale);
     drawCard(ctx);
+    ctx.restore();
     return;
   }
 
   drawStoryBackdrop(ctx);
 
-  const scale = (STORY_W * 0.84) / CARD_W;
+  const scale = (STORY_W * 0.91) / CARD_W;
   const x = (STORY_W - CARD_W * scale) / 2;
-  const y = 292;
+  const y = 90;
   cardTransform.x = x;
   cardTransform.y = y;
   cardTransform.s = scale;
@@ -879,7 +966,7 @@ watch(zoom, () => {
   scheduleRender();
 });
 
-watch([() => ({ ...form }), themeKey, format, seed], scheduleRender, { deep: true });
+watch([() => ({ ...form }), themeKey, templateKey, format, seed], scheduleRender, { deep: true });
 
 onMounted(() => {
   siteLabel.value = `${window.location.host}/id-check`;
@@ -908,15 +995,47 @@ onBeforeUnmount(() => {
 
   <div class="idc">
     <header class="idc-hero">
-      <span class="idc-kicker">Poster Mode</span>
-      <h1>BSUkol ID CHECK</h1>
-      <p>
-        Use your portrait, course, and one iconic line. The card now leans into the BSU batch-pic poster vibe from your
-        reference while still exporting cleanly for stories.
-      </p>
+      <div class="idc-hero-copy">
+        <span class="idc-kicker">03 — Community Tools</span>
+        <h1>BSUkol ID CHECK</h1>
+        <p>Create your own batch-pic style poster and share your story.</p>
+        <small>A fan-made novelty card for the wall. Not an official school ID.</small>
+      </div>
+      <blockquote>
+        “Same campus.<br />Different stories.”
+        <cite>— BSU Freedom Wall</cite>
+      </blockquote>
     </header>
 
-    <div class="idc-grid">
+    <div class="idc-workspace">
+      <aside class="idc-template-rail" aria-label="Poster templates">
+        <h2>1 — Templates</h2>
+        <div class="idc-template-list">
+          <button
+            v-for="template in TEMPLATES"
+            :key="template.key"
+            type="button"
+            class="idc-template-card"
+            :class="[{ active: templateKey === template.key }, `is-${template.key}`]"
+            :aria-pressed="templateKey === template.key"
+            @click="selectTemplate(template)"
+          >
+            <span class="idc-template-poster" aria-hidden="true">
+              <span class="idc-template-title">ID CHECK</span>
+              <span class="idc-template-mountain"></span>
+              <span class="idc-template-photo"></span>
+            </span>
+            <span class="idc-template-name">
+              {{ template.label }}
+              <svg v-if="templateKey === template.key" viewBox="0 0 20 20" aria-hidden="true">
+                <circle cx="10" cy="10" r="9" fill="currentColor" />
+                <path d="m6 10 2.4 2.4L14 7" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </span>
+          </button>
+        </div>
+      </aside>
+
       <section
         class="idc-stage"
         :class="{ over: dragOver }"
@@ -935,20 +1054,36 @@ onBeforeUnmount(() => {
           @wheel="onWheel"
         ></canvas>
 
-        <p v-if="busy" class="idc-stage-note">Reading your photo...</p>
+        <p v-if="busy" class="idc-stage-note">Reading your photo…</p>
         <p v-else-if="cropHint" class="idc-stage-note">{{ cropHint }}</p>
-        <p v-else class="idc-stage-note">Drop a portrait here, paste one, or use the upload button.</p>
       </section>
 
-      <section class="idc-panel-stack">
+      <aside class="idc-panel-stack">
         <div class="idc-panel">
-          <h2>1 - Portrait</h2>
+          <h2>2 — Upload Portrait</h2>
           <input ref="fileInput" type="file" accept="image/*" class="idc-file" @change="onPick" />
-          <div class="idc-row">
-            <button type="button" class="idc-btn primary" @click="fileInput?.click()">
-              {{ photo ? 'Change photo' : 'Upload portrait' }}
+          <div
+            class="idc-dropzone"
+            :class="{ over: dragOver }"
+            role="button"
+            tabindex="0"
+            @click="fileInput?.click()"
+            @keydown.enter="fileInput?.click()"
+            @keydown.space.prevent="fileInput?.click()"
+            @dragover.prevent="dragOver = true"
+            @dragleave="dragOver = false"
+            @drop.prevent="onDrop"
+          >
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <rect x="3" y="4" width="18" height="16" rx="1" stroke="currentColor" stroke-width="1.4" />
+              <circle cx="9" cy="10" r="1.7" fill="currentColor" />
+              <path d="m4 17 5-5 4 4 3-3 4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            <span>{{ photo ? 'Click to change or drag and drop' : 'Click to upload or drag and drop' }}</span>
+            <small>PNG, JPG (Max 5MB)</small>
+            <button type="button" class="idc-btn upload" @click.stop="fileInput?.click()">
+              {{ photo ? 'Change photo' : 'Choose photo' }}
             </button>
-            <button v-if="photo" type="button" class="idc-btn" @click="removePhoto">Remove</button>
           </div>
           <p v-if="photoError" class="idc-error">{{ photoError }}</p>
 
@@ -959,14 +1094,13 @@ onBeforeUnmount(() => {
             </label>
             <div class="idc-row">
               <button type="button" class="idc-btn" @click="recrop">Re-center photo</button>
+              <button type="button" class="idc-btn" @click="removePhoto">Remove</button>
             </div>
           </template>
-
-          <p class="idc-hint">The image stays in your browser. Nothing gets uploaded from this tool.</p>
         </div>
 
         <div class="idc-panel">
-          <h2>2 - Details</h2>
+          <h2>3 — Details</h2>
 
           <label class="idc-field">
             <span class="idc-label">Full name</span>
@@ -1016,142 +1150,328 @@ onBeforeUnmount(() => {
             />
           </label>
 
-          <label class="idc-field">
-            <span class="idc-label">Handle <span class="idc-optional">optional</span></span>
-            <input v-model="form.handle" type="text" maxlength="26" placeholder="@yourhandle" class="idc-input" />
-          </label>
-
-          <div class="idc-row spread">
-            <span class="idc-hint">ID No. {{ idNumber }}</span>
-            <button type="button" class="idc-btn small" @click="shuffleId">Shuffle</button>
+          <div class="idc-field-row idc-meta-row">
+            <label class="idc-field">
+              <span class="idc-label">Handle <span class="idc-optional">optional</span></span>
+              <input v-model="form.handle" type="text" maxlength="26" placeholder="@yourhandle" class="idc-input" />
+            </label>
+            <div class="idc-field">
+              <span class="idc-label">ID No.</span>
+              <button type="button" class="idc-input idc-id-number" title="Generate a new ID number" @click="shuffleId">
+                {{ idNumber }}
+              </button>
+            </div>
           </div>
         </div>
 
         <div class="idc-panel">
-          <h2>3 - Tone & Size</h2>
+          <h2>4 — Style</h2>
 
-          <div class="idc-swatches">
-            <button
-              v-for="(value, key) in THEMES"
-              :key="key"
-              type="button"
-              class="idc-swatch"
-              :class="{ active: themeKey === key }"
-              :style="{ background: `linear-gradient(135deg, ${value.band[0]}, ${value.band[1]})` }"
-              :title="value.label"
-              :aria-label="value.label"
-              @click="themeKey = key"
-            ></button>
+          <div class="idc-style-group">
+            <span class="idc-label">Color theme</span>
+            <div class="idc-swatches">
+              <button
+                v-for="(value, key) in THEMES"
+                :key="key"
+                type="button"
+                class="idc-swatch"
+                :class="{ active: themeKey === key }"
+                :style="{ background: `linear-gradient(135deg, ${value.band[0]}, ${value.band[1]})` }"
+                :title="value.label"
+                :aria-label="value.label"
+                @click="themeKey = key"
+              ></button>
+            </div>
           </div>
 
-          <div class="idc-toggle">
-            <button type="button" :class="{ active: format === 'story' }" @click="format = 'story'">
-              Story poster
-            </button>
-            <button type="button" :class="{ active: format === 'card' }" @click="format = 'card'">Card only</button>
+          <div class="idc-style-group">
+            <span class="idc-label">Card size</span>
+            <div class="idc-toggle">
+              <button type="button" :class="{ active: format === 'story' }" @click="format = 'story'">
+                Story (1080×1920)
+              </button>
+              <button type="button" :class="{ active: format === 'card' }" @click="format = 'card'">
+                Square (1080×1080)
+              </button>
+            </div>
           </div>
         </div>
 
         <div class="idc-panel">
-          <h2>4 - Export</h2>
-          <div class="idc-row">
-            <button type="button" class="idc-btn primary" @click="download">Download PNG</button>
-            <button type="button" class="idc-btn" @click="share">Share</button>
-          </div>
-          <div class="idc-row">
-            <button type="button" class="idc-btn small" @click="copy('caption')">
-              {{ copied === 'caption' ? 'Caption copied' : 'Copy caption' }}
-            </button>
-            <button type="button" class="idc-btn small" @click="copy('link')">
+          <h2>5 — Export</h2>
+          <button type="button" class="idc-btn primary idc-download" @click="download">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 19h16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" /></svg>
+            Download PNG
+          </button>
+          <div class="idc-row idc-export-row">
+            <button type="button" class="idc-btn" @click="copy('link')">
               {{ copied === 'link' ? 'Link copied' : 'Copy link' }}
             </button>
+            <button type="button" class="idc-btn" @click="share">Share</button>
           </div>
-          <ol class="idc-steps">
-            <li>Download the poster or share it straight from your phone.</li>
-            <li>Open the BSUkol ID CHECK Add Yours story.</li>
-            <li>Post it, tag friends, and let them make theirs too.</li>
-          </ol>
-          <p class="idc-hint">
-            This is a fan-made novelty poster for the wall. It is not an official school ID and should not be used as one.
+          <p class="idc-tip">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 18h6m-5 3h4M8.2 14.5A6 6 0 1 1 16 14c-1 .8-1.3 1.5-1.4 2H9.5c-.1-.5-.4-1-1.3-1.5Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" /></svg>
+            <span><strong>Tip:</strong> Keep your photo clear and use a portrait shot for the best result. This is a fan-made poster for the wall.</span>
           </p>
-          <Link href="/wall" class="idc-back">Back to the wall</Link>
         </div>
-      </section>
+      </aside>
+    </div>
+
+    <div class="idc-bottom">
+      <aside class="idc-disclaimer">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5" /><path d="M12 10v6m0-9h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" /></svg>
+        <p><strong>Not an official ID</strong><span>This is a fan-made novelty poster for the BSU Freedom Wall and should not be used as an official school ID.</span></p>
+      </aside>
+      <div class="idc-footer"><Link href="/wall">BSU Freedom Wall</Link><span>•</span><span>Est. 2026</span></div>
     </div>
   </div>
 </template>
 
 <style scoped>
 .idc {
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
+  --idc-green: #075c3b;
+  --idc-green-dark: #063d2a;
+  --idc-line: #cbd6cf;
+  --idc-surface: #fff;
+  --idc-soft: #f6faf7;
+  --idc-text: #143526;
+  --idc-muted: #566961;
+  color: var(--idc-text);
 }
 
 .idc-hero {
-  background: var(--nf-hero-grad);
-  border: 1px solid var(--nf-line);
-  border-radius: var(--b-r-card);
-  padding: 1.5rem 1.75rem;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 98px;
+  padding: 0 8px 10px;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.idc-hero::before,
+.idc-hero::after {
+  content: '';
+  position: absolute;
+  right: 10px;
+  bottom: 0;
+  z-index: -1;
+  width: 68%;
+  height: 94px;
+  background: #dfe7e2;
+  opacity: .72;
+  clip-path: polygon(0 100%, 20% 72%, 34% 48%, 42% 58%, 55% 12%, 64% 42%, 72% 28%, 84% 63%, 94% 47%, 100% 70%, 100% 100%);
+}
+
+.idc-hero::after {
+  right: 4%;
+  width: 54%;
+  height: 68px;
+  opacity: .5;
+  clip-path: polygon(0 100%, 14% 62%, 24% 76%, 36% 30%, 52% 70%, 63% 45%, 76% 78%, 88% 52%, 100% 83%, 100% 100%);
+}
+
+.idc-hero-copy {
+  position: relative;
+  z-index: 1;
 }
 
 .idc-kicker {
-  display: inline-block;
-  font-size: 0.75rem;
+  display: block;
+  margin-bottom: 9px;
+  font-family: var(--b-mono);
+  font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: .7px;
   text-transform: uppercase;
-  color: var(--nf-accent);
-  margin-bottom: 0.4rem;
+  color: var(--idc-green);
 }
 
 .idc-hero h1 {
-  margin: 0 0 0.5rem;
-  font-size: 1.9rem;
+  margin: 0 0 4px;
+  font-family: var(--b-display);
+  font-size: clamp(28px, 3vw, 34px);
   font-weight: 800;
-  color: var(--nf-ink);
+  letter-spacing: -.02em;
+  color: var(--idc-green-dark);
 }
 
 .idc-hero p {
   margin: 0;
-  max-width: 62ch;
-  font-size: 0.92rem;
-  line-height: 1.6;
-  color: var(--nf-muted);
+  font-size: 14px;
+  color: #29463a;
 }
 
-.idc-grid {
+.idc-hero small {
+  display: block;
+  margin-top: 5px;
+  font-size: 11px;
+  color: var(--idc-muted);
+}
+
+.idc-hero blockquote {
+  position: relative;
+  z-index: 1;
+  width: 315px;
+  margin: 0 70px 0 24px;
+  padding-left: 27px;
+  border-left: 1px solid #8fb6a1;
+  font: italic 700 17px/1.45 var(--b-mono);
+  color: #173c2b;
+}
+
+.idc-hero cite {
+  display: block;
+  margin-top: 5px;
+  font: 700 9px var(--b-mono);
+  letter-spacing: 1px;
+  text-align: center;
+  text-transform: uppercase;
+  color: #4a695b;
+}
+
+.idc-workspace {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 360px;
-  gap: 1.25rem;
-  align-items: start;
+  grid-template-columns: 188px minmax(420px, 1fr) 370px;
+  align-items: stretch;
+  background: var(--idc-surface);
+  border: 1px solid var(--idc-line);
+}
+
+.idc-template-rail {
+  padding: 28px 20px;
+}
+
+.idc-template-rail h2,
+.idc-panel h2 {
+  margin: 0;
+  font-family: var(--b-mono);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .75px;
+  text-transform: uppercase;
+  color: var(--idc-green);
+}
+
+.idc-template-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.idc-template-card {
+  width: 100%;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--idc-line);
+  border-radius: 2px;
+  background: #fff;
+  color: var(--idc-text);
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(15, 48, 34, .05);
+}
+
+.idc-template-card.active {
+  border: 2px solid #08a451;
+}
+
+.idc-template-poster {
+  position: relative;
+  display: block;
+  height: 128px;
+  overflow: hidden;
+  background: linear-gradient(160deg, #0a412d, #08271d);
+}
+
+.idc-template-card.is-minimal .idc-template-poster {
+  background: linear-gradient(160deg, #ecece2, #d8d9ca);
+}
+
+.idc-template-card.is-cordillera .idc-template-poster {
+  background: linear-gradient(160deg, #ddd7ca, #c8c1b4);
+  filter: grayscale(.85);
+}
+
+.idc-template-card.is-retro .idc-template-poster {
+  background: linear-gradient(160deg, #304137, #14251e);
+  filter: saturate(.55);
+}
+
+.idc-template-title {
+  position: absolute;
+  top: 9px;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  text-align: center;
+  font: 800 13px var(--b-mono);
+  color: #f2efe0;
+}
+
+.is-minimal .idc-template-title,
+.is-cordillera .idc-template-title {
+  color: #24392f;
+}
+
+.idc-template-mountain {
+  position: absolute;
+  inset: 34px 8px 0;
+  opacity: .24;
+  background: #b8c7b5;
+  clip-path: polygon(0 76%, 22% 44%, 35% 60%, 52% 10%, 70% 61%, 84% 38%, 100% 76%, 100% 100%, 0 100%);
+}
+
+.idc-template-photo {
+  position: absolute;
+  left: 38px;
+  right: 38px;
+  top: 45px;
+  bottom: 9px;
+  border: 2px solid rgba(243, 241, 224, .85);
+  background: linear-gradient(165deg, transparent 0 48%, rgba(8, 40, 28, .72) 49%), linear-gradient(25deg, #91a89a, #dce5df);
+}
+
+.idc-template-name {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  font: 800 9px var(--b-mono);
+  text-transform: uppercase;
+}
+
+.idc-template-name svg {
+  width: 14px;
+  height: 14px;
+  color: #06a451;
 }
 
 .idc-stage {
-  position: sticky;
-  top: 1rem;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.75rem;
-  background: var(--nf-panel);
-  border: 1px solid var(--nf-line);
-  border-radius: var(--b-r-card);
-  padding: 1.25rem;
+  justify-content: flex-start;
+  min-width: 0;
+  padding: 22px 34px;
+  background: #fff;
+  border-inline: 1px solid var(--idc-line);
 }
 
 .idc-stage.over {
-  border-color: var(--nf-accent);
-  box-shadow: none;
+  background: #f2faf5;
 }
 
 .idc-canvas {
   max-width: 100%;
-  max-height: 78vh;
+  max-height: 758px;
   width: auto;
   height: auto;
-  border-radius: var(--b-r-card);
-  background: var(--nf-surface-2);
+  border-radius: 18px;
+  background: #092c20;
+  box-shadow: 0 14px 32px rgba(15, 51, 35, .16);
   touch-action: none;
 }
 
@@ -1164,45 +1484,67 @@ onBeforeUnmount(() => {
 }
 
 .idc-stage-note {
-  margin: 0;
-  font-size: 0.8rem;
-  color: var(--nf-muted);
+  margin: 8px 0 0;
+  font-size: 11px;
+  color: var(--idc-muted);
   text-align: center;
 }
 
 .idc-panel-stack {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 10px;
+  padding: 12px 16px;
 }
 
 .idc-panel {
-  background: var(--nf-panel);
-  border: 1px solid var(--nf-line);
-  border-radius: var(--b-r-card);
-  padding: 1.1rem 1.15rem;
   display: flex;
   flex-direction: column;
-  gap: 0.7rem;
-}
-
-.idc-panel h2 {
-  margin: 0;
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--nf-muted);
+  gap: 7px;
+  padding: 11px 14px;
+  background: #fff;
+  border: 1px solid var(--idc-line);
 }
 
 .idc-file {
   display: none;
 }
 
+.idc-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 104px;
+  gap: 5px;
+  border: 1px dashed #b8c8bf;
+  background: #fbfdfb;
+  color: #3f5c4e;
+  cursor: pointer;
+}
+
+.idc-dropzone.over {
+  border-color: #06a451;
+  background: #f0faf4;
+}
+
+.idc-dropzone > svg {
+  width: 29px;
+  color: #078e49;
+}
+
+.idc-dropzone > span {
+  font-size: 12px;
+}
+
+.idc-dropzone > small {
+  font-size: 9px;
+  color: #72847b;
+}
+
 .idc-row {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: 8px;
 }
 
 .idc-row.spread {
@@ -1212,27 +1554,29 @@ onBeforeUnmount(() => {
 
 .idc-btn {
   flex: 1;
-  min-width: 7rem;
-  padding: 0.55rem 0.85rem;
-  border-radius: var(--b-r-thumb);
-  border: 1px solid var(--nf-line);
-  background: var(--nf-surface-2);
-  color: var(--nf-ink);
-  font-size: 0.85rem;
-  font-weight: 600;
+  min-width: 0;
+  min-height: 31px;
+  padding: 6px 12px;
+  border-radius: 2px;
+  border: 1px solid var(--idc-line);
+  background: #fff;
+  color: var(--idc-text);
+  font-family: var(--b-sans);
+  font-size: 11px;
+  font-weight: 700;
   cursor: pointer;
   transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
 }
 
 .idc-btn:hover {
-  border-color: var(--nf-accent);
-  color: var(--nf-accent);
+  border-color: #059d4e;
+  color: #05743e;
 }
 
 .idc-btn.primary {
-  background: var(--nf-accent);
-  border-color: var(--nf-accent);
-  color: var(--nf-accent-contrast);
+  background: #06a451;
+  border-color: #06a451;
+  color: #fff;
 }
 
 .idc-btn.primary:hover {
@@ -1240,17 +1584,20 @@ onBeforeUnmount(() => {
   color: var(--nf-accent-contrast);
 }
 
-.idc-btn.small {
-  flex: 0 1 auto;
-  min-width: 0;
-  padding: 0.4rem 0.7rem;
-  font-size: 0.78rem;
+.idc-btn.upload {
+  flex: 0 0 auto;
+  min-height: 29px;
+  margin-top: 5px;
+  padding-inline: 20px;
+  border-color: #08a451;
+  color: #078446;
 }
 
 .idc-field {
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
+  min-width: 0;
+  gap: 4px;
 }
 
 .idc-field-row {
@@ -1260,9 +1607,9 @@ onBeforeUnmount(() => {
 }
 
 .idc-label {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--nf-muted);
+  font-size: 10px;
+  font-weight: 650;
+  color: #3d5549;
 }
 
 .idc-optional {
@@ -1272,18 +1619,25 @@ onBeforeUnmount(() => {
 
 .idc-input {
   width: 100%;
-  padding: 0.5rem 0.65rem;
-  border-radius: var(--b-r-thumb);
-  border: 1px solid var(--nf-line);
-  background: var(--nf-surface-2);
-  color: var(--nf-ink);
+  height: 31px;
+  padding: 6px 10px;
+  border-radius: 2px;
+  border: 1px solid var(--idc-line);
+  background: #f8faf8;
+  color: #253e32;
   font-family: inherit;
-  font-size: 0.88rem;
+  font-size: 11px;
 }
 
 .idc-input:focus {
   outline: none;
-  border-color: var(--nf-accent);
+  border-color: #06a451;
+  box-shadow: 0 0 0 2px rgba(6, 164, 81, .09);
+}
+
+.idc-id-number {
+  text-align: left;
+  cursor: pointer;
 }
 
 .idc-range {
@@ -1293,65 +1647,88 @@ onBeforeUnmount(() => {
 
 .idc-swatches {
   display: flex;
-  gap: 0.5rem;
+  gap: 13px;
 }
 
 .idc-swatch {
-  width: 2.4rem;
-  height: 2.4rem;
-  border-radius: var(--b-r-thumb);
-  border: 2px solid transparent;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid #fff;
   cursor: pointer;
   padding: 0;
+  box-shadow: 0 0 0 1px #9caea4;
 }
 
 .idc-swatch.active {
-  border-color: var(--nf-ink);
-  box-shadow: none;
+  box-shadow: 0 0 0 2px #058f49;
+}
+
+.idc-style-group {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
 }
 
 .idc-toggle {
   display: flex;
-  gap: 0.35rem;
-  background: var(--nf-surface-2);
-  border: 1px solid var(--nf-line);
-  border-radius: var(--b-r-thumb);
-  padding: 0.25rem;
+  border: 1px solid var(--idc-line);
 }
 
 .idc-toggle button {
   flex: 1;
-  padding: 0.4rem 0.5rem;
+  min-height: 30px;
+  padding: 5px 8px;
   border: none;
-  border-radius: var(--b-r-sm);
-  background: transparent;
-  color: var(--nf-muted);
+  border-right: 1px solid var(--idc-line);
+  background: #fff;
+  color: #4d6257;
   font-family: inherit;
-  font-size: 0.82rem;
-  font-weight: 600;
+  font-size: 10px;
+  font-weight: 650;
   cursor: pointer;
 }
 
+.idc-toggle button:last-child { border-right: 0; }
+
 .idc-toggle button.active {
-  background: var(--nf-accent);
-  color: var(--nf-accent-contrast);
+  background: #06a451;
+  color: #fff;
 }
 
-.idc-steps {
-  margin: 0;
-  padding-left: 1.1rem;
+.idc-download {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+}
+
+.idc-download svg {
+  width: 15px;
+}
+
+.idc-tip {
   display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  font-size: 0.82rem;
-  color: var(--nf-muted);
+  align-items: flex-start;
+  gap: 8px;
+  margin: 3px 0 0;
+  font-size: 9.5px;
+  line-height: 1.4;
+  color: #5a6e63;
+}
+
+.idc-tip svg {
+  flex: 0 0 auto;
+  width: 18px;
+  color: #078e49;
 }
 
 .idc-hint {
   margin: 0;
-  font-size: 0.76rem;
+  font-size: 10px;
   line-height: 1.5;
-  color: var(--nf-muted);
+  color: var(--idc-muted);
 }
 
 .idc-error {
@@ -1360,24 +1737,169 @@ onBeforeUnmount(() => {
   color: #dc2626;
 }
 
-.idc-back {
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--nf-accent);
+.idc-bottom {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  padding-top: 14px;
+}
+
+.idc-disclaimer {
+  display: flex;
+  gap: 10px;
+  width: 335px;
+  padding: 12px 14px;
+  background: #eef8f2;
+  color: #49685a;
+}
+
+.idc-disclaimer > svg {
+  flex: 0 0 auto;
+  width: 17px;
+  color: #078e49;
+}
+
+.idc-disclaimer p {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 0;
+  font-size: 9.5px;
+  line-height: 1.45;
+}
+
+.idc-disclaimer strong { color: #14603c; }
+
+.idc-footer {
+  display: flex;
+  gap: 10px;
+  padding-bottom: 4px;
+  font: 600 9px var(--b-mono);
+  letter-spacing: .6px;
+  text-transform: uppercase;
+  color: #71837a;
+}
+
+.idc-footer a {
+  color: inherit;
   text-decoration: none;
 }
 
-@media (max-width: 1000px) {
-  .idc-grid {
-    grid-template-columns: minmax(0, 1fr);
+@media (max-width: 1180px) {
+  .idc-workspace {
+    grid-template-columns: 160px minmax(370px, 1fr) 330px;
+  }
+
+  .idc-template-rail { padding-inline: 14px; }
+  .idc-stage { padding-inline: 20px; }
+  .idc-panel-stack { padding-inline: 12px; }
+  .idc-hero blockquote { margin-right: 20px; }
+}
+
+@media (max-width: 960px) {
+  .idc-workspace {
+    grid-template-columns: 150px minmax(0, 1fr);
+  }
+
+  .idc-panel-stack {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    border-top: 1px solid var(--idc-line);
+  }
+
+  .idc-stage { border-right: 0; }
+}
+
+@media (max-width: 700px) {
+  .idc-hero {
+    min-height: 0;
+    padding: 4px 0 18px;
+  }
+
+  .idc-hero blockquote { display: none; }
+
+  .idc-workspace {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .idc-template-rail { padding: 18px 14px; }
+
+  .idc-template-list {
+    flex-direction: row;
+    margin-top: 14px;
+    padding-bottom: 4px;
+    overflow-x: auto;
+  }
+
+  .idc-template-card {
+    flex: 0 0 132px;
   }
 
   .idc-stage {
-    position: static;
+    order: 2;
+    padding: 18px 14px;
+    border: 0;
+    border-top: 1px solid var(--idc-line);
   }
 
   .idc-canvas {
-    max-height: 62vh;
+    max-height: 72vh;
+  }
+
+  .idc-panel-stack {
+    order: 3;
+    display: flex;
+  }
+
+  .idc-bottom {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .idc-disclaimer { width: 100%; }
+  .idc-footer { justify-content: flex-end; }
+}
+
+/* Keep the reference's true-white editor in light mode while allowing the
+   surrounding shell to retain its existing dark theme behavior. */
+:global(:root[data-theme='dark'] .idc) {
+  --idc-line: #34433b;
+  --idc-surface: #0d1411;
+  --idc-soft: #121c17;
+  --idc-text: #e7eee9;
+  --idc-muted: #9eaca4;
+}
+
+:global(:root[data-theme='dark'] .idc .idc-hero h1),
+:global(:root[data-theme='dark'] .idc .idc-hero p),
+:global(:root[data-theme='dark'] .idc .idc-hero blockquote) {
+  color: #e7eee9;
+}
+
+:global(:root[data-theme='dark'] .idc .idc-workspace),
+:global(:root[data-theme='dark'] .idc .idc-stage),
+:global(:root[data-theme='dark'] .idc .idc-panel-stack),
+:global(:root[data-theme='dark'] .idc .idc-panel),
+:global(:root[data-theme='dark'] .idc .idc-template-card),
+:global(:root[data-theme='dark'] .idc .idc-dropzone),
+:global(:root[data-theme='dark'] .idc .idc-btn),
+:global(:root[data-theme='dark'] .idc .idc-toggle button) {
+  background: var(--idc-surface);
+  color: var(--idc-text);
+}
+
+:global(:root[data-theme='dark'] .idc .idc-input) {
+  background: var(--idc-soft);
+  color: var(--idc-text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .idc-btn,
+  .idc-template-card {
+    transition: none;
   }
 }
 </style>
