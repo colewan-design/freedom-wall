@@ -195,7 +195,7 @@ function excerpt(text, length = 60) {
           </h2>
           <ul class="nf-stat-list">
             <li><span>Total posts</span><strong>{{ totalPosts }}</strong></li>
-            <li><span>With photos</span><strong>{{ withPhotos }}</strong></li>
+            <li><span>With media</span><strong>{{ withPhotos }}</strong></li>
             <li><span>Text only</span><strong>{{ textOnly }}</strong></li>
           </ul>
         </section>
@@ -1023,10 +1023,12 @@ function excerpt(text, length = 60) {
 
 .nf-shell.bryl.light {
   --nf-bg: #f5f8f6;
-  --nf-panel: rgba(255, 255, 255, 0.88);
+  --nf-panel: #ffffff;
   --nf-line: #cbd5ce;
   --nf-ink: #0b1710;
   --nf-muted: #59665e;
+  --nf-accent: #087a34;
+  --nf-accent-contrast: #ffffff;
   --nf-surface-2: #eef3f0;
   background: #f5f8f6;
 }
@@ -1427,6 +1429,64 @@ function excerpt(text, length = 60) {
 .nf-shell.bryl .nf-app-url {
   margin-top: 3px;
   color: #7c8996;
+}
+
+/* Light mode needs its own opaque surface treatment. The reference skin uses
+   translucent near-black fills in dark mode; carrying those fills across the
+   theme boundary produced the gray blocks and unreadable copy. */
+.nf-shell.bryl.light .nf-icon-btn,
+.nf-shell.bryl.light .nf-search,
+.nf-shell.bryl.light .nf-tag {
+  background: #ffffff;
+  border-color: var(--nf-line);
+  color: var(--nf-muted);
+}
+
+.nf-shell.bryl.light .nf-search input {
+  color: var(--nf-ink);
+}
+
+.nf-shell.bryl.light .nf-search input::placeholder {
+  color: #718078;
+}
+
+.nf-shell.bryl.light .nf-search kbd {
+  border-color: var(--nf-line);
+  background: var(--nf-surface-2);
+  color: var(--nf-muted);
+}
+
+.nf-shell.bryl.light .nf-tag:hover,
+.nf-shell.bryl.light .nf-tag.active {
+  border-color: var(--nf-accent);
+  background: #e9f7ee;
+  color: var(--nf-accent);
+}
+
+.nf-shell.bryl.light .nf-stat-list,
+.nf-shell.bryl.light .nf-cta p {
+  color: var(--nf-muted);
+}
+
+.nf-shell.bryl.light .nf-rule-number {
+  border-color: #9eddb5;
+  background: #ebf9f0;
+  color: var(--nf-accent);
+}
+
+.nf-shell.bryl.light .nf-rule-note {
+  border-color: var(--nf-line);
+  background: var(--nf-surface-2);
+  color: var(--nf-muted);
+}
+
+.nf-shell.bryl.light .nf-trend-number {
+  background: #eff9f2;
+  color: var(--nf-accent);
+}
+
+.nf-shell.bryl.light .nf-app-url {
+  color: #68766e;
 }
 
 @media (max-width: 1180px) {
