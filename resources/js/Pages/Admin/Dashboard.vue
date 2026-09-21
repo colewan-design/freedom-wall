@@ -2,6 +2,7 @@
 import { nextTick, onMounted, reactive, ref } from 'vue';
 import { adminApi } from '../../lib/adminApi';
 import { formatDateTime } from '../../lib/date';
+import { isVideoUrl } from '../../lib/media';
 import NewsfeedLayout from '../../Layouts/NewsfeedLayout.vue';
 
 defineOptions({ layout: NewsfeedLayout });
@@ -119,7 +120,7 @@ async function approve(post) {
 
     showBanner(
       post.image_urls?.length
-        ? 'Approved. Copy the text and download the images from the approved list when you are ready to post manually.'
+        ? 'Approved. Copy the text and download the media from the approved list when you are ready to post manually.'
         : 'Approved. Copy the text from the approved list when you are ready to post manually.',
       'success',
     );
@@ -165,15 +166,15 @@ async function copyPostText(post) {
   }
 }
 
-function downloadImages(post) {
+function downloadMedia(post) {
   if (!post.image_urls?.length) {
-    showBanner('This post does not have images to download.', 'info');
+    showBanner('This post does not have media to download.', 'info');
     return;
   }
 
-  post.image_urls.forEach((imageUrl, index) => {
+  post.image_urls.forEach((mediaUrl, index) => {
     const link = document.createElement('a');
-    link.href = imageUrl;
+    link.href = mediaUrl;
     link.download = `submission-${post.id}-${index + 1}`;
     link.target = '_blank';
     link.rel = 'noopener';
@@ -184,8 +185,8 @@ function downloadImages(post) {
 
   showBanner(
     post.image_urls.length === 1
-      ? 'Image download started.'
-      : `${post.image_urls.length} image downloads started.`,
+      ? 'Download started.'
+      : `${post.image_urls.length} downloads started.`,
     'success',
   );
 }
@@ -316,7 +317,10 @@ onMounted(() => {
             class="image-grid"
             :class="`tiles-${Math.min(post.image_urls.length, 4)}`"
           >
-            <img v-for="(imageUrl, index) in post.image_urls" :key="`${post.id}-${index}`" :src="imageUrl" alt="" />
+            <template v-for="(imageUrl, index) in post.image_urls" :key="`${post.id}-${index}`">
+              <video v-if="isVideoUrl(imageUrl)" :src="imageUrl" controls playsinline preload="metadata" />
+              <img v-else :src="imageUrl" alt="" />
+            </template>
           </div>
 
           <div class="meta">Submitted {{ formatDateTime(post.submitted_at) }}</div>
@@ -417,15 +421,18 @@ onMounted(() => {
             class="image-grid"
             :class="`tiles-${Math.min(post.image_urls.length, 4)}`"
           >
-            <img v-for="(imageUrl, index) in post.image_urls" :key="`${post.id}-approved-${index}`" :src="imageUrl" alt="" />
+            <template v-for="(imageUrl, index) in post.image_urls" :key="`${post.id}-approved-${index}`">
+              <video v-if="isVideoUrl(imageUrl)" :src="imageUrl" controls playsinline preload="metadata" />
+              <img v-else :src="imageUrl" alt="" />
+            </template>
           </div>
 
           <div class="meta">Approved {{ formatDateTime(post.reviewed_at) }}</div>
 
           <div class="actions">
             <button class="btn btn-approve" @click="copyPostText(post)">Copy text</button>
-            <button class="btn btn-secondary" @click="downloadImages(post)">
-              {{ post.image_urls?.length ? 'Download images' : 'No images' }}
+            <button class="btn btn-secondary" @click="downloadMedia(post)">
+              {{ post.image_urls?.length ? 'Download media' : 'No media' }}
             </button>
           </div>
         </li>
@@ -451,8 +458,8 @@ onMounted(() => {
               <td><span class="status-pill is-approved">Approved</span></td>
               <td class="cell-actions">
                 <button class="btn btn-approve btn-sm" @click="copyPostText(post)">Copy text</button>
-                <button class="btn btn-secondary btn-sm" @click="downloadImages(post)">
-                  {{ post.image_urls?.length ? 'Download images' : 'No images' }}
+                <button class="btn btn-secondary btn-sm" @click="downloadMedia(post)">
+                  {{ post.image_urls?.length ? 'Download media' : 'No media' }}
                 </button>
               </td>
             </tr>
@@ -693,7 +700,8 @@ h1 {
   grid-template-columns: 1fr;
 }
 
-.image-grid.tiles-1 img {
+.image-grid.tiles-1 img,
+.image-grid.tiles-1 video {
   aspect-ratio: 16 / 10;
 }
 
@@ -708,7 +716,8 @@ h1 {
   height: 320px;
 }
 
-.image-grid.tiles-3 img:first-child {
+.image-grid.tiles-3 img:first-child,
+.image-grid.tiles-3 video:first-child {
   grid-row: 1 / 3;
 }
 
@@ -718,11 +727,16 @@ h1 {
   height: 320px;
 }
 
-.image-grid img {
+.image-grid img,
+.image-grid video {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
+}
+
+.image-grid video {
+  background: #000;
 }
 
 .meta {

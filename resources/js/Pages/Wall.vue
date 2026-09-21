@@ -4,6 +4,13 @@ import { computed, inject, nextTick, onBeforeUnmount, onMounted, reactive, ref, 
 import NewsfeedLayout from '../Layouts/NewsfeedLayout.vue';
 import TurnstileWidget from '../Components/TurnstileWidget.vue';
 import { timeAgo } from '../lib/date';
+import {
+  ACCEPTED_UPLOAD_TYPES,
+  describeAttachments,
+  isVideoUrl,
+  MAX_VIDEO_SECONDS,
+  validateAttachments,
+} from '../lib/media';
 
 defineOptions({ layout: NewsfeedLayout });
 
@@ -41,8 +48,21 @@ const composerReady = computed(
   () => composerForm.content.trim().length > 0 && composerForm.category !== '',
 );
 
-function onComposerFileChange(e) {
-  composerForm.images = Array.from(e.target.files || []);
+const attachmentSummary = computed(() => describeAttachments(composerForm.images));
+
+async function onComposerFileChange(e) {
+  const files = Array.from(e.target.files || []);
+  const error = await validateAttachments(files);
+
+  if (error) {
+    composerForm.images = [];
+    if (fileInput.value) fileInput.value.value = '';
+    composerForm.setError('images', error);
+    return;
+  }
+
+  composerForm.clearErrors('images');
+  composerForm.images = files;
 }
 
 function selectCategory(category) {
@@ -241,7 +261,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
           <div class="stat">
             <dt>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="4" width="18" height="16" stroke="currentColor" stroke-width="1.6"/><circle cx="8" cy="9" r="1.5" fill="currentColor"/><path d="m4 17 5-5 4 4 3-3 4 4" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
-              <span>{{ withPhotos }} photo{{ withPhotos === 1 ? '' : 's' }}</span>
+              <span>{{ withPhotos }} with media</span>
             </dt>
           </div>
           <div class="stat">
@@ -348,7 +368,13 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
             class="feed-photo-tile"
             @click="openLightbox(post, imageIndex)"
           >
-            <img :src="imageUrl" alt="" />
+            <template v-if="isVideoUrl(imageUrl)">
+              <video :src="imageUrl" class="feed-photo-video" muted playsinline preload="metadata" />
+              <span class="feed-photo-play" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5-11-6.5Z" /></svg>
+              </span>
+            </template>
+            <img v-else :src="imageUrl" alt="" />
             <span v-if="imageIndex === 3 && post.image_urls.length > 4" class="feed-photo-more">
               +{{ post.image_urls.length - 4 }}
             </span>
@@ -407,7 +433,17 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
           </svg>
         </button>
 
-        <img :src="lightbox.images[lightbox.index]" alt="" class="lightbox-image" />
+        <video
+          v-if="isVideoUrl(lightbox.images[lightbox.index])"
+          :key="lightbox.images[lightbox.index]"
+          :src="lightbox.images[lightbox.index]"
+          class="lightbox-image"
+          controls
+          autoplay
+          playsinline
+          @click.stop
+        />
+        <img v-else :src="lightbox.images[lightbox.index]" alt="" class="lightbox-image" />
 
         <button
           v-if="lightbox.images.length > 1"
@@ -480,13 +516,13 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
 
             <label class="composer-attach-row">
               <span>
-                {{ composerForm.images.length ? `${composerForm.images.length} image${composerForm.images.length > 1 ? 's' : ''} selected` : 'Add to your post' }}
+                {{ composerForm.images.length ? `${attachmentSummary} selected` : 'Add photos or a video' }}
               </span>
               <span class="composer-attach-icon">
                 <input
                   ref="fileInput"
                   type="file"
-                  accept="image/jpeg,image/png,image/webp"
+                  :accept="ACCEPTED_UPLOAD_TYPES"
                   multiple
                   @change="onComposerFileChange"
                 />
@@ -501,6 +537,9 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
             <ul v-if="composerForm.images.length" class="composer-file-list">
               <li v-for="image in composerForm.images" :key="`${image.name}-${image.lastModified}`">{{ image.name }}</li>
             </ul>
+            <p v-else class="composer-attach-hint">
+              Up to 4 photos, or one video of {{ MAX_VIDEO_SECONDS }} seconds or less.
+            </p>
 
             <TurnstileWidget @verified="(token) => (composerForm.captchaToken = token)" />
 
@@ -951,6 +990,30 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
   transform: scale(1.04);
 }
 
+.feed-photo-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  background: #000;
+}
+
+.feed-photo-play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 3rem;
+  height: 3rem;
+  border-radius: var(--b-r-pill);
+  background: rgba(10, 10, 10, 0.55);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
 .feed-photo-more {
   position: absolute;
   inset: 0;
@@ -1335,6 +1398,13 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
 .composer-file-list {
   margin: -0.5rem 0 0;
   padding-left: 1.1rem;
+  font-family: var(--b-mono);
+  font-size: 11px;
+  color: var(--b-500);
+}
+
+.composer-attach-hint {
+  margin: -0.5rem 0 0;
   font-family: var(--b-mono);
   font-size: 11px;
   color: var(--b-500);
@@ -1740,6 +1810,76 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
 .composer-modal {
   background: #0d1216;
   border-color: #30383f;
+}
+
+/* Light mode surface and contrast corrections. These intentionally override
+   only the dark reference skin above, leaving the dark composition untouched. */
+:global(:root[data-theme='light'] .wall-page .lede) {
+  color: #526159;
+}
+
+:global(:root[data-theme='light'] .wall-page .stat-row),
+:global(:root[data-theme='light'] .wall-page .stat),
+:global(:root[data-theme='light'] .wall-page .feed-header),
+:global(:root[data-theme='light'] .wall-page .feed-actions) {
+  border-color: var(--nf-line);
+}
+
+:global(:root[data-theme='light'] .wall-page .stat dt) {
+  color: #526159;
+}
+
+:global(:root[data-theme='light'] .wall-page .composer-trigger),
+:global(:root[data-theme='light'] .wall-page .feed-card),
+:global(:root[data-theme='light'] .wall-page .composer-modal) {
+  background: #ffffff;
+  border-color: var(--nf-line);
+}
+
+:global(:root[data-theme='light'] .wall-page .composer-trigger:hover),
+:global(:root[data-theme='light'] .wall-page .feed-card:hover) {
+  border-color: #8fb79d;
+}
+
+:global(:root[data-theme='light'] .wall-page .composer-trigger-text) {
+  background: var(--nf-surface-2);
+  border-color: var(--nf-line);
+  color: #68766e;
+}
+
+:global(:root[data-theme='light'] .wall-page .composer-trigger-photo) {
+  border-color: var(--nf-line);
+  color: #53635a;
+  background: #ffffff;
+}
+
+:global(:root[data-theme='light'] .wall-page .composer-note),
+:global(:root[data-theme='light'] .wall-page .feed-sort),
+:global(:root[data-theme='light'] .wall-page .feed-sub-meta),
+:global(:root[data-theme='light'] .wall-page .action),
+:global(:root[data-theme='light'] .wall-page .feed-like-count),
+:global(:root[data-theme='light'] .wall-page .feed-more) {
+  color: #59685f;
+}
+
+:global(:root[data-theme='light'] .wall-page .feed-sort strong) {
+  color: #344239;
+}
+
+:global(:root[data-theme='light'] .wall-page .feed-name),
+:global(:root[data-theme='light'] .wall-page .feed-content) {
+  color: #0b1710;
+}
+
+:global(:root[data-theme='light'] .wall-page .feed-card:hover) {
+  background: #ffffff;
+}
+
+:global(:root[data-theme='light'] .wall-page .composer-modal-textarea),
+:global(:root[data-theme='light'] .wall-page .composer-attach-row) {
+  background: var(--nf-surface-2);
+  border-color: var(--nf-line);
+  color: var(--nf-ink);
 }
 
 @media (max-width: 900px) {

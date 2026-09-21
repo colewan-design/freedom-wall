@@ -2,6 +2,7 @@
 import { Link, router, useForm } from '@inertiajs/vue3';
 import { onBeforeUnmount, onMounted, ref } from 'vue';
 import { timeAgo } from '../lib/date';
+import { isVideoUrl } from '../lib/media';
 
 const props = defineProps({
   post: { type: Object, required: true },
@@ -129,7 +130,10 @@ onBeforeUnmount(() => {
     <p class="post-content">{{ post.content }}</p>
 
     <div v-if="post.image_urls?.length" class="post-images" :class="`count-${Math.min(post.image_urls.length, 4)}`">
-      <img v-for="(url, i) in post.image_urls" :key="i" :src="url" alt="" />
+      <template v-for="(url, i) in post.image_urls" :key="i">
+        <video v-if="isVideoUrl(url)" :src="url" controls playsinline preload="metadata" />
+        <img v-else :src="url" alt="" />
+      </template>
     </div>
 
     <div class="post-stats">
@@ -361,7 +365,8 @@ onBeforeUnmount(() => {
   grid-template-columns: 1fr 1fr;
 }
 
-.post-images img {
+.post-images img,
+.post-images video {
   width: 100%;
   height: 100%;
   max-height: 420px;
@@ -369,7 +374,12 @@ onBeforeUnmount(() => {
   border-radius: var(--b-r-thumb);
 }
 
-.post-images.count-3 img {
+.post-images video {
+  background: #000;
+}
+
+.post-images.count-3 img,
+.post-images.count-3 video {
   max-height: 220px;
 }
 

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreSubmissionRequest;
 use App\Models\Submission;
+use App\Rules\MediaAttachment;
 use App\Services\ContentFilterService;
 use App\Services\IpHasher;
 use App\Services\TurnstileService;
@@ -41,17 +42,17 @@ class SubmissionController extends Controller
 
         $content = $this->withCategoryHashtag($content, $request->string('category')->toString());
 
-        $imageUrls = [];
-        foreach ($request->file('images', []) as $image) {
-            $filename = Str::uuid().'.'.$image->getClientOriginalExtension();
-            $path = $image->storeAs('uploads', $filename, 'public');
-            $imageUrls[] = Storage::disk('public')->url($path);
+        $mediaUrls = [];
+        foreach ($request->file('images', []) as $file) {
+            $filename = Str::uuid().'.'.MediaAttachment::extensionFor($file);
+            $path = $file->storeAs('uploads', $filename, 'public');
+            $mediaUrls[] = Storage::disk('public')->url($path);
         }
 
         Submission::create([
             'content' => $content,
-            'image_url' => $imageUrls[0] ?? null,
-            'images' => $imageUrls ?: null,
+            'image_url' => $mediaUrls[0] ?? null,
+            'images' => $mediaUrls ?: null,
             'ip_hash' => $ipHasher->hash($request->ip()),
         ]);
 

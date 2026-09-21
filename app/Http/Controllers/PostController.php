@@ -6,6 +6,7 @@ use App\Http\Requests\StorePostRequest;
 use App\Models\Friendship;
 use App\Models\Post;
 use App\Models\PostReaction;
+use App\Rules\MediaAttachment;
 use App\Services\ContentFilterService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -27,16 +28,16 @@ class PostController extends Controller
             ]);
         }
 
-        $imagePaths = [];
-        foreach ($request->file('images', []) as $image) {
-            $filename = Str::uuid().'.'.$image->getClientOriginalExtension();
-            $imagePaths[] = $image->storeAs('posts', $filename, 'public');
+        $mediaPaths = [];
+        foreach ($request->file('images', []) as $file) {
+            $filename = Str::uuid().'.'.MediaAttachment::extensionFor($file);
+            $mediaPaths[] = $file->storeAs('posts', $filename, 'public');
         }
 
         Post::create([
             'user_id' => $request->user()->id,
             'content' => $content,
-            'images' => $imagePaths ?: null,
+            'images' => $mediaPaths ?: null,
         ]);
 
         return redirect()->route('feed');

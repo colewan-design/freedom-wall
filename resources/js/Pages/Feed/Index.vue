@@ -1,8 +1,9 @@
 <script setup>
 import { Link, useForm } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import StudentLayout from '../../Layouts/StudentLayout.vue';
 import PostCard from '../../Components/PostCard.vue';
+import { ACCEPTED_UPLOAD_TYPES, describeAttachments, validateAttachments } from '../../lib/media';
 
 defineOptions({ layout: StudentLayout });
 
@@ -19,8 +20,22 @@ const form = useForm({
   images: [],
 });
 
-function onFileChange(e) {
-  form.images = Array.from(e.target.files || []);
+const fileInput = ref(null);
+const attachmentSummary = computed(() => describeAttachments(form.images));
+
+async function onFileChange(e) {
+  const files = Array.from(e.target.files || []);
+  const error = await validateAttachments(files);
+
+  if (error) {
+    form.images = [];
+    if (fileInput.value) fileInput.value.value = '';
+    form.setError('images', error);
+    return;
+  }
+
+  form.clearErrors('images');
+  form.images = files;
 }
 
 function onSubmit() {
@@ -31,7 +46,10 @@ function onSubmit() {
 
   form.post(route('posts.store'), {
     forceFormData: true,
-    onSuccess: () => form.reset(),
+    onSuccess: () => {
+      form.reset();
+      if (fileInput.value) fileInput.value.value = '';
+    },
   });
 }
 
@@ -89,18 +107,18 @@ function insertEmoji(emoji) {
       <p v-if="form.errors.content" class="composer-error">{{ form.errors.content }}</p>
       <p v-else-if="form.errors.images" class="composer-error">{{ form.errors.images }}</p>
       <p v-if="form.images.length" class="composer-file-count">
-        {{ form.images.length }} image{{ form.images.length > 1 ? 's' : '' }} attached
+        {{ attachmentSummary }} attached
       </p>
 
       <div class="composer-actions">
         <label class="composer-action">
-          <input type="file" accept="image/jpeg,image/png,image/webp" multiple @change="onFileChange" />
+          <input ref="fileInput" type="file" :accept="ACCEPTED_UPLOAD_TYPES" multiple @change="onFileChange" />
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <rect x="3" y="4" width="18" height="16" rx="3" stroke="currentColor" stroke-width="1.6" />
             <circle cx="8.5" cy="10" r="1.6" fill="currentColor" />
             <path d="m4 17 5-5 4 4 3-3 4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
-          Image
+          Photo / Video
         </label>
 
         <span class="composer-action inert" title="Coming soon">

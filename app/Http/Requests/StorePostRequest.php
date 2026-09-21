@@ -2,10 +2,13 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\ValidatesAttachments;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StorePostRequest extends FormRequest
 {
+    use ValidatesAttachments;
+
     public function authorize(): bool
     {
         return true;
@@ -15,8 +18,12 @@ class StorePostRequest extends FormRequest
     {
         return [
             'content' => ['required', 'string'],
-            'images' => ['nullable', 'array', 'max:4'],
-            'images.*' => ['file', 'mimes:jpeg,png,webp', 'max:5120'],
+            ...$this->attachmentRules(),
         ];
+    }
+
+    public function messages(): array
+    {
+        return $this->attachmentMessages();
     }
 }
