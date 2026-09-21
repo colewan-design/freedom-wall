@@ -94,7 +94,7 @@ const schoolYear = `S.Y. ${syStart}-${syStart + 1}`;
 const validUntil = `JUN ${syStart + 1}`;
 
 const form = reactive({
-  name: props.defaults.name || 'Rublyn C. Galuludan',
+  name: props.defaults.name || 'Juan D. Dela Cruz',
   course: 'BSED — VALUES EDUCATION',
   year: '1st Year',
   campus: props.campuses[0] || 'Alangilan',
@@ -1104,7 +1104,7 @@ onBeforeUnmount(() => {
 
           <label class="idc-field">
             <span class="idc-label">Full name</span>
-            <input v-model="form.name" type="text" maxlength="40" placeholder="Rublyn C. Galuludan" class="idc-input" />
+            <input v-model="form.name" type="text" maxlength="40" placeholder="Juan D. Dela Cruz" class="idc-input" />
           </label>
 
           <label class="idc-field">
