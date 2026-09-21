@@ -18,7 +18,7 @@ class FeedController extends Controller
 
         $authorIds = Friendship::friendIdsFor($user)->push($user->id);
 
-        $sort = $request->query('sort', 'friends');
+        $sort = $request->query('sort', 'for-you');
 
         $posts = Post::query()
             ->whereIn('user_id', $authorIds)

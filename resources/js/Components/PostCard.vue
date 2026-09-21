@@ -1,6 +1,6 @@
 <script setup>
 import { Link, router, useForm } from '@inertiajs/vue3';
-import { onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { timeAgo } from '../lib/date';
 import { isVideoUrl } from '../lib/media';
 
@@ -27,6 +27,16 @@ const pickerOpen = ref(false);
 const toast = ref(null);
 let toastTimer = null;
 let hoverTimer = null;
+
+const postCategory = computed(() => {
+  const content = props.post.content?.toLowerCase() || '';
+  if (content.includes('question') || content.includes('?')) return 'QUESTION';
+  if (content.includes('opportunity') || content.includes('hiring') || content.includes('looking for')) return 'OPPORTUNITY';
+  if (content.includes('event') || content.includes('ceremony') || content.includes('intram')) return 'EVENT';
+  return 'UPDATE';
+});
+
+const contentTags = computed(() => [...new Set((props.post.content?.match(/#[\w-]+/g) || []).slice(0, 4))]);
 
 function openPickerOnHover() {
   hoverTimer = window.setTimeout(() => {
@@ -68,6 +78,18 @@ function toggleSave() {
   }
 }
 
+async function sharePost() {
+  const url = `${window.location.origin}/feed#post-${props.post.id}`;
+  if (navigator.share) {
+    await navigator.share({ title: `${props.post.user.name} on BSU Connect`, text: props.post.content, url });
+    return;
+  }
+  await navigator.clipboard.writeText(url);
+  toast.value = { emoji: '✓', label: 'Link copied' };
+  if (toastTimer) window.clearTimeout(toastTimer);
+  toastTimer = window.setTimeout(() => { toast.value = null; }, 1600);
+}
+
 function destroyPost() {
   menuOpen.value = false;
   if (!confirm('Delete this post?')) return;
@@ -103,7 +125,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <article ref="cardEl" class="post-card" :class="`tint-${tint}`">
+  <article :id="`post-${post.id}`" ref="cardEl" class="post-card" :class="`tint-${tint}`">
     <div class="post-header">
       <Link :href="`/profile/${post.user.username}`" class="post-avatar">
         <img v-if="post.user.avatar_url" :src="post.user.avatar_url" alt="" />
@@ -113,6 +135,7 @@ onBeforeUnmount(() => {
         <Link :href="`/profile/${post.user.username}`" class="post-name">{{ post.user.name }}</Link>
         <span class="post-meta">@{{ post.user.username }} · {{ timeAgo(post.created_at) }}</span>
       </div>
+      <span class="post-category" :class="`is-${postCategory.toLowerCase()}`">{{ postCategory }}</span>
       <div v-if="isOwner" class="post-menu-wrap">
         <button type="button" class="post-menu-btn" title="Post options" @click="menuOpen = !menuOpen">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -128,6 +151,10 @@ onBeforeUnmount(() => {
     </div>
 
     <p class="post-content">{{ post.content }}</p>
+
+    <div v-if="contentTags.length" class="post-tags">
+      <span v-for="tag in contentTags" :key="tag">{{ tag }}</span>
+    </div>
 
     <div v-if="post.image_urls?.length" class="post-images" :class="`count-${Math.min(post.image_urls.length, 4)}`">
       <template v-for="(url, i) in post.image_urls" :key="i">
@@ -193,6 +220,13 @@ onBeforeUnmount(() => {
         </svg>
         Comment
         <span class="reaction-count" v-if="post.comments_count">{{ post.comments_count }}</span>
+      </button>
+
+      <button type="button" class="action" @click="sharePost">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="m14 5 5 5-5 5M19 10H9a5 5 0 0 0-5 5v3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        Share
       </button>
 
       <button type="button" class="action" :class="{ active: saved }" @click="toggleSave">
@@ -602,5 +636,59 @@ onBeforeUnmount(() => {
   margin: 0;
   color: #f87171;
   font-size: 0.8rem;
+}
+
+/* BSU Connect feed treatment */
+.post-card,
+.post-card.tint-blue,
+.post-card.tint-cream {
+  gap: 6px;
+  padding: 11px 16px 0;
+  border: 1px solid #dce5e0;
+  border-radius: 10px;
+  background: #fff;
+  color: #17211b;
+  box-shadow: 0 2px 9px rgba(17, 53, 33, 0.035);
+}
+
+.post-header { gap: 11px; align-items: flex-start; }
+.post-avatar { width: 43px; height: 43px; border-radius: 50%; background: #e7f0eb; color: #075b32; }
+.post-name { color: #17211b; font-size: 12px; line-height: 1.25; }
+.post-meta { margin-top: 1px; color: #708078; font-size: 9px; }
+.post-category { margin-left: auto; padding: 5px 9px; border-radius: 5px; background: #e8f4ff; color: #0874bc; font-size: 9px; font-weight: 800; }
+.post-category.is-opportunity { background: #dcf8e8; color: #087542; }
+.post-category.is-event { background: #ece8ff; color: #5c46c7; }
+.post-category.is-update { background: #eef2f0; color: #55645c; }
+.post-menu-wrap { margin-left: 1px; }
+.post-menu-btn { color: #6d7a73; }
+.post-menu { border-color: #dce5e0; border-radius: 7px; background: #fff; box-shadow: 0 8px 24px rgba(15, 45, 29, .12); }
+
+.post-content { margin-left: 54px; color: #445149; font-size: 11px; line-height: 1.45; }
+.post-tags { margin: 2px 0 2px 54px; display: flex; flex-wrap: wrap; gap: 6px; }
+.post-tags span { padding: 4px 9px; border-radius: 20px; background: #edf6f1; color: #087542; font-size: 9px; }
+.post-images { margin: 4px 0 0 54px; overflow: hidden; border-radius: 8px; }
+.post-images img, .post-images video { max-height: 350px; border-radius: 8px; }
+.post-stats { display: none; }
+.post-actions { margin-top: 4px; padding: 7px 0; gap: clamp(9px, 3vw, 42px); border-top: 1px solid #e2e9e5; }
+.post-actions > .action:last-child { margin-left: auto; }
+.action { min-height: 27px; padding: 3px 2px; border-radius: 5px; color: #607067; font-size: 10px; font-weight: 500; }
+.action:hover { background: #f1f6f3; color: #075b32; }
+.action.active { color: #075b32; }
+.action svg { width: 17px; height: 17px; }
+.reaction-count { color: inherit; }
+.reaction-picker { border-color: #dce5e0; border-radius: 30px; background: #fff; box-shadow: 0 8px 24px rgba(15, 45, 29, .13); }
+.reaction-toast { background: #075b32; }
+.comments-section { border-top-color: #e2e9e5; }
+.comment-bubble { border-radius: 7px; background: #f3f7f5; }
+.comment-form input { border-color: #dce5e0; border-radius: 7px; background: #fff; }
+.comment-form button { border-radius: 6px; background: #075b32; }
+
+@media (max-width: 560px) {
+  .post-card, .post-card.tint-blue, .post-card.tint-cream { padding-right: 12px; padding-left: 12px; }
+  .post-category { display: none; }
+  .post-content, .post-tags, .post-images { margin-left: 0; }
+  .post-actions { justify-content: space-between; gap: 4px; }
+  .post-actions > .action:last-child { margin-left: 0; }
+  .action { font-size: 9px; }
 }
 </style>
