@@ -34,6 +34,9 @@ Route::get('/chat/messages', [ChatController::class, 'fetch'])->name('chat.messa
 Route::post('/chat/messages', [ChatController::class, 'store'])
     ->middleware('throttle:chat-message')
     ->name('chat.messages.store');
+Route::post('/chat/nickname', [ChatController::class, 'updateNickname'])
+    ->middleware('throttle:chat-nickname')
+    ->name('chat.nickname.update');
 Route::get('/wall', [SubmissionController::class, 'wall'])->name('wall');
 Route::get('/id-check', [IdCheckController::class, 'index'])->name('id-check');
 Route::redirect('/id', '/id-check');

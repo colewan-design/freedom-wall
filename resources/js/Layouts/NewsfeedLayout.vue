@@ -1,6 +1,7 @@
 <script setup>
 import { Link, router, usePage } from '@inertiajs/vue3';
-import { computed, onBeforeUnmount, onMounted, provide, ref, watchEffect } from 'vue';
+import { computed, onBeforeUnmount, onMounted, provide, ref, watch, watchEffect } from 'vue';
+import { shortTimeAgo } from '../lib/date';
 
 const page = usePage();
 const isActive = (path) => computed(() => page.url === path || page.url.startsWith(`${path}?`));
@@ -24,6 +25,8 @@ const theme = ref('dark');
 onMounted(() => {
   const saved = localStorage.getItem('wall-theme');
   if (saved === 'light' || saved === 'dark') theme.value = saved;
+  autoScroll.value = localStorage.getItem('chat-auto-scroll') !== 'off';
+  soundAlerts.value = localStorage.getItem('chat-sound-alerts') === 'on';
   window.addEventListener('keydown', focusSearchWithSlash);
 });
 
@@ -42,9 +45,97 @@ watchEffect(() => {
 });
 
 const posts = computed(() => page.props.posts ?? []);
-const chatNickname = computed(() => page.props.chatNickname ?? 'Anonymous');
 const chatStats = computed(() => page.props.chatStats ?? { totalMessages: 0, messagesToday: 0, pollLabel: 'Every 4 sec' });
-const recentChatNicknames = computed(() => page.props.recentChatNicknames ?? []);
+
+// --- Chat room state -------------------------------------------------------
+// The room controls live in this sidebar but drive the stream inside <slot/>,
+// so the shared pieces are provided down rather than duplicated per page.
+const nicknameOverride = ref(null);
+const presenceOverride = ref(null);
+
+const chatNickname = computed(() => nicknameOverride.value ?? page.props.chatNickname ?? 'Anonymous');
+const chatPresence = computed(
+  () => presenceOverride.value ?? page.props.chatPresence ?? { members: [], onlineCount: 0 },
+);
+
+const autoScroll = ref(true);
+const soundAlerts = ref(false);
+
+watch(autoScroll, (value) => localStorage.setItem('chat-auto-scroll', value ? 'on' : 'off'));
+watch(soundAlerts, (value) => localStorage.setItem('chat-sound-alerts', value ? 'on' : 'off'));
+
+const editingNickname = ref(false);
+const nicknameDraft = ref('');
+const nicknameError = ref('');
+const savingNickname = ref(false);
+const nicknameInput = ref(null);
+
+// Re-renders reset session-scoped props, so drop stale overrides when Inertia
+// swaps the page out from under us.
+watch(() => page.props.chatNickname, () => { nicknameOverride.value = null; });
+watch(() => page.props.chatPresence, () => { presenceOverride.value = null; });
+
+provide('chatRoom', {
+  nickname: chatNickname,
+  presence: chatPresence,
+  autoScroll,
+  soundAlerts,
+  setPresence(next) {
+    if (next) presenceOverride.value = next;
+  },
+});
+
+function openNicknameEditor() {
+  editingNickname.value = !editingNickname.value;
+  if (!editingNickname.value) return;
+  nicknameDraft.value = chatNickname.value;
+  nicknameError.value = '';
+  nextTickFocus();
+}
+
+function nextTickFocus() {
+  window.requestAnimationFrame(() => {
+    nicknameInput.value?.focus();
+    nicknameInput.value?.select();
+  });
+}
+
+function cancelNicknameEdit() {
+  editingNickname.value = false;
+  nicknameError.value = '';
+}
+
+async function saveNickname() {
+  const next = nicknameDraft.value.trim();
+
+  if (next === chatNickname.value) {
+    cancelNicknameEdit();
+    return;
+  }
+
+  savingNickname.value = true;
+  nicknameError.value = '';
+
+  try {
+    const { data } = await window.axios.post(route('chat.nickname.update'), { nickname: next });
+    nicknameOverride.value = data.nickname;
+    editingNickname.value = false;
+  } catch (error) {
+    if (error.response?.status === 422) {
+      nicknameError.value = error.response.data?.errors?.nickname?.[0] ?? 'That nickname could not be used.';
+    } else if (error.response?.status === 429) {
+      nicknameError.value = 'Too many changes. Try again in a few minutes.';
+    } else {
+      nicknameError.value = 'Something went wrong. Try again.';
+    }
+  } finally {
+    savingNickname.value = false;
+  }
+}
+
+function initials(nickname) {
+  return (nickname ?? '').slice(0, 2).toUpperCase();
+}
 
 // The wall ships real totals as a `stats` prop because `posts` only holds the
 // rendered slice. Pages without it (the student feed) still count what's loaded.
@@ -149,15 +240,109 @@ function excerpt(text, length = 60) {
           <kbd>/</kbd>
         </label>
 
-        <div v-if="isChatPage" class="nf-panel">
-          <h2>Chat Snapshot</h2>
+        <section v-if="isChatPage" class="nf-panel">
+          <h2>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 20V10M12 20V4M19 20v-7" stroke="currentColor" stroke-width="2" /></svg>
+            Chat Snapshot
+          </h2>
           <ul class="nf-stat-list">
             <li><span>Your nickname</span><strong>{{ chatNickname }}</strong></li>
             <li><span>Total messages</span><strong>{{ chatStats.totalMessages }}</strong></li>
             <li><span>Messages today</span><strong>{{ chatStats.messagesToday }}</strong></li>
             <li><span>Refresh pace</span><strong>{{ chatStats.pollLabel }}</strong></li>
           </ul>
-        </div>
+        </section>
+
+        <section v-if="isChatPage" class="nf-panel nf-room-panel">
+          <h2>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <circle cx="12" cy="12" r="3.2" stroke="currentColor" stroke-width="1.6" />
+              <path d="M12 3.5v2.2M12 18.3v2.2M4.9 4.9l1.6 1.6M17.5 17.5l1.6 1.6M3.5 12h2.2M18.3 12h2.2M4.9 19.1l1.6-1.6M17.5 6.5l1.6-1.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+            </svg>
+            Room Controls
+          </h2>
+
+          <div class="nf-room-rows">
+            <button
+              type="button"
+              class="nf-room-row nf-room-action"
+              :aria-expanded="editingNickname"
+              @click="openNicknameEditor"
+            >
+              <span class="nf-room-label">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M4 20h4L19.5 8.5a2.1 2.1 0 0 0-3-3L5 17v3Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" />
+                </svg>
+                Change nickname
+              </span>
+              <svg class="nf-room-chevron" :class="{ open: editingNickname }" width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="m9 5 7 7-7 7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </button>
+
+            <form v-if="editingNickname" class="nf-nickname-form" @submit.prevent="saveNickname">
+              <input
+                ref="nicknameInput"
+                v-model="nicknameDraft"
+                type="text"
+                maxlength="20"
+                aria-label="New nickname"
+                placeholder="NewNickname12"
+                @keydown.esc="cancelNicknameEdit"
+              />
+              <div class="nf-nickname-actions">
+                <button type="submit" :disabled="savingNickname">{{ savingNickname ? 'Saving…' : 'Save' }}</button>
+                <button type="button" class="ghost" @click="cancelNicknameEdit">Cancel</button>
+              </div>
+              <p v-if="nicknameError" class="nf-nickname-error">{{ nicknameError }}</p>
+              <p v-else class="nf-nickname-hint">3–20 letters or numbers.</p>
+            </form>
+
+            <div class="nf-room-row">
+              <span class="nf-room-label">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M4 9a8 8 0 0 1 13.3-3.3L20 8M20 15a8 8 0 0 1-13.3 3.3L4 16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+                  <path d="M20 4v4h-4M4 20v-4h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                Auto-scroll
+              </span>
+              <button
+                type="button"
+                class="nf-switch"
+                role="switch"
+                :aria-checked="autoScroll"
+                aria-label="Auto-scroll to newest messages"
+                :class="{ on: autoScroll }"
+                @click="autoScroll = !autoScroll"
+              >
+                <span class="nf-switch-knob"></span>
+              </button>
+            </div>
+
+            <div class="nf-room-row">
+              <span class="nf-room-label">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M6 9a6 6 0 0 1 12 0c0 4 1.4 5.5 2 6H4c.6-.5 2-2 2-6Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" />
+                  <path d="M10 19a2 2 0 0 0 4 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                </svg>
+                Sound notifications
+              </span>
+              <button
+                type="button"
+                class="nf-switch"
+                role="switch"
+                :aria-checked="soundAlerts"
+                aria-label="Play a sound for new messages"
+                :class="{ on: soundAlerts }"
+                @click="soundAlerts = !soundAlerts"
+              >
+                <span class="nf-switch-knob"></span>
+              </button>
+            </div>
+          </div>
+
+          <p class="nf-room-note">These settings only apply to your current session in this room.</p>
+        </section>
 
         <section v-if="!isChatPage" class="nf-panel nf-filter-panel">
           <h2>
@@ -222,15 +407,24 @@ function excerpt(text, length = 60) {
       <aside v-if="!isAdminPage && !isFocusPage" class="nf-sidebar nf-right">
         <section class="nf-panel nf-trending-panel">
           <h2>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <svg v-if="isChatPage" width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM2.5 20a6.5 6.5 0 0 1 13 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+              <path d="M16 5.2a3.5 3.5 0 0 1 0 6.6M18 14.4a6.5 6.5 0 0 1 3.5 5.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+            </svg>
+            <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path d="m4 16 5-6 4 3 7-8M16 5h4v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
-            {{ isChatPage ? 'Recent Nicknames' : 'Trending Today' }}
+            {{ isChatPage ? 'Active Recently' : 'Trending Today' }}
+            <span v-if="isChatPage" class="nf-online-badge">
+              <i class="nf-online-dot" aria-hidden="true"></i>{{ chatPresence.onlineCount }} online
+            </span>
           </h2>
-          <ul v-if="isChatPage && recentChatNicknames.length" class="nf-highlights">
-            <li v-for="nickname in recentChatNicknames" :key="nickname">
-              <span class="nf-highlight-chip">{{ nickname.slice(0, 2).toUpperCase() }}</span>
-              <p>{{ nickname }}</p>
+          <ul v-if="isChatPage && chatPresence.members.length" class="nf-presence-list">
+            <li v-for="member in chatPresence.members" :key="member.nickname">
+              <span class="nf-highlight-chip">{{ initials(member.nickname) }}</span>
+              <i class="nf-online-dot" aria-hidden="true"></i>
+              <p :class="{ self: member.nickname === chatNickname }">{{ member.nickname }}</p>
+              <time :datetime="member.lastSentAt">{{ shortTimeAgo(member.lastSentAt) }}</time>
             </li>
           </ul>
           <ol v-else-if="!isChatPage && highlights.length" class="nf-trending-list">
@@ -1548,5 +1742,247 @@ function excerpt(text, length = 60) {
   .nf-shell.bryl .nf-body.focus-mode {
     width: 100%;
   }
+}
+
+/* --- Chat: room controls + presence ------------------------------------- */
+.nf-room-rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.nf-room-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--nf-line);
+}
+
+.nf-room-rows > .nf-room-row:last-child {
+  border-bottom: 0;
+  padding-bottom: 2px;
+}
+
+.nf-room-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 13px;
+  color: var(--nf-ink);
+}
+
+.nf-room-label svg {
+  flex: 0 0 auto;
+  color: var(--nf-muted);
+}
+
+.nf-room-action {
+  background: none;
+  border-left: 0;
+  border-right: 0;
+  border-top: 0;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+
+.nf-room-action:hover .nf-room-label,
+.nf-room-action:hover .nf-room-chevron {
+  color: var(--nf-accent);
+}
+
+.nf-room-chevron {
+  flex: 0 0 auto;
+  color: var(--nf-muted);
+  transition: transform 0.18s var(--b-ease), color 0.18s ease;
+}
+
+.nf-room-chevron.open {
+  transform: rotate(90deg);
+}
+
+.nf-switch {
+  position: relative;
+  flex: 0 0 auto;
+  width: 38px;
+  height: 21px;
+  padding: 0;
+  border: 1px solid var(--b-300);
+  border-radius: 999px;
+  background: var(--b-100);
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+
+.nf-switch.on {
+  background: var(--nf-accent);
+  border-color: var(--nf-accent);
+}
+
+.nf-switch-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 15px;
+  height: 15px;
+  border-radius: 999px;
+  background: var(--b-bg);
+  transition: transform 0.18s var(--b-ease);
+}
+
+.nf-switch.on .nf-switch-knob {
+  transform: translateX(17px);
+}
+
+.nf-nickname-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--nf-line);
+}
+
+.nf-nickname-form input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--nf-line);
+  border-radius: var(--b-r-input);
+  background: var(--b-50);
+  color: var(--nf-ink);
+  font: inherit;
+  font-size: 13px;
+}
+
+.nf-nickname-form input:focus {
+  outline: none;
+  border-color: var(--nf-accent);
+}
+
+.nf-nickname-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.nf-nickname-actions button {
+  flex: 1;
+  padding: 7px 10px;
+  border: 1px solid var(--nf-accent);
+  border-radius: var(--b-r-input);
+  background: var(--nf-accent);
+  color: var(--nf-accent-contrast);
+  font-family: var(--b-mono);
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.nf-nickname-actions button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.nf-nickname-actions .ghost {
+  background: transparent;
+  border-color: var(--nf-line);
+  color: var(--nf-muted);
+}
+
+.nf-nickname-hint,
+.nf-nickname-error {
+  margin: 0;
+  font-size: 12px;
+  color: var(--nf-muted);
+}
+
+.nf-nickname-error {
+  color: #f87171;
+}
+
+.nf-room-note {
+  margin: 13px 0 0;
+  padding-top: 13px;
+  border-top: 1px solid var(--nf-line);
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--nf-muted);
+}
+
+.nf-online-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  font-family: var(--b-mono);
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0.5px;
+  text-transform: none;
+  color: var(--nf-muted);
+  white-space: nowrap;
+}
+
+.nf-online-dot {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: var(--nf-accent);
+}
+
+.nf-presence-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.nf-presence-list li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--nf-line);
+}
+
+.nf-presence-list li:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.nf-presence-list li:first-child {
+  padding-top: 0;
+}
+
+.nf-presence-list .nf-highlight-chip {
+  width: 30px;
+  height: 30px;
+}
+
+.nf-presence-list p {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 13px;
+  color: var(--nf-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nf-presence-list p.self {
+  color: var(--nf-accent);
+  font-weight: 600;
+}
+
+.nf-presence-list time {
+  flex: 0 0 auto;
+  font-family: var(--b-mono);
+  font-size: 11px;
+  color: var(--nf-muted);
 }
 </style>

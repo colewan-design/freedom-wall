@@ -3,11 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreChatMessageRequest;
+use App\Http\Requests\UpdateChatNicknameRequest;
 use App\Models\ChatMessage;
 use App\Services\ContentFilterService;
 use App\Services\IpHasher;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -15,6 +17,11 @@ use Inertia\Response;
 class ChatController extends Controller
 {
     private const NICKNAME_KEY = 'chat_nickname';
+
+    /** How recently a nickname must have posted to count as still in the room. */
+    private const ONLINE_WINDOW_MINUTES = 15;
+
+    private const ACTIVE_MEMBER_LIMIT = 8;
 
     private const ADJECTIVES = [
         'Amber', 'Brave', 'Calm', 'Clever', 'Comet', 'Coral', 'Echo', 'Golden',
@@ -36,14 +43,7 @@ class ChatController extends Controller
                 'messagesToday' => ChatMessage::query()->whereDate('sent_at', today())->count(),
                 'pollLabel' => 'Every 4 sec',
             ],
-            'recentChatNicknames' => ChatMessage::query()
-                ->newestFirst()
-                ->limit(30)
-                ->get(['nickname'])
-                ->pluck('nickname')
-                ->unique()
-                ->take(8)
-                ->values(),
+            'chatPresence' => $this->presence(),
         ]);
     }
 
@@ -60,6 +60,7 @@ class ChatController extends Controller
         return response()->json([
             'items' => $messages,
             'nickname' => $this->nicknameFor($request),
+            'presence' => $this->presence(),
         ]);
     }
 
@@ -88,6 +89,23 @@ class ChatController extends Controller
         ]);
     }
 
+    public function updateNickname(
+        UpdateChatNicknameRequest $request,
+        ContentFilterService $contentFilter,
+    ): JsonResponse {
+        $nickname = trim($request->string('nickname'));
+
+        if ($contentFilter->containsBlockedContent($nickname)) {
+            throw ValidationException::withMessages([
+                'nickname' => 'That nickname contains content that is not allowed.',
+            ]);
+        }
+
+        $request->session()->put(self::NICKNAME_KEY, $nickname);
+
+        return response()->json(['nickname' => $nickname]);
+    }
+
     private function latestMessages(): array
     {
         return ChatMessage::query()
@@ -97,6 +115,37 @@ class ChatController extends Controller
             ->sortBy('id')
             ->values()
             ->all();
+    }
+
+    /**
+     * Who is still in the room, newest activity first. The room has no
+     * connection state, so "online" is inferred from recent message times.
+     */
+    private function presence(): array
+    {
+        $since = now()->subMinutes(self::ONLINE_WINDOW_MINUTES);
+
+        $members = ChatMessage::query()
+            ->where('sent_at', '>=', $since)
+            ->groupBy('nickname')
+            ->orderByDesc('last_sent_at')
+            ->limit(self::ACTIVE_MEMBER_LIMIT)
+            ->selectRaw('nickname, MAX(sent_at) as last_sent_at')
+            ->get()
+            ->map(fn (ChatMessage $row) => [
+                'nickname' => $row->nickname,
+                'lastSentAt' => Carbon::parse($row->last_sent_at)->toJSON(),
+            ])
+            ->all();
+
+        return [
+            'members' => $members,
+            'onlineCount' => ChatMessage::query()
+                ->where('sent_at', '>=', $since)
+                ->distinct()
+                ->count('nickname'),
+            'windowMinutes' => self::ONLINE_WINDOW_MINUTES,
+        ];
     }
 
     private function nicknameFor(Request $request): string
