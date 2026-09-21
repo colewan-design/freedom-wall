@@ -1461,4 +1461,32 @@ function excerpt(text, length = 60) {
     display: none;
   }
 }
+
+/* The public wall uses three columns, but focused/admin surfaces own the full
+   content rail. Keep these more-specific rules after the responsive wall grid
+   so the dashboard can never collapse into the left-column track. */
+.nf-shell.bryl .nf-body.admin-mode {
+  grid-template-columns: minmax(0, 1fr);
+  width: calc(100% - 80px);
+  max-width: 1160px;
+}
+
+.nf-shell.bryl .nf-body.focus-mode {
+  grid-template-columns: minmax(0, 1fr);
+  width: calc(100% - 80px);
+  max-width: 1360px;
+}
+
+.nf-shell.bryl .nf-body.admin-mode .nf-main,
+.nf-shell.bryl .nf-body.focus-mode .nf-main {
+  width: 100%;
+  min-width: 0;
+}
+
+@media (max-width: 760px) {
+  .nf-shell.bryl .nf-body.admin-mode,
+  .nf-shell.bryl .nf-body.focus-mode {
+    width: 100%;
+  }
+}
 </style>
