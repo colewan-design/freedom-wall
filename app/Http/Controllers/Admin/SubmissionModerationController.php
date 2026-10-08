@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Submission;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -57,16 +59,46 @@ class SubmissionModerationController extends Controller
         }
 
         $editedContent = is_string($request->input('content')) ? trim($request->input('content')) : null;
-        $finalContent = $editedContent ?: $submission->content;
-        $wasEdited = $editedContent && $editedContent !== $submission->content;
 
-        $submission->status = 'approved';
-        $submission->content = $finalContent;
-        $submission->was_edited = $wasEdited;
-        $submission->reviewed_at = now();
-        $submission->save();
+        $this->markApproved($submission, $editedContent, now());
 
         return response()->json(['status' => 'approved']);
+    }
+
+    /**
+     * Clear the whole pending queue in one pass. Edits still open in the
+     * dashboard come along in `edits`, keyed by submission id, so nothing an
+     * admin typed is lost by reaching for this instead of approving one by one.
+     */
+    public function approveAll(Request $request): JsonResponse
+    {
+        $edits = collect(is_array($request->input('edits')) ? $request->input('edits') : [])
+            ->filter(fn ($content) => is_string($content))
+            ->mapWithKeys(fn ($content, $id) => [(int) $id => trim($content)]);
+
+        // Snapshot the queue first. A submission that lands while this runs has
+        // not been read by anyone, so it waits for the next pass instead of
+        // being swept through unreviewed.
+        $ids = Submission::query()->pending()->orderBy('submitted_at')->pluck('id');
+        $reviewedAt = now();
+        $approved = 0;
+
+        foreach ($ids->chunk(100) as $chunk) {
+            DB::transaction(function () use ($chunk, $edits, $reviewedAt, &$approved) {
+                $submissions = Submission::query()
+                    ->pending()
+                    ->whereIn('id', $chunk)
+                    ->lockForUpdate()
+                    ->get();
+
+                foreach ($submissions as $submission) {
+                    $this->markApproved($submission, $edits->get($submission->id), $reviewedAt);
+                    $approved++;
+                }
+            });
+        }
+
+        return response()->json(['status' => 'approved', 'approved' => $approved]);
     }
 
     public function reject(Submission $submission): JsonResponse
@@ -80,5 +112,14 @@ class SubmissionModerationController extends Controller
         $submission->save();
 
         return response()->json(['status' => 'rejected']);
+    }
+
+    private function markApproved(Submission $submission, ?string $editedContent, Carbon $reviewedAt): void
+    {
+        $submission->status = 'approved';
+        $submission->was_edited = (bool) $editedContent && $editedContent !== $submission->content;
+        $submission->content = $editedContent ?: $submission->content;
+        $submission->reviewed_at = $reviewedAt;
+        $submission->save();
     }
 }

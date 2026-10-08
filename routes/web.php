@@ -135,6 +135,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('dashboard', [SubmissionModerationController::class, 'dashboard'])->name('dashboard');
         Route::get('submissions', [SubmissionModerationController::class, 'index'])->name('submissions.index');
         Route::get('stats', [SubmissionModerationController::class, 'stats'])->name('stats');
+        Route::post('submissions/approve-all', [SubmissionModerationController::class, 'approveAll'])->name('submissions.approveAll');
         Route::post('submissions/{submission}/approve', [SubmissionModerationController::class, 'approve'])->name('submissions.approve');
         Route::post('submissions/{submission}/reject', [SubmissionModerationController::class, 'reject'])->name('submissions.reject');
 

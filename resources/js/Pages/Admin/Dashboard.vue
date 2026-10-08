@@ -1,5 +1,5 @@
 <script setup>
-import { nextTick, onMounted, reactive, ref } from 'vue';
+import { computed, nextTick, onMounted, reactive, ref } from 'vue';
 import { adminApi } from '../../lib/adminApi';
 import { formatDateTime } from '../../lib/date';
 import { isVideoUrl } from '../../lib/media';
@@ -19,6 +19,9 @@ const stats = reactive({ pending: 0, approvedToday: 0, rejectedToday: 0 });
 const displayStats = reactive({ pending: 0, approvedToday: 0, rejectedToday: 0 });
 
 const editingContent = reactive({});
+// What the queue handed us, so an edit can still be told apart from the
+// original after the admin has paged away from the card it was typed on.
+const originalContent = reactive({});
 const expandedContent = reactive({});
 const overflowingContent = reactive({});
 const textareaEls = {};
@@ -26,8 +29,15 @@ const textareaEls = {};
 const loadingPending = ref(true);
 const loadingApproved = ref(true);
 const approvingId = ref(null);
+const approvingAll = ref(false);
 const rejectingId = ref(null);
 const viewMode = ref('card');
+
+// One review at a time: a bulk pass and a single verdict would fight over the
+// same rows, and either one leaves the list it was launched from out of date.
+const busyWithQueue = computed(
+  () => approvingAll.value || approvingId.value !== null || rejectingId.value !== null,
+);
 
 // Threads post straight to the forum with no queue in front of them, so what
 // lands here is what readers flagged after the fact.
@@ -76,6 +86,7 @@ async function loadPending(page = pendingPage.value) {
 
     data.items.forEach((post) => {
       if (!(post.id in editingContent)) editingContent[post.id] = post.content;
+      originalContent[post.id] = post.content;
     });
 
     nextTick(() => {
@@ -137,6 +148,55 @@ async function approve(post) {
   }
 }
 
+// Anything the admin retyped and left sitting in a textarea, from any page of
+// the queue they have opened, so approving in bulk keeps those edits.
+function pendingEdits() {
+  const edits = {};
+
+  for (const [id, content] of Object.entries(editingContent)) {
+    if (typeof content === 'string' && content.trim() && content !== originalContent[id]) {
+      edits[id] = content;
+    }
+  }
+
+  return edits;
+}
+
+async function approveAll() {
+  const queued = stats.pending;
+
+  if (queued === 0) {
+    showBanner('Nothing pending to approve.', 'info');
+    return;
+  }
+
+  const label = queued === 1 ? '1 pending submission' : `all ${queued} pending submissions`;
+  if (!confirm(`Approve ${label}? They go straight to the posting queue and this cannot be undone.`)) return;
+
+  banner.message = '';
+  approvingAll.value = true;
+
+  try {
+    const data = await adminApi.approveAll(pendingEdits());
+
+    // The queue is empty now, so there is no page to stay on.
+    pendingPage.value = 1;
+    approvedPage.value = 1;
+    await refreshAfterAction();
+
+    showBanner(
+      data.approved === 0
+        ? 'The queue was already clear — nothing to approve.'
+        : `Approved ${data.approved === 1 ? '1 submission' : `${data.approved} submissions`}. Copy the text from the approved list when you are ready to post.`,
+      data.approved === 0 ? 'info' : 'success',
+    );
+  } catch (err) {
+    showBanner(err.message, 'error');
+  } finally {
+    approvingAll.value = false;
+  }
+}
+
 async function reject(post) {
   banner.message = '';
   rejectingId.value = post.id;
@@ -152,21 +212,38 @@ async function reject(post) {
 }
 
 // Everything that leaves here goes straight onto the page, so the copied text
-// always carries the page tag. Posts that already end with it are left alone.
+// always carries the page tag plus the submission's reference number — that is
+// how a post out on Facebook gets traced back to a row in this queue.
 const PAGE_HASHTAG = '#bsufw';
 
-function withPageHashtag(content) {
+function postReference(post) {
+  return String(post.id).padStart(4, '0');
+}
+
+function postHashtag(post) {
+  return `${PAGE_HASHTAG}${postReference(post)}`;
+}
+
+// Posts that already end with their own tag are left alone; ones tagged before
+// references existed end with a bare #bsufw, so top those up in place rather
+// than leaving two tags behind.
+function withPageHashtag(content, post) {
+  const tag = postHashtag(post);
   const text = (content || '').trimEnd();
 
-  if (new RegExp(`(^|\\s)${PAGE_HASHTAG}\\s*$`, 'i').test(text)) return text;
+  if (new RegExp(`(^|\\s)${tag}\\s*$`, 'i').test(text)) return text;
 
-  return text ? `${text}\n\n${PAGE_HASHTAG}` : PAGE_HASHTAG;
+  if (new RegExp(`(^|\\s)${PAGE_HASHTAG}\\s*$`, 'i').test(text)) {
+    return text.replace(new RegExp(`${PAGE_HASHTAG}\\s*$`, 'i'), tag);
+  }
+
+  return text ? `${text}\n\n${tag}` : tag;
 }
 
 async function copyPostText(post) {
   try {
-    await navigator.clipboard.writeText(withPageHashtag(post.content));
-    showBanner(`Post text copied with ${PAGE_HASHTAG}.`, 'success');
+    await navigator.clipboard.writeText(withPageHashtag(post.content, post));
+    showBanner(`Post text copied with ${postHashtag(post)}.`, 'success');
   } catch (err) {
     showBanner(`Copy failed: ${err.message}`, 'error');
   }
@@ -329,7 +406,18 @@ onMounted(() => {
     </Transition>
 
     <section class="panel">
-      <h2>Pending submissions</h2>
+      <div class="panel-head">
+        <h2>Pending submissions</h2>
+
+        <button
+          v-if="!loadingPending && pending.length"
+          class="btn btn-approve btn-sm"
+          :disabled="busyWithQueue"
+          @click="approveAll"
+        >
+          {{ approvingAll ? 'Approving all...' : `Approve all (${stats.pending})` }}
+        </button>
+      </div>
 
       <div v-if="loadingPending" class="skeleton-list">
         <div class="skeleton-card" v-for="n in 3" :key="n">
@@ -377,7 +465,7 @@ onMounted(() => {
           <div class="actions">
             <button
               class="btn btn-approve"
-              :disabled="approvingId === post.id || rejectingId === post.id"
+              :disabled="approvingAll || approvingId === post.id || rejectingId === post.id"
               @click="approve(post)"
             >
               {{ approvingId === post.id ? 'Approving...' : 'Approve' }}
@@ -385,7 +473,7 @@ onMounted(() => {
 
             <button
               class="btn btn-reject"
-              :disabled="approvingId === post.id || rejectingId === post.id"
+              :disabled="approvingAll || approvingId === post.id || rejectingId === post.id"
               @click="reject(post)"
             >
               {{ rejectingId === post.id ? 'Rejecting...' : 'Reject' }}
@@ -415,7 +503,7 @@ onMounted(() => {
               <td class="cell-actions">
                 <button
                   class="btn btn-approve btn-sm"
-                  :disabled="approvingId === post.id || rejectingId === post.id"
+                  :disabled="approvingAll || approvingId === post.id || rejectingId === post.id"
                   @click="approve(post)"
                 >
                   {{ approvingId === post.id ? 'Approving...' : 'Approve' }}
@@ -423,7 +511,7 @@ onMounted(() => {
 
                 <button
                   class="btn btn-reject btn-sm"
-                  :disabled="approvingId === post.id || rejectingId === post.id"
+                  :disabled="approvingAll || approvingId === post.id || rejectingId === post.id"
                   @click="reject(post)"
                 >
                   {{ rejectingId === post.id ? 'Rejecting...' : 'Reject' }}
@@ -448,8 +536,8 @@ onMounted(() => {
     <section class="panel">
       <h2>Recently approved</h2>
       <p class="hint">
-        Manual posting queue. Copy the text here — {{ PAGE_HASHTAG }} is appended automatically — then
-        upload any downloaded images to Facebook.
+        Manual posting queue. Copy the text here — the post's reference tag, like {{ PAGE_HASHTAG }}0001, is
+        appended automatically — then upload any downloaded images to Facebook.
       </p>
 
       <div v-if="loadingApproved" class="skeleton-list">
@@ -476,7 +564,7 @@ onMounted(() => {
             </template>
           </div>
 
-          <div class="meta">Approved {{ formatDateTime(post.reviewed_at) }}</div>
+          <div class="meta">{{ postHashtag(post) }} · Approved {{ formatDateTime(post.reviewed_at) }}</div>
 
           <div class="actions">
             <button class="btn btn-approve" @click="copyPostText(post)">Copy text</button>
@@ -492,6 +580,7 @@ onMounted(() => {
           <thead>
             <tr>
               <th>Submission</th>
+              <th>Reference</th>
               <th>Approved</th>
               <th>Status</th>
               <th></th>
@@ -503,6 +592,7 @@ onMounted(() => {
                 <span class="row-avatar">A</span>
                 <span :title="post.content">{{ truncate(post.content) }}</span>
               </td>
+              <td class="cell-muted">{{ postHashtag(post) }}</td>
               <td class="cell-muted">{{ formatDateTime(post.reviewed_at) }}</td>
               <td><span class="status-pill is-approved">Approved</span></td>
               <td class="cell-actions">
@@ -692,6 +782,19 @@ h1 {
 .panel h2 {
   margin: 0 0 0.25rem;
   font-size: 1.15rem;
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.panel-head h2 {
+  margin: 0;
 }
 
 .report-meta {
