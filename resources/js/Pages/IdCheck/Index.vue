@@ -829,13 +829,13 @@ function drawStoryChrome(ctx) {
   ctx.textAlign = 'left';
 }
 
-function render() {
-  const canvas = canvasEl.value;
+function renderCanvas(canvas, outputFormat, updateTransform = false) {
   if (!canvas) return;
 
-  const story = format.value === 'story';
-  const width = story ? STORY_W : SQUARE_W;
-  const height = story ? STORY_H : SQUARE_H;
+  const preview = outputFormat === 'preview';
+  const story = outputFormat === 'story';
+  const width = preview ? CARD_W : story ? STORY_W : SQUARE_W;
+  const height = preview ? CARD_H : story ? STORY_H : SQUARE_H;
 
   if (canvas.width !== width) canvas.width = width;
   if (canvas.height !== height) canvas.height = height;
@@ -847,12 +847,19 @@ function render() {
   ctx.textBaseline = 'alphabetic';
   ctx.textAlign = 'left';
 
+  if (preview) {
+    if (updateTransform) {
+      cardTransform.x = 0;
+      cardTransform.y = 0;
+      cardTransform.s = 1;
+    }
+    drawCard(ctx);
+    return;
+  }
+
   if (!story) {
     const scale = SQUARE_H / CARD_H;
     const x = (SQUARE_W - CARD_W * scale) / 2;
-    cardTransform.x = x;
-    cardTransform.y = 0;
-    cardTransform.s = scale;
     drawStoryBackdrop(ctx);
     ctx.save();
     ctx.translate(x, 0);
@@ -867,9 +874,6 @@ function render() {
   const scale = (STORY_W * 0.91) / CARD_W;
   const x = (STORY_W - CARD_W * scale) / 2;
   const y = 90;
-  cardTransform.x = x;
-  cardTransform.y = y;
-  cardTransform.s = scale;
 
   ctx.save();
   ctx.shadowColor = 'rgba(0,0,0,0.44)';
@@ -887,6 +891,10 @@ function render() {
   ctx.restore();
 
   drawStoryChrome(ctx);
+}
+
+function render() {
+  renderCanvas(canvasEl.value, 'preview', true);
 }
 
 function scheduleRender() {
@@ -907,7 +915,9 @@ function fileName() {
 }
 
 function toBlob() {
-  return new Promise((resolve) => canvasEl.value?.toBlob(resolve, 'image/png'));
+  const exportCanvas = document.createElement('canvas');
+  renderCanvas(exportCanvas, format.value);
+  return new Promise((resolve) => exportCanvas.toBlob(resolve, 'image/png'));
 }
 
 function saveBlob(blob) {
