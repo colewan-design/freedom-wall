@@ -65,9 +65,35 @@ const GROUPS = [
       <ul class="tools-grid">
         <li v-for="app in group.apps" :key="app.id">
           <component :is="app.component" v-bind="app.attrs" class="tools-card">
-            <span class="tools-mark" aria-hidden="true">{{ app.mark }}</span>
+            <span class="tools-media" :class="{ 'is-fallback': !app.cover }" aria-hidden="true">
+              <img v-if="app.cover" :src="app.cover" alt="" loading="lazy" decoding="async" class="tools-cover" />
+              <span
+                v-else-if="app.wordmark || app.logo"
+                class="tools-art"
+                :class="{ 'has-dark-art': app.wordmarkDark }"
+              >
+                <img
+                  :src="app.wordmark ?? app.logo"
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                  class="tools-fallback-art on-light"
+                  :class="{ 'is-wordmark': app.wordmark }"
+                />
+                <img
+                  v-if="app.wordmarkDark"
+                  :src="app.wordmarkDark"
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                  class="tools-fallback-art on-dark is-wordmark"
+                />
+              </span>
+              <span v-else class="tools-mark">{{ app.mark }}</span>
+            </span>
 
             <span class="tools-card-head">
+              <img v-if="app.logo" :src="app.logo" alt="" loading="lazy" decoding="async" class="tools-logo" />
               <strong>{{ app.name }}</strong>
               <span class="tools-platform">{{ app.platform }}</span>
             </span>
@@ -212,12 +238,78 @@ const GROUPS = [
   outline-offset: 2px;
 }
 
+/*
+ * Full-bleed media strip: the negative margins pull it back out to the card
+ * edges without having to strip the padding off the card itself.
+ */
+.tools-media {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 16 / 9;
+  margin: -1.25rem -1.25rem 0.35rem;
+  overflow: hidden;
+  background: var(--b-50);
+  border-bottom: 1px solid var(--b-200);
+}
+
+.tools-cover {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s var(--b-ease);
+}
+
+.tools-card:hover .tools-cover {
+  transform: scale(1.03);
+}
+
+/* Apps whose site publishes no og:image get their mark on a tinted panel, so
+   every card still has the same silhouette in the grid. */
+.tools-media.is-fallback {
+  background: linear-gradient(135deg, var(--b-50) 0%, var(--b-100) 100%);
+}
+
+.tools-art {
+  display: grid;
+  place-items: center;
+}
+
+.tools-fallback-art {
+  width: 5rem;
+  height: 5rem;
+  object-fit: contain;
+}
+
+.tools-fallback-art.is-wordmark {
+  width: auto;
+  max-width: 68%;
+  height: auto;
+  max-height: 3rem;
+}
+
+/*
+ * Brands whose lockup is dark ink ship a second file for dark grounds. Both
+ * are in the markup and the theme decides, which keeps the swap free of any
+ * JavaScript the layout would have to hand down.
+ */
+.tools-art .on-dark {
+  display: none;
+}
+
+:global(html[data-theme='dark']) .tools-art.has-dark-art .on-light {
+  display: none;
+}
+
+:global(html[data-theme='dark']) .tools-art.has-dark-art .on-dark {
+  display: block;
+}
+
 .tools-mark {
   display: grid;
   place-items: center;
   width: 2.25rem;
   height: 2.25rem;
-  background: var(--b-50);
+  background: var(--b-bg);
   border: 1px solid var(--b-200);
   font-family: var(--b-display);
   font-size: 11px;
@@ -228,8 +320,15 @@ const GROUPS = [
 .tools-card-head {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   gap: 0.5rem;
+}
+
+.tools-logo {
+  width: 1.4rem;
+  height: 1.4rem;
+  object-fit: contain;
+  border-radius: var(--b-r-sm);
 }
 
 .tools-card-head strong {

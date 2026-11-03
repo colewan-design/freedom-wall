@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <rect width="120" height="120" rx="26" fill="#0b0b0c"/>
+  <g fill="#ffffff">
+    <path fill-rule="evenodd" d="M60 14a13 13 0 1 1 0 26 13 13 0 0 1 0-26Zm5 2.8a10.8 10.8 0 1 0 0 20.4 12 12 0 0 1 0-20.4Z"/>
+    <rect x="14" y="62" width="4" height="26" rx="2"/>
+    <rect x="23" y="54" width="4" height="42" rx="2"/>
+    <rect x="93" y="54" width="4" height="42" rx="2"/>
+    <rect x="102" y="62" width="4" height="26" rx="2"/>
+  </g>
+  <circle cx="60" cy="74" r="24" fill="none" stroke="#ffffff" stroke-width="4"/>
+  <g fill="#ffffff">
+    <path d="M57.5 63.5v18.8h-3.2V63.5h3.2Z"/>
+    <path d="M70 60.6v21.7h-3.2V60.6H70Z"/>
+    <path d="M54.3 63.5 70 60.6v4.6l-15.7 2.9v-4.6Z"/>
+    <ellipse cx="51.4" cy="84.2" rx="5.1" ry="4" transform="rotate(-14 51.4 84.2)"/>
+    <ellipse cx="63.9" cy="82.2" rx="5.1" ry="4" transform="rotate(-14 63.9 82.2)"/>
+  </g>
+</svg>

@@ -660,8 +660,12 @@ function excerpt(text, length = 60) {
           <ul class="nf-app-list">
             <li v-for="app in SIDEBAR_APPS" :key="app.id">
               <a :href="app.url" target="_blank" rel="noopener noreferrer" class="nf-app-link">
-                <span class="nf-app-name">{{ app.name }}</span>
-                <span class="nf-app-url">{{ app.host }}</span>
+                <img v-if="app.logo" :src="app.logo" alt="" loading="lazy" decoding="async" class="nf-app-logo" />
+                <span v-else class="nf-app-logo nf-app-logo-text" aria-hidden="true">{{ app.mark }}</span>
+                <span class="nf-app-text">
+                  <span class="nf-app-name">{{ app.name }}</span>
+                  <span class="nf-app-url">{{ app.host }}</span>
+                </span>
               </a>
             </li>
           </ul>
@@ -1005,12 +1009,37 @@ function excerpt(text, length = 60) {
 
 .nf-app-link {
   display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
+  align-items: center;
+  gap: 0.6rem;
   padding: 0.55rem 0.65rem;
   border-radius: var(--b-r-sm);
   text-decoration: none;
   transition: background 0.15s ease;
+}
+
+.nf-app-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.nf-app-logo {
+  flex: none;
+  width: 1.5rem;
+  height: 1.5rem;
+  object-fit: contain;
+  border-radius: var(--b-r-sm);
+}
+
+.nf-app-logo-text {
+  display: grid;
+  place-items: center;
+  background: var(--b-50);
+  border: 1px solid var(--b-200);
+  font-family: var(--b-display);
+  font-size: 9px;
+  color: var(--b-green-text);
 }
 
 .nf-app-link:hover {
@@ -1857,16 +1886,13 @@ function excerpt(text, length = 60) {
 
 .nf-shell.bryl .nf-app-link {
   position: relative;
-  padding: 7px 8px 7px 43px;
+  padding: 7px 8px;
+  gap: 10px;
 }
 
-.nf-shell.bryl .nf-app-link::before {
-  content: '↗';
-  position: absolute;
-  left: 7px;
-  top: 8px;
-  color: var(--nf-muted);
-  font-size: 16px;
+.nf-shell.bryl .nf-app-logo {
+  width: 26px;
+  height: 26px;
 }
 
 .nf-shell.bryl .nf-app-name {

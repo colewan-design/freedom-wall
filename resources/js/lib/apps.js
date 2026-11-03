@@ -6,8 +6,16 @@
  * is enough for both — nothing else needs touching.
  *
  * Fields:
- *   mark        1-2 characters for the card tile, since none of these have a
- *               logo we can hotlink without the remote host going down with us.
+ *   logo        Square-ish brand mark. Copied into public/images/tools rather
+ *               than hotlinked, so a remote host going down cannot take our
+ *               cards with it.
+ *   cover       The site's own og:image, where it publishes one. Cards without
+ *               one fall back to the wordmark or logo on a tinted panel.
+ *   wordmark    Optional wide lockup, used for that fallback panel when a
+ *               square icon would read as a smudge.
+ *   wordmarkDark Variant for dark backgrounds, where a brand's dark ink would
+ *               otherwise sink into the panel. Swapped in by theme.
+ *   mark        1-2 characters, the last resort if an app has no art yet.
  *   platform    Short chip: what you need to run it.
  *   blurb       One line, sentence case, for the card.
  *   description Two sentences at most, for the page.
@@ -19,6 +27,7 @@ export const APPS = [
     id: 'id-check',
     name: 'BSUkol ID Check',
     mark: 'ID',
+    logo: '/images/branding/bsufw-mark-180.png',
     url: '/id-check',
     host: '/id-check',
     platform: 'On this site',
@@ -32,6 +41,8 @@ export const APPS = [
     id: 'salidumay',
     name: 'Salidumay',
     mark: 'SA',
+    logo: '/images/tools/salidumay-logo.svg',
+    cover: '/images/tools/salidumay-cover.jpg',
     url: 'https://salidumay.com/',
     host: 'salidumay.com',
     platform: 'Web app',
@@ -44,6 +55,9 @@ export const APPS = [
     id: 'omaykan',
     name: 'Omaykan',
     mark: 'OM',
+    logo: '/images/tools/omaykan-logo.png',
+    wordmark: '/images/tools/omaykan-wordmark.png',
+    wordmarkDark: '/images/tools/omaykan-wordmark-light.png',
     url: 'https://omaykan.com/',
     host: 'omaykan.com',
     platform: 'Web app',
@@ -56,6 +70,8 @@ export const APPS = [
     id: 'kantata',
     name: 'Kantata',
     mark: 'KA',
+    logo: '/images/tools/kantata-logo.svg',
+    cover: '/images/tools/kantata-cover.jpg',
     url: 'https://kantata.salidumay.com/',
     host: 'kantata.salidumay.com',
     platform: 'Android app',
@@ -68,6 +84,7 @@ export const APPS = [
     id: 'bg-remover',
     name: 'AI Background Remover',
     mark: 'BG',
+    logo: '/images/tools/bg-remover-logo.png',
     url: 'https://bg-remover.salidumay.com/',
     host: 'bg-remover.salidumay.com',
     platform: 'Web app',
@@ -80,6 +97,7 @@ export const APPS = [
     id: 'gpx2video',
     name: 'GPX to Video',
     mark: 'GP',
+    logo: '/images/tools/gpx2video-logo.png',
     url: 'https://gpx2video.salidumay.com/',
     host: 'gpx2video.salidumay.com',
     platform: 'Web app',
