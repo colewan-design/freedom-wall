@@ -2,6 +2,10 @@
 import { Link, router, usePage } from '@inertiajs/vue3';
 import { computed, onBeforeUnmount, onMounted, provide, ref, watch, watchEffect } from 'vue';
 import { shortTimeAgo, timeAgo } from '../lib/date';
+import { EXTERNAL_APPS } from '../lib/apps';
+
+// The sidebar teases a few; /tools lists every one of them.
+const SIDEBAR_APPS = EXTERNAL_APPS.slice(0, 4);
 
 const page = usePage();
 const isActive = (path) => computed(() => page.url === path || page.url.startsWith(`${path}?`));
@@ -9,7 +13,7 @@ const isChatPage = computed(() => page.component === 'Chat');
 const isThreadsPage = computed(() => page.component === 'Threads/Index');
 const isWallPage = computed(() => page.component === 'Wall');
 const isAdminPage = computed(() => page.component?.startsWith('Admin/'));
-const isFocusPage = computed(() => page.component === 'IdCheck/Index');
+const isFocusPage = computed(() => page.component === 'IdCheck/Index' || page.component === 'Tools/Index');
 const authUser = computed(() => page.props.auth?.user ?? null);
 const isStudentAuthed = computed(() => authUser.value?.role === 'student');
 
@@ -267,6 +271,7 @@ function excerpt(text, length = 60) {
         <Link href="/threads" :class="{ active: isActive('/threads').value || isThreadsPage }">Threads</Link>
         <Link href="/chat" :class="{ active: isActive('/chat').value }">Chat</Link>
         <Link href="/id-check" :class="{ active: isActive('/id-check').value }">ID Check</Link>
+        <Link href="/tools" :class="{ active: isActive('/tools').value }">Tools</Link>
       </nav>
       <span v-else class="nf-admin-label">Moderation Dashboard</span>
 
@@ -653,25 +658,14 @@ function excerpt(text, length = 60) {
             Other Tools
           </h2>
           <ul class="nf-app-list">
-            <li>
-              <a href="https://salidumay.com/" target="_blank" rel="noopener noreferrer" class="nf-app-link">
-                <span class="nf-app-name">Free Movie Site</span>
-                <span class="nf-app-url">salidumay.com</span>
-              </a>
-            </li>
-            <li>
-              <a href="https://bg-remover.salidumay.com/" target="_blank" rel="noopener noreferrer" class="nf-app-link">
-                <span class="nf-app-name">AI Background Remover</span>
-                <span class="nf-app-url">bg-remover.salidumay.com</span>
-              </a>
-            </li>
-            <li>
-              <a href="https://gpx2video.salidumay.com/" target="_blank" rel="noopener noreferrer" class="nf-app-link">
-                <span class="nf-app-name">GPX to Video</span>
-                <span class="nf-app-url">gpx2video.salidumay.com</span>
+            <li v-for="app in SIDEBAR_APPS" :key="app.id">
+              <a :href="app.url" target="_blank" rel="noopener noreferrer" class="nf-app-link">
+                <span class="nf-app-name">{{ app.name }}</span>
+                <span class="nf-app-url">{{ app.host }}</span>
               </a>
             </li>
           </ul>
+          <Link href="/tools" class="nf-view-all">See all tools <span aria-hidden="true">&rarr;</span></Link>
         </section>
       </aside>
     </div>

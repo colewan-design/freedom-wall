@@ -63,6 +63,12 @@ Route::post('/thread-replies/{reply}/report', [ThreadController::class, 'reportR
 Route::get('/id-check', [IdCheckController::class, 'index'])->name('id-check');
 Route::redirect('/id', '/id-check');
 
+// Directory of the apps we've shipped. The list itself lives in
+// resources/js/lib/apps.js because the newsfeed sidebar renders it too, so
+// there is nothing for a controller to hand over here.
+Route::inertia('/tools', 'Tools/Index')->name('tools');
+Route::redirect('/apps', '/tools');
+
 Route::middleware('guest')->group(function () {
     Route::get('register', [RegisteredUserController::class, 'create'])->name('register');
     Route::post('register', [RegisteredUserController::class, 'store'])

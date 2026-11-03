@@ -33,6 +33,7 @@ const wallItems = [
   { label: 'Threads', href: '/threads', icon: 'hash' },
   { label: 'Global Chat', href: '/chat', icon: 'globe' },
   { label: 'ID Check', href: '/id-check', icon: 'shield' },
+  { label: 'Tools', href: '/tools', icon: 'grid' },
 ];
 
 const trending = [
@@ -127,6 +128,7 @@ function submitSearch() {
             <svg v-if="item.icon === 'forum'" viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4v-4H4V5Z"/><circle cx="9" cy="10.5" r=".7"/><circle cx="12" cy="10.5" r=".7"/><circle cx="15" cy="10.5" r=".7"/></svg>
             <svg v-else-if="item.icon === 'hash'" viewBox="0 0 24 24"><path d="M9 3 7 21M17 3l-2 18M4 9h17M3 15h17"/></svg>
             <svg v-else-if="item.icon === 'globe'" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg>
+            <svg v-else-if="item.icon === 'grid'" viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6"/><rect x="14" y="4" width="6" height="6"/><rect x="4" y="14" width="6" height="6"/><rect x="14" y="14" width="6" height="6"/></svg>
             <svg v-else viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 3.4 8 8 10 4.6-2 8-5 8-10V6l-8-3Z"/></svg>
             <span>{{ item.label }}</span>
           </Link>
