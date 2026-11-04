@@ -410,12 +410,36 @@ const year = new Date().getFullYear();
   min-width: 0;
 }
 
+/* The rail outgrows the viewport once a page stacks a few cards in it, and a
+   sticky column taller than the screen strands its bottom cards off-screen.
+   Cap it to the space under the header and let it scroll on its own instead.
+   The negative margin pulls the gutter back so the cards keep their width. */
 .dir-rail {
   position: sticky;
   top: 4.5rem;
   display: flex;
   flex-direction: column;
   gap: 0.85rem;
+  max-height: calc(100vh - 5.5rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 0.4rem;
+  margin-right: -0.4rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--d-line-strong) transparent;
+}
+
+.dir-rail::-webkit-scrollbar {
+  width: 6px;
+}
+
+.dir-rail::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dir-rail::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: var(--d-line-strong);
 }
 
 /* --- Call to action ------------------------------------------------------- */
@@ -567,8 +591,14 @@ const year = new Date().getFullYear();
     grid-template-columns: minmax(0, 1fr);
   }
 
+  /* Single column: the rail flows under the feed, so it scrolls with the page
+     rather than inside its own box. */
   .dir-rail {
     position: static;
+    max-height: none;
+    overflow-y: visible;
+    padding-right: 0;
+    margin-right: 0;
   }
 }
 

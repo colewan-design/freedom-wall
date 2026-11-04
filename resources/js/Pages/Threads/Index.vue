@@ -282,6 +282,10 @@ function reasonLabel(reason) {
   return REASON_LABELS[reason] ?? reason;
 }
 
+function plural(count, one, many) {
+  return `${count} ${count === 1 ? one : many}`;
+}
+
 provide('threadActions', {
   replyingTo,
   replyDraft,
@@ -317,7 +321,7 @@ provide('threadActions', {
           </button>
           <a href="#topics" class="btn btn-plain">Browse topics</a>
           <p class="hero-proof">
-            <span>{{ threadStats.totalThreads }} threads · {{ threadStats.totalReplies }} replies</span>
+            <span>{{ plural(threadStats.totalThreads, 'thread', 'threads') }} · {{ plural(threadStats.totalReplies, 'reply', 'replies') }}</span>
           </p>
         </div>
       </header>
@@ -527,7 +531,7 @@ provide('threadActions', {
       <p class="rail-stat">
         <span>Threads</span>
         <strong>{{ threadStats.totalThreads }}</strong>
-        <i>· {{ threadStats.totalReplies }} replies</i>
+        <i>· {{ plural(threadStats.totalReplies, 'reply', 'replies') }}</i>
       </p>
 
       <section class="rail-card">
