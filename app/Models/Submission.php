@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Storage;
 
 class Submission extends Model
@@ -28,6 +29,11 @@ class Submission extends Model
         'reviewed_at' => 'datetime',
         'was_edited' => 'boolean',
     ];
+
+    public function votes(): HasMany
+    {
+        return $this->hasMany(SubmissionVote::class);
+    }
 
     public function scopePending(Builder $query): void
     {

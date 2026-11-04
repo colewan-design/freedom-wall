@@ -4,12 +4,16 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreSubmissionRequest;
 use App\Models\Submission;
+use App\Models\SubmissionVote;
 use App\Rules\MediaAttachment;
 use App\Services\ContentFilterService;
 use App\Services\IpHasher;
 use App\Services\TurnstileService;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -19,6 +23,19 @@ use Inertia\Response;
 class SubmissionController extends Controller
 {
     private const WALL_POST_LIMIT = 50;
+
+    /**
+     * Who cast a vote. Nobody signs in here, so a voter is a browser: a token
+     * in a year-long cookie, mirrored into the session so the first response
+     * of a visit can use it before the cookie comes back. Paired with the
+     * unique index on (submission_id, voter_token), a browser holds at most
+     * one vote per post however many times the arrows are pressed.
+     */
+    private const VOTER_COOKIE = 'fw_voter';
+
+    private const VOTER_KEY = 'wall_voter';
+
+    private const VOTER_COOKIE_MINUTES = 60 * 24 * 365;
 
     public function store(
         StoreSubmissionRequest $request,
@@ -59,13 +76,29 @@ class SubmissionController extends Controller
         return redirect()->route('wall')->with('success', 'Submitted! Our team will review it before posting.');
     }
 
-    public function wall(): Response
+    public function wall(Request $request): Response
     {
+        // select() before withSum(): passing columns to get() instead would be
+        // ignored once the aggregate has put a select on the query, and the
+        // rows would come back holding nothing but the score.
         $posts = Submission::query()
             ->approved()
             ->orderByDesc('reviewed_at')
             ->limit(self::WALL_POST_LIMIT)
-            ->get(['id', 'content', 'image_url', 'images', 'reviewed_at']);
+            ->select(['id', 'content', 'image_url', 'images', 'reviewed_at'])
+            ->withSum('votes as score', 'value')
+            ->get();
+
+        $yourVotes = SubmissionVote::query()
+            ->whereIn('submission_id', $posts->pluck('id'))
+            ->where('voter_token', $this->voterToken($request))
+            ->pluck('value', 'submission_id');
+
+        $posts->each(function (Submission $post) use ($yourVotes) {
+            // withSum leaves null on a post nobody has voted on.
+            $post->score = (int) ($post->score ?? 0);
+            $post->your_vote = (int) ($yourVotes[$post->id] ?? 0);
+        });
 
         $tags = $this->tagBreakdown();
 
@@ -79,6 +112,73 @@ class SubmissionController extends Controller
             'tagCounts' => $tags['counts'],
             'tagTotals' => $tags['totals'],
         ]);
+    }
+
+    /**
+     * One vote per browser per post, up or down.
+     *
+     * Pressing the arrow already lit takes the vote back, and pressing the
+     * other one flips it — either way the browser still owns a single row, so
+     * no amount of clicking moves a post's score by more than one.
+     */
+    public function vote(Request $request, Submission $submission): JsonResponse
+    {
+        abort_unless($submission->status === 'approved', 404);
+
+        $validated = $request->validate([
+            'value' => ['required', 'integer', 'in:1,-1'],
+        ]);
+
+        $value = (int) $validated['value'];
+        $token = $this->voterToken($request);
+
+        $existing = SubmissionVote::query()
+            ->where('submission_id', $submission->id)
+            ->where('voter_token', $token)
+            ->first();
+
+        if ($existing && $existing->value === $value) {
+            $existing->delete();
+            $yours = 0;
+        } else {
+            SubmissionVote::updateOrCreate(
+                ['submission_id' => $submission->id, 'voter_token' => $token],
+                ['value' => $value],
+            );
+            $yours = $value;
+        }
+
+        return response()->json([
+            'score' => (int) $submission->votes()->sum('value'),
+            'your_vote' => $yours,
+        ]);
+    }
+
+    /**
+     * The browser's vote identity. Read from the cookie first so it survives
+     * the session window; the session copy covers the request that mints it.
+     *
+     * Clearing cookies hands someone a fresh identity. The alternative — tying
+     * a vote to the hashed IP — would stop that, but it would also let the
+     * first student on the campus network speak for everyone behind it, so the
+     * cookie is the honest trade.
+     */
+    private function voterToken(Request $request): string
+    {
+        $token = (string) $request->cookie(self::VOTER_COOKIE, '');
+
+        if ($token === '') {
+            $token = (string) $request->session()->get(self::VOTER_KEY, '');
+        }
+
+        if ($token === '') {
+            $token = (string) Str::uuid();
+        }
+
+        $request->session()->put(self::VOTER_KEY, $token);
+        Cookie::queue(self::VOTER_COOKIE, $token, self::VOTER_COOKIE_MINUTES);
+
+        return $token;
     }
 
     /**

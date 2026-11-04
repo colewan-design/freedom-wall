@@ -28,6 +28,9 @@ Route::redirect('/', '/wall');
 Route::post('/submissions', [SubmissionController::class, 'store'])
     ->middleware('throttle:submission')
     ->name('submissions.store');
+Route::post('/submissions/{submission}/vote', [SubmissionController::class, 'vote'])
+    ->middleware('throttle:submission-vote')
+    ->name('submissions.vote');
 Route::get('/media/{path}', [PublicMediaController::class, 'show'])
     ->where('path', '.*')
     ->name('media.show');

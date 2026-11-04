@@ -173,23 +173,93 @@ const filteredPosts = computed(() => {
   return props.posts.filter((post) => post.content?.toLowerCase().includes(query));
 });
 
-const reactions = reactive({});
+// --- Votes -----------------------------------------------------------------
+// The server owns the score. Each row starts from what the page was given and
+// is corrected by whatever the vote endpoint returns, so two tabs cannot drift
+// apart for longer than one click.
 
-function reactionFor(post) {
-  if (!reactions[post.id]) {
-    reactions[post.id] = { liked: false, saved: false, likes: Number(post.likes_count ?? 0) };
+const votes = reactive({});
+
+function voteFor(post) {
+  if (!votes[post.id]) {
+    votes[post.id] = { score: Number(post.score ?? 0), yours: Number(post.your_vote ?? 0) };
   }
-  return reactions[post.id];
+  return votes[post.id];
 }
 
-function toggleLike(post) {
-  const reaction = reactionFor(post);
-  reaction.liked = !reaction.liked;
-  reaction.likes = Math.max(0, reaction.likes + (reaction.liked ? 1 : -1));
+// Seed from props up front: a watcher would miss the posts the page opened on.
+watch(
+  () => props.posts,
+  (posts) => {
+    posts.forEach((post) => {
+      votes[post.id] = { score: Number(post.score ?? 0), yours: Number(post.your_vote ?? 0) };
+    });
+  },
+  { immediate: true },
+);
+
+const voting = reactive({});
+
+async function castVote(post, value) {
+  if (voting[post.id]) return;
+
+  const vote = voteFor(post);
+  const before = { ...vote };
+
+  // Pressing the lit arrow takes the vote back; the other one flips it.
+  const next = vote.yours === value ? 0 : value;
+  vote.score += next - vote.yours;
+  vote.yours = next;
+  voting[post.id] = true;
+
+  try {
+    const { data } = await window.axios.post(route('submissions.vote', post.id), { value });
+    vote.score = Number(data.score);
+    vote.yours = Number(data.your_vote);
+  } catch (error) {
+    Object.assign(vote, before);
+    voteError.value = error.response?.status === 429
+      ? 'You are voting too fast. Give it a moment.'
+      : 'That vote did not go through. Try again.';
+    window.clearTimeout(voteErrorTimer);
+    voteErrorTimer = window.setTimeout(() => { voteError.value = ''; }, 4000);
+  } finally {
+    voting[post.id] = false;
+  }
+}
+
+const voteError = ref('');
+let voteErrorTimer = null;
+
+// --- Saves -----------------------------------------------------------------
+// A personal bookmark with no account behind it, kept on the device the same
+// way the forum keeps its saved threads.
+
+const savedPosts = ref([]);
+
+onMounted(() => {
+  try {
+    const stored = JSON.parse(localStorage.getItem('wall-saved') ?? '[]');
+    savedPosts.value = Array.isArray(stored) ? stored : [];
+  } catch {
+    savedPosts.value = [];
+  }
+});
+
+function isSaved(post) {
+  return savedPosts.value.includes(post.id);
 }
 
 function toggleSave(post) {
-  reactionFor(post).saved = !reactionFor(post).saved;
+  savedPosts.value = isSaved(post)
+    ? savedPosts.value.filter((id) => id !== post.id)
+    : [...savedPosts.value, post.id];
+
+  try {
+    localStorage.setItem('wall-saved', JSON.stringify(savedPosts.value));
+  } catch {
+    // A browser with storage blocked still gets the in-page state.
+  }
 }
 
 function postCategory(post) {
@@ -459,19 +529,35 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
             <p class="spotlight-sub">Posted {{ timeAgo(featuredPost.reviewed_at) }}</p>
           </div>
 
-          <button
-            type="button"
-            class="vote"
-            :class="{ active: reactionFor(featuredPost).liked }"
-            :aria-pressed="reactionFor(featuredPost).liked"
-            aria-label="Like this post"
-            @click="toggleLike(featuredPost)"
-          >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="m6 14 6-6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
-            <b>{{ reactionFor(featuredPost).likes }}</b>
-          </button>
+          <span class="vote">
+            <button
+              type="button"
+              class="vote-arrow"
+              :class="{ on: voteFor(featuredPost).yours === 1 }"
+              :aria-pressed="voteFor(featuredPost).yours === 1"
+              aria-label="Upvote this post"
+              @click="castVote(featuredPost, 1)"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="m6 14 6-6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </button>
+            <b :class="{ up: voteFor(featuredPost).score > 0, down: voteFor(featuredPost).score < 0 }">
+              {{ voteFor(featuredPost).score }}
+            </b>
+            <button
+              type="button"
+              class="vote-arrow"
+              :class="{ on: voteFor(featuredPost).yours === -1 }"
+              :aria-pressed="voteFor(featuredPost).yours === -1"
+              aria-label="Downvote this post"
+              @click="castVote(featuredPost, -1)"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="m6 10 6 6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </button>
+          </span>
 
           <a :href="`#post-${featuredPost.id}`" class="btn btn-green btn-sm">
             Read post <span aria-hidden="true">&rarr;</span>
@@ -562,6 +648,8 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
         <span class="composer-post">Post</span>
       </section>
 
+      <p v-if="voteError" class="vote-error" role="status">{{ voteError }}</p>
+
       <p v-if="filteredPosts.length === 0" class="empty">
         {{ posts.length === 0 ? 'No approved posts yet.' : 'No posts match your search.' }}
       </p>
@@ -635,17 +723,33 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
           </div>
 
           <div class="post-actions">
-            <button type="button" class="action" :class="{ active: reactionFor(post).liked }" @click="toggleLike(post)">
-              <svg width="14" height="14" viewBox="0 0 24 24" :fill="reactionFor(post).liked ? 'currentColor' : 'none'" aria-hidden="true">
-                <path
-                  d="M7 10v11H4a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1h3Zm0 0 4.5-8a2 2 0 0 1 2.24.6c.5.6.7 1.4.48 2.16L13 10h5.2a2 2 0 0 1 1.96 2.4l-1.5 7A2 2 0 0 1 16.7 21H10a3 3 0 0 1-3-3"
-                  stroke="currentColor"
-                  stroke-width="1.4"
-                  stroke-linejoin="round"
-                />
-              </svg>
-              <span>Like</span>
-            </button>
+            <span class="vote vote-inline">
+              <button
+                type="button"
+                class="vote-arrow"
+                :class="{ on: voteFor(post).yours === 1 }"
+                :aria-pressed="voteFor(post).yours === 1"
+                aria-label="Upvote this post"
+                @click="castVote(post, 1)"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="m6 14 6-6 6 6" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </button>
+              <b :class="{ up: voteFor(post).score > 0, down: voteFor(post).score < 0 }">{{ voteFor(post).score }}</b>
+              <button
+                type="button"
+                class="vote-arrow"
+                :class="{ on: voteFor(post).yours === -1 }"
+                :aria-pressed="voteFor(post).yours === -1"
+                aria-label="Downvote this post"
+                @click="castVote(post, -1)"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="m6 10 6 6 6-6" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </button>
+            </span>
             <button type="button" class="action" @click="sharePost(post)">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <circle cx="18" cy="5" r="2.4" stroke="currentColor" stroke-width="1.4" />
@@ -655,13 +759,12 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
               </svg>
               <span>Share</span>
             </button>
-            <button type="button" class="action" :class="{ active: reactionFor(post).saved }" @click="toggleSave(post)">
-              <svg width="14" height="14" viewBox="0 0 24 24" :fill="reactionFor(post).saved ? 'currentColor' : 'none'" aria-hidden="true">
+            <button type="button" class="action" :class="{ active: isSaved(post) }" @click="toggleSave(post)">
+              <svg width="14" height="14" viewBox="0 0 24 24" :fill="isSaved(post) ? 'currentColor' : 'none'" aria-hidden="true">
                 <path d="M6 4h12v16l-6-4-6 4V4Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" />
               </svg>
-              <span>Save</span>
+              <span>{{ isSaved(post) ? 'Saved' : 'Save' }}</span>
             </button>
-            <span class="post-likes">{{ reactionFor(post).likes }}</span>
           </div>
         </article>
         </div>
@@ -1199,51 +1302,91 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
 
 /* --- Vote pill ------------------------------------------------------------ */
 
+/* Up arrow, score, down arrow. Stacked on the spotlight card where it reads
+   as the reference's vote box, laid out in a row inside the feed's action
+   bar where a column would stretch it. */
 .vote {
   display: inline-flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.1rem;
+  gap: 0.05rem;
   min-width: 2.6rem;
-  padding: 0.35rem 0.4rem;
+  padding: 0.2rem 0.3rem;
   border: 1px solid var(--d-line);
   border-radius: var(--d-r-md);
   background: var(--d-card);
   color: var(--d-muted);
-  font: inherit;
-  cursor: pointer;
-  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.vote-inline {
+  flex-direction: row;
+  gap: 0.15rem;
+  min-width: 0;
+  padding: 0.12rem 0.25rem;
+  border-radius: var(--d-r-pill);
 }
 
 .vote b {
-  font-size: 0.8rem;
+  min-width: 1.1rem;
+  font-size: 0.78rem;
   font-weight: 700;
   color: var(--d-ink);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 
-.vote:hover {
-  border-color: var(--d-green);
+.vote b.up {
   color: var(--d-green-text);
 }
 
-.vote.active {
-  border-color: var(--d-green);
-  background: var(--d-green);
-  color: var(--d-green-ink);
+.vote b.down {
+  color: #c53030;
 }
 
-.vote.active b {
-  color: var(--d-green-ink);
+.vote-arrow {
+  display: inline-flex;
+  padding: 0.15rem;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--d-muted);
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.vote-arrow:hover {
+  background: var(--d-soft);
+  color: var(--d-ink);
+}
+
+/* Your own vote needs to read at a glance, and colour alone is thin at this
+   size. The tint is mixed from currentColor so it follows the arrow in both
+   themes; a browser without color-mix just keeps the colour change. */
+.vote-arrow.on {
+  color: var(--d-green-text);
+  background: color-mix(in srgb, currentColor 16%, transparent);
+}
+
+.vote-arrow.on:last-child {
+  color: #e05252;
+}
+
+.vote-arrow.on:hover {
+  background: color-mix(in srgb, currentColor 26%, transparent);
 }
 
 .vote-static {
-  cursor: default;
+  padding: 0.35rem 0.4rem;
   background: transparent;
 }
 
-.vote-static:hover {
-  border-color: var(--d-line);
-  color: var(--d-muted);
+.vote-error {
+  margin: 0;
+  padding: 0.6rem 0.9rem;
+  background: #fee2e2;
+  border-radius: var(--d-r-md);
+  font-size: 0.82rem;
+  color: #991b1b;
 }
 
 /* --- Leaderboard ---------------------------------------------------------- */
@@ -1673,7 +1816,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
 .post-actions {
   display: flex;
   align-items: center;
-  gap: 0.15rem;
+  gap: 0.3rem;
   margin-top: 0.7rem;
   padding-top: 0.45rem;
   border-top: 1px solid var(--d-line);
@@ -1702,13 +1845,6 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
 
 .action.active {
   color: var(--d-green-text);
-}
-
-.post-likes {
-  margin-left: auto;
-  font-size: 0.75rem;
-  font-weight: 650;
-  color: var(--d-faint);
 }
 
 /* --- Rail ----------------------------------------------------------------- */
