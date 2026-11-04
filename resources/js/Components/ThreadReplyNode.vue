@@ -150,6 +150,9 @@ function report(reason) {
 </template>
 
 <style scoped>
+/* The directory skin: this node is rendered inside the threads page, which
+   reads the --d-* tokens rather than the newsfeed shell's --nf-* ones. */
+
 .tr-node {
   position: relative;
   list-style: none;
@@ -159,18 +162,22 @@ function report(reason) {
 .tr-node.nested::before {
   content: '';
   position: absolute;
-  top: 19px;
+  top: 24px;
   left: -21px;
   width: 15px;
   height: 1px;
-  background: var(--nf-line);
+  background: var(--d-line);
 }
 
 .tr-reply {
   display: flex;
   align-items: flex-start;
-  gap: 0.8rem;
-  padding: 0.85rem 0;
+  gap: 0.7rem;
+  padding: 0.75rem 0.9rem;
+  background: var(--d-card);
+  border: 1px solid var(--d-line);
+  border-radius: var(--d-r-lg);
+  box-shadow: var(--d-shadow);
 }
 
 .tr-avatar {
@@ -178,16 +185,16 @@ function report(reason) {
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
-  width: 34px;
-  height: 34px;
-  background: var(--b-50);
-  border: 1px solid var(--nf-line);
-  border-radius: var(--b-r-thumb);
+  width: 2rem;
+  height: 2rem;
+  background: var(--d-soft);
+  border: 1px solid var(--d-line);
+  border-radius: var(--d-r-sm);
 }
 
 .tr-avatar img {
-  width: 22px;
-  height: 22px;
+  width: 1.3rem;
+  height: 1.3rem;
   object-fit: contain;
 }
 
@@ -197,9 +204,9 @@ function report(reason) {
 
 .tr-removed {
   margin: 0;
-  padding: 0.5rem 0;
-  color: var(--nf-muted);
-  font-size: 0.88rem;
+  padding: 0.35rem 0;
+  color: var(--d-faint);
+  font-size: 0.86rem;
   font-style: italic;
 }
 
@@ -211,35 +218,37 @@ function report(reason) {
 .tr-head {
   display: flex;
   align-items: baseline;
-  gap: 0.5rem;
-  margin: 0 0 0.3rem;
+  gap: 0.45rem;
+  margin: 0 0 0.25rem;
 }
 
 .tr-head strong {
-  font-size: 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--d-ink);
 }
 
 .tr-head time {
-  color: var(--nf-muted);
-  font-family: var(--b-mono);
-  font-size: 11px;
+  font-size: 0.72rem;
+  color: var(--d-faint);
 }
 
 .tr-you {
-  padding: 1px 6px;
-  border: 1px solid var(--nf-line);
-  border-radius: var(--b-r-pill);
-  color: var(--nf-accent);
-  font-family: var(--b-mono);
-  font-size: 10px;
-  letter-spacing: 0.5px;
+  padding: 0.05rem 0.35rem;
+  border-radius: var(--d-r-pill);
+  background: var(--d-green);
+  color: var(--d-green-ink);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
 .tr-text {
   margin: 0;
-  font-size: 0.93rem;
+  font-size: 0.9rem;
   line-height: 1.6;
+  color: var(--d-ink-2);
   overflow-wrap: anywhere;
   white-space: pre-wrap;
 }
@@ -248,73 +257,77 @@ function report(reason) {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 0.9rem;
-  margin-top: 0.55rem;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
 }
 
 .tr-votes {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.15rem;
+  padding: 0.1rem 0.25rem;
+  border: 1px solid var(--d-line);
+  border-radius: var(--d-r-pill);
 }
 
 .tr-vote {
   display: inline-flex;
-  padding: 2px;
+  padding: 0.15rem;
   background: none;
   border: 0;
-  color: var(--nf-muted);
+  border-radius: 50%;
+  color: var(--d-muted);
   cursor: pointer;
   transition: color 0.15s var(--b-ease);
 }
 
 .tr-vote:hover {
-  color: var(--b-900);
+  color: var(--d-ink);
 }
 
 .tr-vote.on {
-  color: var(--nf-accent);
+  color: var(--d-green-text);
 }
 
 .tr-votes b {
   min-width: 1.1rem;
-  color: var(--nf-muted);
-  font-family: var(--b-mono);
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--d-ink);
   text-align: center;
 }
 
 .tr-votes b.up {
-  color: var(--nf-accent);
+  color: var(--d-green-text);
 }
 
 .tr-votes b.down {
-  color: var(--danger);
+  color: #dc2626;
 }
 
 .tr-action {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  padding: 0;
+  gap: 0.3rem;
+  padding: 0.3rem 0.5rem;
   background: none;
   border: 0;
-  color: var(--nf-muted);
-  font-family: var(--b-mono);
-  font-size: 11px;
-  letter-spacing: 0.6px;
-  text-transform: uppercase;
+  border-radius: var(--d-r-sm);
+  color: var(--d-muted);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: color 0.15s var(--b-ease);
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
 .tr-action:hover {
-  color: var(--nf-accent);
+  background: var(--d-soft);
+  color: var(--d-ink);
 }
 
 .tr-more {
-  font-size: 15px;
+  font-size: 0.95rem;
   line-height: 1;
 }
 
@@ -326,108 +339,119 @@ function report(reason) {
 .tr-menu {
   position: absolute;
   z-index: 5;
-  top: calc(100% + 8px);
+  top: calc(100% + 6px);
   left: 0;
   display: flex;
   flex-direction: column;
-  min-width: 172px;
-  padding: 0.35rem;
-  background: var(--nf-panel);
-  border: 1px solid var(--nf-line);
-  border-radius: var(--b-r-sm);
+  min-width: 11.5rem;
+  padding: 0.4rem;
+  background: var(--d-card);
+  border: 1px solid var(--d-line);
+  border-radius: var(--d-r-md);
+  box-shadow: var(--d-shadow-lift);
 }
 
 .tr-menu-title {
   margin: 0;
-  padding: 0.4rem 0.5rem;
-  color: var(--nf-muted);
-  font-family: var(--b-mono);
-  font-size: 10px;
-  letter-spacing: 0.8px;
+  padding: 0.25rem 0.4rem 0.35rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
+  color: var(--d-faint);
 }
 
 .tr-menu button {
-  padding: 0.45rem 0.5rem;
+  padding: 0.4rem;
   background: none;
   border: 0;
-  color: inherit;
-  font-size: 0.85rem;
+  border-radius: var(--d-r-sm);
+  color: var(--d-ink-2);
+  font: inherit;
+  font-size: 0.82rem;
   text-align: left;
   cursor: pointer;
 }
 
 .tr-menu button:hover {
-  background: var(--b-50);
-  color: var(--nf-accent);
+  background: var(--d-soft);
+  color: var(--d-ink);
 }
 
 .tr-reported {
-  color: var(--nf-accent);
-  font-family: var(--b-mono);
-  font-size: 11px;
+  font-size: 0.74rem;
+  font-weight: 650;
+  color: var(--d-green-text);
 }
 
 .tr-inline-form {
-  margin-top: 0.7rem;
+  margin-top: 0.6rem;
 }
 
 .tr-inline-form textarea {
   width: 100%;
   padding: 0.6rem 0.7rem;
-  background: var(--b-50);
-  border: 1px solid var(--nf-line);
-  border-radius: var(--b-r-input);
-  color: inherit;
+  background: var(--d-soft);
+  border: 1px solid var(--d-line);
+  border-radius: var(--d-r-md);
+  color: var(--d-ink);
   font: inherit;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
+  line-height: 1.5;
   resize: vertical;
 }
 
 .tr-inline-form textarea:focus {
   outline: none;
-  border-color: var(--nf-accent);
+  border-color: var(--d-green);
+  background: var(--d-card);
+}
+
+.tr-inline-form textarea::placeholder {
+  color: var(--d-faint);
 }
 
 .tr-inline-error {
   margin: 0.4rem 0 0;
-  color: var(--danger);
-  font-size: 0.82rem;
+  font-size: 0.8rem;
+  color: #dc2626;
 }
 
 .tr-inline-actions {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.4rem;
   margin-top: 0.5rem;
 }
 
 .tr-inline-actions button {
-  padding: 0.42rem 0.9rem;
-  background: var(--nf-accent);
-  border: 1px solid var(--nf-accent);
-  border-radius: var(--b-r-sm);
-  color: var(--b-green-ink);
-  font-family: var(--b-mono);
-  font-size: 11px;
-  letter-spacing: 0.7px;
-  text-transform: uppercase;
+  padding: 0.45rem 0.9rem;
+  background: var(--d-green);
+  border: 1px solid var(--d-green);
+  border-radius: var(--d-r-md);
+  color: var(--d-green-ink);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 650;
   cursor: pointer;
 }
 
 .tr-inline-actions button:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
 .tr-inline-actions .ghost {
-  background: none;
-  border-color: var(--nf-line);
-  color: var(--nf-muted);
+  background: var(--d-card);
+  border-color: var(--d-line);
+  color: var(--d-ink);
 }
 
 .tr-children {
-  margin: 0 0 0 17px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin: 0.6rem 0 0 17px;
   padding: 0 0 0 21px;
-  border-left: 1px solid var(--nf-line);
+  border-left: 1px solid var(--d-line);
 }
 </style>

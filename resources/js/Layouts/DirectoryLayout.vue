@@ -12,6 +12,8 @@ import { computed, onBeforeUnmount, onMounted, ref, watchEffect } from 'vue';
 
 const props = defineProps({
   search: { type: String, default: '' },
+  // What the bar says it searches, since each page searches its own list.
+  searchPlaceholder: { type: String, default: 'Search posts' },
 });
 
 const emit = defineEmits(['update:search']);
@@ -131,7 +133,13 @@ const year = new Date().getFullYear();
               <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8" />
               <path d="m20 20-3.2-3.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
             </svg>
-            <input ref="searchInput" v-model="searchTerm" type="text" placeholder="Search posts" aria-label="Search posts" />
+            <input
+              ref="searchInput"
+              v-model="searchTerm"
+              type="text"
+              :placeholder="searchPlaceholder"
+              :aria-label="searchPlaceholder"
+            />
             <kbd>/</kbd>
           </label>
 
