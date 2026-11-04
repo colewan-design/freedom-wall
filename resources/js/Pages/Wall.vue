@@ -32,15 +32,15 @@ const props = defineProps({
     type: Object,
     default: () => ({ total: 0, withPhotos: 0, textOnly: 0, today: 0 }),
   },
-  // Hashtag counts per time window, for the leaderboard tabs.
-  tagBoard: {
+  // The best-scoring posts per time window, for the leaderboard tabs.
+  postBoard: {
     type: Object,
     default: () => ({ today: [], week: [], month: [], all: [] }),
   },
+  // Every vote ever cast, for the leaderboard headline.
+  voteTotal: { type: Number, default: 0 },
   // All-time hashtag counts, for the directory in the rail.
   tagCounts: { type: Array, default: () => [] },
-  // Lifetime count per tag, covering every tag the leaderboard can show.
-  tagTotals: { type: Object, default: () => ({}) },
 });
 
 const page = usePage();
@@ -188,14 +188,18 @@ function voteFor(post) {
 }
 
 // Seed from props up front: a watcher would miss the posts the page opened on.
+// The board is seeded too, so a post sitting in both shares one entry and the
+// two copies can never show different numbers.
 watch(
-  () => props.posts,
-  (posts) => {
-    posts.forEach((post) => {
+  () => [props.posts, props.postBoard],
+  () => {
+    const seed = (post) => {
       votes[post.id] = { score: Number(post.score ?? 0), yours: Number(post.your_vote ?? 0) };
-    });
+    };
+    props.posts.forEach(seed);
+    Object.values(props.postBoard ?? {}).forEach((rows) => rows.forEach(seed));
   },
-  { immediate: true },
+  { immediate: true, deep: true },
 );
 
 const voting = reactive({});
@@ -287,19 +291,6 @@ async function sharePost(post) {
 // The leaderboard, the featured card and the rail directory all label posts by
 // their hashtag, so the blurbs and the tile letters are defined once here.
 
-const TAG_BLURBS = {
-  confessions: 'Things people needed to get off their chest.',
-  rant: 'Steam let off about campus life.',
-  kilig: 'Crushes, butterflies, and small wins.',
-  question: 'What the community is asking about.',
-  announcement: 'Notices worth passing around.',
-  community: 'Everything that does not fit a tag yet.',
-};
-
-function tagBlurb(tag) {
-  return TAG_BLURBS[tag] ?? 'Posts the community filed under this hashtag.';
-}
-
 function tagInitial(tag) {
   return (tag ?? '?').charAt(0).toUpperCase();
 }
@@ -316,23 +307,15 @@ const BOARD_TABS = [
 ];
 
 // A quiet day would otherwise open the page on an empty board.
-const boardTab = ref(props.tagBoard?.today?.length ? 'today' : 'all');
-const boardRows = computed(() => props.tagBoard?.[boardTab.value] ?? []);
-const boardTotal = computed(() => boardRows.value.reduce((sum, row) => sum + row.count, 0));
+const boardTab = ref(props.postBoard?.today?.length ? 'today' : 'all');
+const boardRows = computed(() => props.postBoard?.[boardTab.value] ?? []);
 const boardTabLabel = computed(
   () => BOARD_TABS.find((tab) => tab.id === boardTab.value)?.label.toLowerCase() ?? '',
 );
 
-// The lifetime count behind each leaderboard row. tagTotals already covers
-// every tag a window can surface; the ranked lists are folded in after it so
-// the rail and the board can never disagree about a number.
-const allTimeByTag = computed(() => {
-  const totals = { ...props.tagTotals };
-  [...(props.tagBoard?.all ?? []), ...props.tagCounts].forEach(({ tag, count }) => {
-    totals[tag] = count;
-  });
-  return totals;
-});
+// A board row links to its post only when that post is one of the fifty the
+// feed rendered; an older one has no anchor on the page to jump to.
+const feedIds = computed(() => new Set(props.posts.map((post) => post.id)));
 
 function applyTag(tag) {
   search.value = search.value === tag ? '' : tag;
@@ -569,8 +552,8 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
       <section class="board rise" :style="riseDelay(2)" aria-labelledby="board-heading">
         <div class="board-head">
           <div>
-            <p id="board-heading" class="card-kicker">Hashtag leaderboard</p>
-            <p class="board-total">{{ formatCount(boardTotal) }} posts tagged</p>
+            <p id="board-heading" class="card-kicker">Community leaderboard</p>
+            <p class="board-total">{{ formatCount(voteTotal) }} {{ voteTotal === 1 ? 'vote' : 'votes' }} cast</p>
           </div>
 
           <div class="board-tabs" role="group" aria-label="Leaderboard period">
@@ -588,32 +571,58 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
         </div>
 
         <ol v-if="boardRows.length" class="board-list">
-          <li v-for="(row, index) in boardRows" :key="row.tag" :class="{ lead: index < 3 }">
+          <li v-for="(row, index) in boardRows" :key="row.id" :class="{ lead: index < 3 }">
             <span class="board-rank">{{ index + 1 }}</span>
-            <span class="tile" aria-hidden="true">{{ tagInitial(row.tag) }}</span>
+            <span class="tile" aria-hidden="true">{{ tagInitial(postCategory(row)) }}</span>
 
             <div class="board-text">
               <p class="meta-line">
-                <b>Hashtag</b>
+                <b>#{{ postCategory(row) }}</b>
                 <i aria-hidden="true">•</i>
-                <span>BSU Freedom Wall</span>
+                <span>Anonymous</span>
               </p>
-              <button type="button" class="board-name" @click="applyTag(row.tag)">#{{ row.tag }}</button>
-              <p class="board-sub">{{ tagBlurb(row.tag) }}</p>
+              <a v-if="feedIds.has(row.id)" class="board-name" :href="`#post-${row.id}`">
+                {{ excerpt(postBody(row), 64) }}
+              </a>
+              <p v-else class="board-name as-text">{{ excerpt(postBody(row), 64) }}</p>
+              <p class="board-sub">Posted {{ timeAgo(row.reviewed_at) }}</p>
             </div>
 
-            <span v-if="boardTab !== 'all'" class="board-delta">+{{ row.count }}</span>
-
-            <span class="vote vote-static">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="m6 14 6-6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
-              </svg>
-              <b>{{ formatCount(allTimeByTag[row.tag] ?? row.count) }}</b>
+            <span class="vote">
+              <button
+                type="button"
+                class="vote-arrow"
+                :class="{ on: voteFor(row).yours === 1 }"
+                :aria-pressed="voteFor(row).yours === 1"
+                aria-label="Upvote this post"
+                @click="castVote(row, 1)"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="m6 14 6-6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </button>
+              <b :class="{ up: voteFor(row).score > 0, down: voteFor(row).score < 0 }">{{ voteFor(row).score }}</b>
+              <button
+                type="button"
+                class="vote-arrow"
+                :class="{ on: voteFor(row).yours === -1 }"
+                :aria-pressed="voteFor(row).yours === -1"
+                aria-label="Downvote this post"
+                @click="castVote(row, -1)"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="m6 10 6 6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </button>
             </span>
           </li>
         </ol>
 
-        <p v-else class="empty">Nothing tagged {{ boardTabLabel }} yet.</p>
+        <p v-else class="empty">
+          {{ boardTab === 'all'
+            ? 'No votes yet. Upvote a post and it lands here.'
+            : `Nothing posted ${boardTabLabel} has been voted up yet.` }}
+        </p>
       </section>
 
       <!-- Feed -------------------------------------------------------------- -->
@@ -1489,19 +1498,23 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
 .board-name {
   display: block;
   margin: 0.1rem 0 0.05rem;
-  padding: 0;
-  border: 0;
-  background: none;
-  font: inherit;
-  font-size: 0.95rem;
-  font-weight: 750;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.92rem;
+  font-weight: 700;
   letter-spacing: -0.015em;
   color: var(--d-ink);
-  cursor: pointer;
+  text-decoration: none;
 }
 
-.board-name:hover {
+a.board-name:hover {
   color: var(--d-green-text);
+  text-decoration: underline;
+}
+
+.board-name.as-text {
+  cursor: default;
 }
 
 .board-sub {
@@ -1511,16 +1524,6 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
   white-space: nowrap;
   font-size: 0.78rem;
   color: var(--d-muted);
-}
-
-.board-delta {
-  flex-shrink: 0;
-  padding: 0.2rem 0.5rem;
-  border-radius: var(--d-r-sm);
-  background: var(--d-green-tint);
-  color: var(--d-green-text);
-  font-size: 0.72rem;
-  font-weight: 700;
 }
 
 /* --- Feed ----------------------------------------------------------------- */

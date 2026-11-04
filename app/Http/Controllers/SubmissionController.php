@@ -89,8 +89,12 @@ class SubmissionController extends Controller
             ->withSum('votes as score', 'value')
             ->get();
 
+        $scored = $this->scoredPosts();
+
+        // One lookup for the feed and the leaderboard together: a post can sit
+        // in both, and asking twice would only disagree with itself.
         $yourVotes = SubmissionVote::query()
-            ->whereIn('submission_id', $posts->pluck('id'))
+            ->whereIn('submission_id', $posts->pluck('id')->merge($scored->pluck('id'))->unique())
             ->where('voter_token', $this->voterToken($request))
             ->pluck('value', 'submission_id');
 
@@ -100,18 +104,87 @@ class SubmissionController extends Controller
             $post->your_vote = (int) ($yourVotes[$post->id] ?? 0);
         });
 
-        $tags = $this->tagBreakdown();
-
         return Inertia::render('Wall', [
             'posts' => $posts,
             'categories' => Submission::CATEGORIES,
             'stats' => $this->wallStats(),
-            // Feeds the leaderboard's four time tabs and the hashtag directory
-            // in the sidebar. Both read the same tally, counted once.
-            'tagBoard' => $tags['board'],
-            'tagCounts' => $tags['counts'],
-            'tagTotals' => $tags['totals'],
+            'postBoard' => $this->postBoard($scored, $yourVotes),
+            'voteTotal' => SubmissionVote::query()->count(),
+            // The hashtag directory in the sidebar.
+            'tagCounts' => $this->tagCounts(),
         ]);
+    }
+
+    /**
+     * Every post anyone has voted on, best score first.
+     *
+     * Pulled in one go and bucketed into the leaderboard's time windows in
+     * PHP: four windowed queries would each drag the same vote subquery
+     * across the whole wall. whereHas keeps it to posts with votes, which the
+     * unique index on submission_votes answers from the index alone.
+     *
+     * @return \Illuminate\Database\Eloquent\Collection<int, Submission>
+     */
+    private function scoredPosts(): \Illuminate\Database\Eloquent\Collection
+    {
+        return Submission::query()
+            ->approved()
+            ->whereHas('votes')
+            ->select(['id', 'content', 'reviewed_at'])
+            ->withSum('votes as score', 'value')
+            ->orderByDesc('score')
+            ->orderByDesc('reviewed_at')
+            // A guard, not a product rule: the board shows six, and no window
+            // needs more candidates than this to fill them.
+            ->limit(500)
+            ->get();
+    }
+
+    /**
+     * The leaderboard: the best-scoring posts, by when they were posted.
+     *
+     * Only posts in positive territory make it — a board that listed posts on
+     * zero would be ranking nothing, and one that listed negatives would be
+     * pointing at the posts people liked least.
+     *
+     * @param  \Illuminate\Database\Eloquent\Collection<int, Submission>  $scored
+     * @param  \Illuminate\Support\Collection<int, int>  $yourVotes
+     * @return array<string, list<array<string, mixed>>>
+     */
+    private function postBoard($scored, $yourVotes): array
+    {
+        $windows = [
+            'today' => now()->startOfDay(),
+            'week' => now()->subDays(7),
+            'month' => now()->subDays(30),
+            'all' => null,
+        ];
+
+        $board = [];
+
+        foreach ($windows as $window => $since) {
+            $board[$window] = $scored
+                ->filter(function (Submission $post) use ($since) {
+                    if ((int) ($post->score ?? 0) <= 0) {
+                        return false;
+                    }
+
+                    return $since === null
+                        || ($post->reviewed_at !== null && $post->reviewed_at->gte($since));
+                })
+                ->take(6)
+                ->map(fn (Submission $post) => [
+                    'id' => $post->id,
+                    'content' => $post->content,
+                    'reviewed_at' => $post->reviewed_at,
+                    'score' => (int) $post->score,
+                    'your_vote' => (int) ($yourVotes[$post->id] ?? 0),
+                ])
+                ->values()
+                ->all();
+        }
+
+        return $board;
     }
 
     /**
@@ -216,69 +289,41 @@ class SubmissionController extends Controller
     }
 
     /**
-     * Tally how many approved posts carry each hashtag, both for the whole
-     * wall and for the three recent windows the leaderboard tabs offer.
+     * How many approved posts carry each hashtag, for the sidebar directory.
      *
      * The tag lives in the post body rather than in a column (see
      * withCategoryHashtag), so this counts in PHP over two columns instead of
      * reaching for MySQL string functions the SQLite test database lacks.
      *
-     * @return array{
-     *     board: array<string, list<array{tag: string, count: int}>>,
-     *     counts: list<array{tag: string, count: int}>,
-     *     totals: array<string, int>
-     * }
+     * @return list<array{tag: string, count: int}>
      */
-    private function tagBreakdown(): array
+    private function tagCounts(): array
     {
-        $windows = [
-            'today' => now()->startOfDay(),
-            'week' => now()->subDays(7),
-            'month' => now()->subDays(30),
-            'all' => null,
-        ];
-
-        $tallies = array_fill_keys(array_keys($windows), []);
+        $tally = [];
 
         Submission::query()
             ->approved()
-            ->select(['id', 'content', 'reviewed_at'])
-            ->chunkById(500, function ($submissions) use ($windows, &$tallies) {
+            ->select(['id', 'content'])
+            ->chunkById(500, function ($submissions) use (&$tally) {
                 foreach ($submissions as $submission) {
                     $tag = $this->tagOf($submission->content);
 
-                    if ($tag === null) {
-                        continue;
-                    }
-
-                    foreach ($windows as $window => $since) {
-                        if ($since !== null && ($submission->reviewed_at === null || $submission->reviewed_at->lt($since))) {
-                            continue;
-                        }
-
-                        $tallies[$window][$tag] = ($tallies[$window][$tag] ?? 0) + 1;
+                    if ($tag !== null) {
+                        $tally[$tag] = ($tally[$tag] ?? 0) + 1;
                     }
                 }
             });
 
-        $board = array_map(fn (array $tally) => $this->rankTags($tally, 6), $tallies);
+        // Count first, then alphabetically, so a tie renders the same order on
+        // every request instead of shuffling with whatever the database returns.
+        uksort($tally, fn (string $a, string $b) => [$tally[$b], $a] <=> [$tally[$a], $b]);
 
-        // A tag can top one window's list without placing in the all-time
-        // twelve the sidebar shows, so ship the lifetime figure for every tag
-        // the leaderboard can put on screen. Without this a tag new today
-        // would report today's count as its total.
-        $totals = [];
-        foreach ($board as $rows) {
-            foreach ($rows as $row) {
-                $totals[$row['tag']] = $tallies['all'][$row['tag']] ?? $row['count'];
-            }
+        $ranked = [];
+        foreach (array_slice($tally, 0, 12, true) as $tag => $count) {
+            $ranked[] = ['tag' => $tag, 'count' => $count];
         }
 
-        return [
-            'board' => $board,
-            'counts' => $this->rankTags($tallies['all'], 12),
-            'totals' => $totals,
-        ];
+        return $ranked;
     }
 
     /**
@@ -294,24 +339,6 @@ class SubmissionController extends Controller
         return preg_match('/#([\p{L}\p{N}_-]{1,32})\s*$/u', $content, $matches) === 1
             ? mb_strtolower($matches[1])
             : null;
-    }
-
-    /**
-     * @param  array<string, int>  $tally
-     * @return list<array{tag: string, count: int}>
-     */
-    private function rankTags(array $tally, int $limit): array
-    {
-        // Count first, then alphabetically, so a tie renders the same order on
-        // every request instead of shuffling with whatever the database returns.
-        uksort($tally, fn (string $a, string $b) => [$tally[$b], $a] <=> [$tally[$a], $b]);
-
-        $ranked = [];
-        foreach (array_slice($tally, 0, $limit, true) as $tag => $count) {
-            $ranked[] = ['tag' => $tag, 'count' => $count];
-        }
-
-        return $ranked;
     }
 
     /**

@@ -6,11 +6,11 @@ use App\Models\Submission;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-class WallTagBoardTest extends TestCase
+class WallHashtagCountsTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_the_leaderboard_counts_each_window_separately(): void
+    public function test_the_sidebar_directory_counts_posts_per_hashtag(): void
     {
         $this->approved('Nothing beats a quiet library. #confessions', now());
         $this->approved('Second one today. #confessions', now()->subHours(2));
@@ -20,12 +20,7 @@ class WallTagBoardTest extends TestCase
         $this->get(route('wall'))
             ->assertOk()
             ->assertInertia(fn ($page) => $page
-                ->where('tagBoard.today', [['tag' => 'confessions', 'count' => 2]])
-                ->where('tagBoard.week', [
-                    ['tag' => 'confessions', 'count' => 2],
-                    ['tag' => 'rant', 'count' => 1],
-                ])
-                ->where('tagBoard.all', [
+                ->where('tagCounts', [
                     ['tag' => 'confessions', 'count' => 2],
                     ['tag' => 'kilig', 'count' => 1],
                     ['tag' => 'rant', 'count' => 1],
@@ -46,24 +41,6 @@ class WallTagBoardTest extends TestCase
                 ->where('tagCounts', [['tag' => 'rant', 'count' => 1]]));
     }
 
-    public function test_a_tag_outside_the_sidebar_top_twelve_still_reports_its_lifetime_count(): void
-    {
-        // Thirteen tags beat the sidebar's cap, and #thesis is the smallest of
-        // them, so it can only reach the page through the Today board.
-        foreach (['alpha', 'bravo', 'charlie', 'delta', 'echo', 'foxtrot', 'golf', 'hotel', 'india', 'juliet', 'kilo', 'lima'] as $tag) {
-            $this->approved("Older one. #{$tag}", now()->subDays(60));
-            $this->approved("Another older one. #{$tag}", now()->subDays(61));
-        }
-
-        $this->approved('Last year. #thesis', now()->subDays(300));
-        $this->approved('Today. #thesis', now());
-
-        $this->get(route('wall'))
-            ->assertInertia(fn ($page) => $page
-                ->where('tagBoard.today', [['tag' => 'thesis', 'count' => 1]])
-                ->where('tagTotals.thesis', 2));
-    }
-
     public function test_ties_are_broken_alphabetically_so_the_order_holds_between_requests(): void
     {
         $this->approved('One. #rant', now());
@@ -79,14 +56,18 @@ class WallTagBoardTest extends TestCase
                 ]));
     }
 
-    private function approved(string $content, \DateTimeInterface $reviewedAt, array $attributes = []): void
+    private function approved(string $content, \DateTimeInterface $reviewedAt, array $attributes = []): Submission
     {
-        (new Submission)->forceFill(array_merge([
+        $submission = new Submission;
+
+        $submission->forceFill(array_merge([
             'content' => $content,
             'status' => 'approved',
             'ip_hash' => 'test-hash',
             'submitted_at' => $reviewedAt,
             'reviewed_at' => $reviewedAt,
         ], $attributes))->save();
+
+        return $submission;
     }
 }
