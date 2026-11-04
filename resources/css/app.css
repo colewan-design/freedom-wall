@@ -177,3 +177,77 @@ h1 {
   color: var(--status-rejected-fg);
   background: var(--status-rejected-bg);
 }
+
+/* ==========================================================================
+   Directory surface — the rounded, card-first skin the wall wears.
+   Purely additive: the squared bryl tokens above are untouched, so threads,
+   chat, tools and the admin screens keep the look they were given. Anything
+   that opts in reads --d-* instead, and because these sit at :root the
+   overlays teleported to <body> resolve them too.
+   ========================================================================== */
+
+:root {
+  --d-canvas: #f4f5f7;
+  --d-card: #ffffff;
+  --d-soft: #f7f8fa;
+  --d-line: #e7e9ee;
+  --d-line-strong: #d8dce3;
+  --d-ink: #10141a;
+  --d-ink-2: #3f4854;
+  --d-muted: #6b7482;
+  --d-faint: #9aa2ae;
+
+  --d-green: #137a3a;
+  --d-green-hover: #0f6330;
+  --d-green-ink: #ffffff;
+  --d-green-text: #11703a;
+  --d-green-tint: #e9f6ee;
+  --d-green-tint-2: #f2faf5;
+  --d-green-tint-line: #cde8d8;
+
+  --d-footer: #0c1116;
+  --d-footer-ink: #f3f5f7;
+  --d-footer-muted: #93a0ad;
+  --d-footer-line: rgba(255, 255, 255, 0.1);
+
+  --d-r-xl: 18px;
+  --d-r-lg: 14px;
+  --d-r-md: 10px;
+  --d-r-sm: 8px;
+  --d-r-pill: 999px;
+
+  --d-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+  --d-shadow-lift: 0 10px 28px rgba(16, 24, 40, 0.1);
+  --d-scrim: rgba(12, 17, 22, 0.45);
+}
+
+:root[data-theme='dark'] {
+  --d-canvas: #0a0e11;
+  --d-card: #11171b;
+  --d-soft: #151d22;
+  --d-line: #222b31;
+  --d-line-strong: #2e3942;
+  --d-ink: #eef2f5;
+  --d-ink-2: #c5cdd5;
+  --d-muted: #93a0ac;
+  --d-faint: #74808c;
+
+  /* The deep fill green disappears on near-black, so dark mode lifts the hue
+     and flips the ink: #04240f on #2fbf63 is 6.4:1, white would be 2.6:1. */
+  --d-green: #2fbf63;
+  --d-green-hover: #27a855;
+  --d-green-ink: #04240f;
+  --d-green-text: #3fd277;
+  --d-green-tint: #11261a;
+  --d-green-tint-2: #0e1d15;
+  --d-green-tint-line: #1d3e2a;
+
+  --d-footer: #070a0d;
+  --d-footer-ink: #eef2f5;
+  --d-footer-muted: #8b98a5;
+  --d-footer-line: rgba(255, 255, 255, 0.08);
+
+  --d-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --d-shadow-lift: 0 10px 28px rgba(0, 0, 0, 0.5);
+  --d-scrim: rgba(0, 0, 0, 0.6);
+}

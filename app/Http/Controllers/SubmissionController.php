@@ -67,10 +67,16 @@ class SubmissionController extends Controller
             ->limit(self::WALL_POST_LIMIT)
             ->get(['id', 'content', 'image_url', 'images', 'reviewed_at']);
 
+        $tags = $this->tagBreakdown();
+
         return Inertia::render('Wall', [
             'posts' => $posts,
             'categories' => Submission::CATEGORIES,
             'stats' => $this->wallStats(),
+            // Feeds the leaderboard's four time tabs and the hashtag directory
+            // in the sidebar. Both read the same tally, counted once.
+            'tagBoard' => $tags['board'],
+            'tagCounts' => $tags['counts'],
         ]);
     }
 
@@ -95,11 +101,101 @@ class SubmissionController extends Controller
             })
             ->count();
 
+        $today = Submission::query()
+            ->approved()
+            ->where('reviewed_at', '>=', now()->startOfDay())
+            ->count();
+
         return [
             'total' => $total,
             'withPhotos' => $withPhotos,
             'textOnly' => $total - $withPhotos,
+            'today' => $today,
         ];
+    }
+
+    /**
+     * Tally how many approved posts carry each hashtag, both for the whole
+     * wall and for the three recent windows the leaderboard tabs offer.
+     *
+     * The tag lives in the post body rather than in a column (see
+     * withCategoryHashtag), so this counts in PHP over two columns instead of
+     * reaching for MySQL string functions the SQLite test database lacks.
+     *
+     * @return array{
+     *     board: array<string, list<array{tag: string, count: int}>>,
+     *     counts: list<array{tag: string, count: int}>
+     * }
+     */
+    private function tagBreakdown(): array
+    {
+        $windows = [
+            'today' => now()->startOfDay(),
+            'week' => now()->subDays(7),
+            'month' => now()->subDays(30),
+            'all' => null,
+        ];
+
+        $tallies = array_fill_keys(array_keys($windows), []);
+
+        Submission::query()
+            ->approved()
+            ->select(['id', 'content', 'reviewed_at'])
+            ->chunkById(500, function ($submissions) use ($windows, &$tallies) {
+                foreach ($submissions as $submission) {
+                    $tag = $this->tagOf($submission->content);
+
+                    if ($tag === null) {
+                        continue;
+                    }
+
+                    foreach ($windows as $window => $since) {
+                        if ($since !== null && ($submission->reviewed_at === null || $submission->reviewed_at->lt($since))) {
+                            continue;
+                        }
+
+                        $tallies[$window][$tag] = ($tallies[$window][$tag] ?? 0) + 1;
+                    }
+                }
+            });
+
+        return [
+            'board' => array_map(fn (array $tally) => $this->rankTags($tally, 6), $tallies),
+            'counts' => $this->rankTags($tallies['all'], 12),
+        ];
+    }
+
+    /**
+     * The trailing hashtag a post was filed under, lowercased. Hashtags that
+     * appear mid-sentence are the author's own and are left out of the counts.
+     */
+    private function tagOf(?string $content): ?string
+    {
+        if ($content === null) {
+            return null;
+        }
+
+        return preg_match('/#([\p{L}\p{N}_-]{1,32})\s*$/u', $content, $matches) === 1
+            ? mb_strtolower($matches[1])
+            : null;
+    }
+
+    /**
+     * @param  array<string, int>  $tally
+     * @return list<array{tag: string, count: int}>
+     */
+    private function rankTags(array $tally, int $limit): array
+    {
+        // Count first, then alphabetically, so a tie renders the same order on
+        // every request instead of shuffling with whatever the database returns.
+        uksort($tally, fn (string $a, string $b) => [$tally[$b], $a] <=> [$tally[$a], $b]);
+
+        $ranked = [];
+        foreach (array_slice($tally, 0, $limit, true) as $tag => $count) {
+            $ranked[] = ['tag' => $tag, 'count' => $count];
+        }
+
+        return $ranked;
     }
 
     /**
