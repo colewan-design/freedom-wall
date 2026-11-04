@@ -77,6 +77,7 @@ class SubmissionController extends Controller
             // in the sidebar. Both read the same tally, counted once.
             'tagBoard' => $tags['board'],
             'tagCounts' => $tags['counts'],
+            'tagTotals' => $tags['totals'],
         ]);
     }
 
@@ -124,7 +125,8 @@ class SubmissionController extends Controller
      *
      * @return array{
      *     board: array<string, list<array{tag: string, count: int}>>,
-     *     counts: list<array{tag: string, count: int}>
+     *     counts: list<array{tag: string, count: int}>,
+     *     totals: array<string, int>
      * }
      */
     private function tagBreakdown(): array
@@ -159,9 +161,23 @@ class SubmissionController extends Controller
                 }
             });
 
+        $board = array_map(fn (array $tally) => $this->rankTags($tally, 6), $tallies);
+
+        // A tag can top one window's list without placing in the all-time
+        // twelve the sidebar shows, so ship the lifetime figure for every tag
+        // the leaderboard can put on screen. Without this a tag new today
+        // would report today's count as its total.
+        $totals = [];
+        foreach ($board as $rows) {
+            foreach ($rows as $row) {
+                $totals[$row['tag']] = $tallies['all'][$row['tag']] ?? $row['count'];
+            }
+        }
+
         return [
-            'board' => array_map(fn (array $tally) => $this->rankTags($tally, 6), $tallies),
+            'board' => $board,
             'counts' => $this->rankTags($tallies['all'], 12),
+            'totals' => $totals,
         ];
     }
 

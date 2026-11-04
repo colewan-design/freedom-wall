@@ -39,6 +39,8 @@ const props = defineProps({
   },
   // All-time hashtag counts, for the directory in the rail.
   tagCounts: { type: Array, default: () => [] },
+  // Lifetime count per tag, covering every tag the leaderboard can show.
+  tagTotals: { type: Object, default: () => ({}) },
 });
 
 const page = usePage();
@@ -251,10 +253,11 @@ const boardTabLabel = computed(
   () => BOARD_TABS.find((tab) => tab.id === boardTab.value)?.label.toLowerCase() ?? '',
 );
 
-// The rail only carries the top twelve tags, so the all-time figure behind a
-// leaderboard row falls back to the board's own all-time column.
+// The lifetime count behind each leaderboard row. tagTotals already covers
+// every tag a window can surface; the ranked lists are folded in after it so
+// the rail and the board can never disagree about a number.
 const allTimeByTag = computed(() => {
-  const totals = {};
+  const totals = { ...props.tagTotals };
   [...(props.tagBoard?.all ?? []), ...props.tagCounts].forEach(({ tag, count }) => {
     totals[tag] = count;
   });

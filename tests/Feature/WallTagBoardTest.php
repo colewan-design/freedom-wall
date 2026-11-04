@@ -46,6 +46,24 @@ class WallTagBoardTest extends TestCase
                 ->where('tagCounts', [['tag' => 'rant', 'count' => 1]]));
     }
 
+    public function test_a_tag_outside_the_sidebar_top_twelve_still_reports_its_lifetime_count(): void
+    {
+        // Thirteen tags beat the sidebar's cap, and #thesis is the smallest of
+        // them, so it can only reach the page through the Today board.
+        foreach (['alpha', 'bravo', 'charlie', 'delta', 'echo', 'foxtrot', 'golf', 'hotel', 'india', 'juliet', 'kilo', 'lima'] as $tag) {
+            $this->approved("Older one. #{$tag}", now()->subDays(60));
+            $this->approved("Another older one. #{$tag}", now()->subDays(61));
+        }
+
+        $this->approved('Last year. #thesis', now()->subDays(300));
+        $this->approved('Today. #thesis', now());
+
+        $this->get(route('wall'))
+            ->assertInertia(fn ($page) => $page
+                ->where('tagBoard.today', [['tag' => 'thesis', 'count' => 1]])
+                ->where('tagTotals.thesis', 2));
+    }
+
     public function test_ties_are_broken_alphabetically_so_the_order_holds_between_requests(): void
     {
         $this->approved('One. #rant', now());
