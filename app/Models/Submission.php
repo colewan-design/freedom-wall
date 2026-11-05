@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\ContentRisk;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -19,8 +20,14 @@ class Submission extends Model
 
     public $timestamps = false;
 
-    protected $fillable = ['content', 'image_url', 'images', 'ip_hash'];
+    protected $fillable = [
+        'content', 'image_url', 'images', 'ip_hash',
+        'risk_score', 'risk_flags', 'risk_checked_at',
+    ];
 
+    // risk_level is deliberately not appended: the public wall selects its own
+    // narrow column list and has no business carrying moderation signals. The
+    // admin queue appends it per query instead.
     protected $appends = ['image_urls'];
 
     protected $casts = [
@@ -28,6 +35,9 @@ class Submission extends Model
         'submitted_at' => 'datetime',
         'reviewed_at' => 'datetime',
         'was_edited' => 'boolean',
+        'risk_flags' => 'array',
+        'risk_checked_at' => 'datetime',
+        'risk_score' => 'integer',
     ];
 
     public function votes(): HasMany
@@ -43,6 +53,26 @@ class Submission extends Model
     public function scopeApproved(Builder $query): void
     {
         $query->where('status', 'approved');
+    }
+
+    /**
+     * Worst first, then oldest first — so a flagged post never waits behind a
+     * day of clean ones, and two posts at the same risk still queue fairly.
+     */
+    public function scopeByRisk(Builder $query): void
+    {
+        $query->orderByDesc('risk_score')->orderBy('submitted_at');
+    }
+
+    /**
+     * The band this submission's score falls in. Reads the thresholds through
+     * ContentRisk so the dashboard, the assessor and the model never drift.
+     */
+    protected function riskLevel(): Attribute
+    {
+        return Attribute::get(
+            fn (): string => (new ContentRisk((int) $this->risk_score, (array) $this->risk_flags))->level(),
+        );
     }
 
     protected function imageUrls(): Attribute

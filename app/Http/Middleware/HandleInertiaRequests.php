@@ -40,6 +40,9 @@ class HandleInertiaRequests extends Middleware
             ],
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
+                // Helpline details, shown on the composer when a submission
+                // read as someone in trouble. Never blocks the post.
+                'support' => fn () => $request->session()->get('support'),
             ],
             'pendingRequestCount' => fn () => $request->user()?->role === 'student'
                 ? Friendship::query()->where('addressee_id', $request->user()->id)->where('status', 'pending')->count()

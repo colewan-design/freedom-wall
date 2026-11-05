@@ -28,11 +28,15 @@ class SubmissionModerationController extends Controller
         if ($status === 'approved') {
             $query->orderByDesc('reviewed_at');
         } else {
-            $query->orderBy('submitted_at', 'asc');
+            // Flagged first, then oldest first. A post naming a classmate and
+            // printing her number should not wait behind a day of clean ones.
+            $query->byRisk();
         }
 
         $paginator = $query
             ->paginate($limit, ['*'], 'page', (int) $request->query('page', 1));
+
+        $paginator->getCollection()->each->append('risk_level');
 
         return response()->json([
             'items' => $paginator->items(),
@@ -101,13 +105,23 @@ class SubmissionModerationController extends Controller
         return response()->json(['status' => 'approved', 'approved' => $approved]);
     }
 
-    public function reject(Submission $submission): JsonResponse
+    /**
+     * Why a post was turned down is worth a column of its own. "Rejected"
+     * alone lumps a bullying call-out in with a duplicate and a canteen menu,
+     * and a pile of that teaches nothing later — see moderator.md, tier 2.
+     */
+    public const REJECTION_REASONS = ['bullying', 'privacy', 'hate', 'sexual', 'spam', 'off_topic', 'other'];
+
+    public function reject(Request $request, Submission $submission): JsonResponse
     {
         if ($submission->status !== 'pending') {
             return response()->json(['error' => 'Submission has already been reviewed'], 400);
         }
 
+        $reason = $request->input('reason');
+
         $submission->status = 'rejected';
+        $submission->rejection_reason = in_array($reason, self::REJECTION_REASONS, true) ? $reason : 'other';
         $submission->reviewed_at = now();
         $submission->save();
 

@@ -361,6 +361,7 @@ const year = new Date().getFullYear();
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex: 0 0 auto;
   width: 2.1rem;
   height: 2.1rem;
   border-radius: var(--d-r-pill);
@@ -603,10 +604,12 @@ const year = new Date().getFullYear();
 }
 
 @media (max-width: 900px) {
-  /* minmax(0, …) on both tracks: without it the nav's and the search box's
-     min-content widths push the bar past the viewport instead of shrinking. */
+  /* The search track is minmax(0, …) so the nav's and the search box's
+     min-content widths shrink instead of pushing the bar past the viewport.
+     The brand track stays `auto`: at minmax(0, …) it collapses under the mark,
+     and since the mark can't shrink it ends up sitting under the search. */
   .dir-top-inner {
-    grid-template-columns: minmax(0, auto) minmax(0, 1fr);
+    grid-template-columns: auto minmax(0, 1fr);
     row-gap: 0.65rem;
   }
 
@@ -618,7 +621,12 @@ const year = new Date().getFullYear();
     scrollbar-width: none;
   }
 
+  /* Stretched rather than end-aligned: a stretched item is exactly its track's
+     width, so a crowded bar overflows to the right, past the viewport edge,
+     instead of spilling leftwards over the logo. */
   .dir-top-right {
+    justify-self: stretch;
+    justify-content: flex-end;
     min-width: 0;
   }
 
@@ -627,8 +635,17 @@ const year = new Date().getFullYear();
   }
 
   .dir-search {
-    width: 100%;
+    flex: 1;
+    width: auto;
+    min-width: 0;
     max-width: 11rem;
+  }
+
+  /* A long display name truncates instead of shoving the row leftwards. */
+  .dir-login {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .dir-search kbd {

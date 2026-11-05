@@ -28,7 +28,8 @@ export const adminApi = {
   approveAll: (edits = {}) =>
     request('/admin/submissions/approve-all', { method: 'POST', body: { edits } }),
 
-  reject: (id) => request(`/admin/submissions/${id}/reject`, { method: 'POST' }),
+  reject: (id, reason = 'other') =>
+    request(`/admin/submissions/${id}/reject`, { method: 'POST', body: { reason } }),
 
   getThreadReports: (limit = 10) => request(`/admin/thread-reports?limit=${limit}`),
 

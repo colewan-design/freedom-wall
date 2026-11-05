@@ -45,6 +45,47 @@ const reports = ref([]);
 const loadingReports = ref(true);
 const actingReportId = ref(null);
 
+// Why a post was turned down, kept per card. Nothing in the app reads these
+// back yet — they are labels being banked for later. See moderator.md, tier 2.
+const rejectionReason = reactive({});
+
+const REJECTION_REASONS = [
+  { value: 'bullying', label: 'Bullying or harassment' },
+  { value: 'privacy', label: 'Privacy / doxxing' },
+  { value: 'hate', label: 'Hate speech' },
+  { value: 'sexual', label: 'Sexual content' },
+  { value: 'spam', label: 'Spam or selling' },
+  { value: 'off_topic', label: 'Off topic' },
+  { value: 'other', label: 'Other' },
+];
+
+// What the Tier 1 rules found, for the badge on each card. The score decides
+// the order the queue arrives in; this only explains it.
+const RISK_CATEGORY_LABELS = {
+  self_harm: 'Possible crisis',
+  contact_details: 'Contact details',
+  named_target: 'Names someone',
+};
+
+function riskSummary(post) {
+  const flags = post.risk_flags;
+
+  if (!flags || post.risk_level === 'none') return null;
+
+  return {
+    level: post.risk_level,
+    categories: Object.keys(flags).map((key) => RISK_CATEGORY_LABELS[key] ?? key),
+    // The matched substrings, so an admin can disagree with the flag without
+    // rereading the whole post looking for what tripped it.
+    evidence: Object.values(flags).flat().slice(0, 6),
+  };
+}
+
+// Computed once per queue load rather than four times per card per render.
+const pendingRisks = computed(() =>
+  Object.fromEntries(pending.value.map((post) => [post.id, riskSummary(post)])),
+);
+
 const banner = reactive({ message: '', tone: 'info' });
 
 function showBanner(message, tone = 'info') {
@@ -202,7 +243,8 @@ async function reject(post) {
   rejectingId.value = post.id;
 
   try {
-    await adminApi.reject(post.id);
+    await adminApi.reject(post.id, rejectionReason[post.id] ?? 'other');
+    delete rejectionReason[post.id];
     await refreshAfterAction({ backToPrevIfEmpty: true });
   } catch (err) {
     showBanner(err.message, 'error');
@@ -431,6 +473,16 @@ onMounted(() => {
 
       <TransitionGroup v-else-if="viewMode === 'card'" name="card" tag="ul" class="queue">
         <li v-for="post in pending" :key="post.id" class="item">
+          <div
+            v-if="pendingRisks[post.id]"
+            class="risk-note"
+            :class="`risk-${pendingRisks[post.id].level}`"
+          >
+            <span class="risk-badge">{{ pendingRisks[post.id].level }} risk</span>
+            <span class="risk-cats">{{ pendingRisks[post.id].categories.join(' · ') }}</span>
+            <span class="risk-evidence">{{ pendingRisks[post.id].evidence.join('  ·  ') }}</span>
+          </div>
+
           <textarea
             :ref="registerTextarea(post.id)"
             v-model="editingContent[post.id]"
@@ -478,6 +530,18 @@ onMounted(() => {
             >
               {{ rejectingId === post.id ? 'Rejecting...' : 'Reject' }}
             </button>
+
+            <select
+              v-model="rejectionReason[post.id]"
+              class="reason-select"
+              aria-label="Reason for rejecting"
+              :disabled="approvingAll || approvingId === post.id || rejectingId === post.id"
+            >
+              <option :value="undefined" disabled>Reason (optional)</option>
+              <option v-for="reason in REJECTION_REASONS" :key="reason.value" :value="reason.value">
+                {{ reason.label }}
+              </option>
+            </select>
           </div>
         </li>
       </TransitionGroup>
@@ -499,7 +563,17 @@ onMounted(() => {
                 <span :title="post.content">{{ truncate(post.content) }}</span>
               </td>
               <td class="cell-muted">{{ formatDateTime(post.submitted_at) }}</td>
-              <td><span class="status-pill is-pending">Pending</span></td>
+              <td>
+                <span class="status-pill is-pending">Pending</span>
+                <span
+                  v-if="pendingRisks[post.id]"
+                  class="risk-badge risk-badge-inline"
+                  :class="`risk-${pendingRisks[post.id].level}`"
+                  :title="pendingRisks[post.id].categories.join(' · ')"
+                >
+                  {{ pendingRisks[post.id].level }}
+                </span>
+              </td>
               <td class="cell-actions">
                 <button
                   class="btn btn-approve btn-sm"
@@ -970,6 +1044,79 @@ h1 {
 
 .image-grid video {
   background: #000;
+}
+
+/* --- Tier 1 risk note ----------------------------------------------------
+   Sits above the post, not over it. The rules are advisory: they reorder the
+   queue and say why, and the admin reading the card decides. Styled as a note
+   rather than an alert on purpose — a red box over every flagged post trains
+   people to approve past it. See moderator.md. */
+.risk-note {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.6rem;
+  margin-bottom: 0.65rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--muted);
+  border-radius: var(--b-r-thumb);
+  background: var(--page-bg);
+  font-size: 0.76rem;
+}
+
+.risk-note.risk-medium {
+  border-left-color: var(--info);
+}
+
+.risk-note.risk-high {
+  border-left-color: var(--danger);
+}
+
+.risk-badge {
+  font-weight: 700;
+  text-transform: capitalize;
+  color: var(--ink);
+}
+
+.risk-note.risk-high .risk-badge {
+  color: var(--danger);
+}
+
+.risk-cats {
+  color: var(--ink);
+}
+
+.risk-badge-inline {
+  margin-left: 0.4rem;
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.risk-badge-inline.risk-high {
+  color: var(--danger);
+}
+
+.risk-evidence {
+  flex-basis: 100%;
+  font-family: var(--b-mono);
+  font-size: 0.72rem;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.reason-select {
+  padding: 0.35rem 0.5rem;
+  font: inherit;
+  font-size: 0.78rem;
+  color: var(--muted);
+  background: var(--page-bg);
+  border: 1px solid var(--line);
+  border-radius: var(--b-r-thumb);
+}
+
+.reason-select:disabled {
+  opacity: 0.5;
 }
 
 .meta {

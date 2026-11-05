@@ -45,6 +45,7 @@ const props = defineProps({
 
 const page = usePage();
 const successMessage = computed(() => page.props.flash?.success ?? null);
+const supportNote = computed(() => page.props.flash?.support ?? null);
 const composerTextarea = ref(null);
 const fileInput = ref(null);
 const composerModalOpen = ref(false);
@@ -458,6 +459,18 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
 
   <DirectoryLayout v-model:search="search">
     <div ref="wallEl" class="wall">
+      <!-- Support note ------------------------------------------------------
+           Shown when a submission read as someone in trouble. It sits on the
+           page rather than in the composer because the composer closes the
+           moment a post goes through, and this is the one message that has to
+           be seen. The post itself was accepted and queued either way. -->
+      <aside v-if="supportNote" class="support-note rise" :style="riseDelay(0)">
+        <p class="support-lede">{{ supportNote.message }}</p>
+        <ul>
+          <li v-for="line in supportNote.lines" :key="line">{{ line }}</li>
+        </ul>
+      </aside>
+
       <!-- Hero ------------------------------------------------------------ -->
       <header class="hero rise" :style="riseDelay(0)">
         <h1>Anonymous posts from the BSU community</h1>
@@ -2411,6 +2424,32 @@ a.board-name:hover {
 .composer-banner.success {
   background: var(--d-green-tint);
   color: var(--d-green-text);
+}
+
+/* Quiet on purpose. Someone who just wrote a hard post does not need a red
+   alarm box; they need a number they can read without feeling caught. */
+.support-note {
+  margin-bottom: 1.25rem;
+  padding: 1rem 1.15rem;
+  border: 1px solid var(--d-line);
+  border-left: 3px solid var(--d-green);
+  border-radius: var(--d-r-md);
+  background: var(--d-card);
+}
+
+.support-lede {
+  margin: 0 0 0.6rem;
+  font-size: 0.92rem;
+  color: var(--d-ink);
+}
+
+.support-note ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.3rem;
+  font-size: 0.86rem;
+  color: var(--d-muted);
 }
 
 .composer-modal-submit {

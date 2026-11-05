@@ -7,6 +7,7 @@ use App\Models\Submission;
 use App\Models\SubmissionVote;
 use App\Rules\MediaAttachment;
 use App\Services\ContentFilterService;
+use App\Services\ContentRiskService;
 use App\Services\IpHasher;
 use App\Services\TurnstileService;
 use Illuminate\Database\Eloquent\Builder;
@@ -40,6 +41,7 @@ class SubmissionController extends Controller
     public function store(
         StoreSubmissionRequest $request,
         ContentFilterService $contentFilter,
+        ContentRiskService $contentRisk,
         TurnstileService $turnstile,
         IpHasher $ipHasher,
     ): RedirectResponse {
@@ -66,12 +68,25 @@ class SubmissionController extends Controller
             $mediaUrls[] = Storage::disk('public')->url($path);
         }
 
+        // Advisory only — the submission is stored and queued either way. All
+        // the score decides is where in the queue an admin meets it.
+        $risk = $contentRisk->assess($content);
+
         Submission::create([
             'content' => $content,
             'image_url' => $mediaUrls[0] ?? null,
             'images' => $mediaUrls ?: null,
             'ip_hash' => $ipHasher->hash($request->ip()),
+            'risk_score' => $risk->score,
+            'risk_flags' => $risk->isClean() ? null : $risk->flags,
+            'risk_checked_at' => now(),
         ]);
+
+        if ($risk->has('self_harm')) {
+            return redirect()->route('wall')
+                ->with('success', 'Submitted! Our team will review it before posting.')
+                ->with('support', config('moderation.support'));
+        }
 
         return redirect()->route('wall')->with('success', 'Submitted! Our team will review it before posting.');
     }
