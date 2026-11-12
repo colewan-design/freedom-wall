@@ -314,14 +314,16 @@ const boardTabLabel = computed(
   () => BOARD_TABS.find((tab) => tab.id === boardTab.value)?.label.toLowerCase() ?? '',
 );
 
-// The server counted the row with this browser's vote as it stood on page
-// load; swap that out for the live one so voting moves the tally at once.
-function boardTally(row) {
-  const was = Number(row.your_vote ?? 0);
-  const now = voteFor(row).yours;
+// Up and down counted separately: a net score shows "0" on a post five people
+// liked and five didn't, which reads as nobody voting. The server counted
+// with this browser's vote as it stood on page load; swap that out for the
+// live one so pressing an arrow moves the count at once.
+function voteTally(post) {
+  const was = Number(post.your_vote ?? 0);
+  const now = voteFor(post).yours;
   return {
-    up: Number(row.upvotes ?? 0) - (was === 1 ? 1 : 0) + (now === 1 ? 1 : 0),
-    down: Number(row.downvotes ?? 0) - (was === -1 ? 1 : 0) + (now === -1 ? 1 : 0),
+    up: Number(post.upvotes ?? 0) - (was === 1 ? 1 : 0) + (now === 1 ? 1 : 0),
+    down: Number(post.downvotes ?? 0) - (was === -1 ? 1 : 0) + (now === -1 ? 1 : 0),
   };
 }
 
@@ -549,9 +551,8 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
                 <path d="m6 14 6-6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
               </svg>
             </button>
-            <b :class="{ up: voteFor(featuredPost).score > 0, down: voteFor(featuredPost).score < 0 }">
-              {{ voteFor(featuredPost).score }}
-            </b>
+            <b :class="{ up: voteTally(featuredPost).up > 0 }" :aria-label="`${voteTally(featuredPost).up} upvotes`">{{ voteTally(featuredPost).up }}</b>
+            <b :class="{ down: voteTally(featuredPost).down > 0 }" :aria-label="`${voteTally(featuredPost).down} downvotes`">{{ voteTally(featuredPost).down ? `-${voteTally(featuredPost).down}` : 0 }}</b>
             <button
               type="button"
               class="vote-arrow"
@@ -609,11 +610,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
                 {{ excerpt(postBody(row), 64) }}
               </a>
               <p v-else class="board-name as-text">{{ excerpt(postBody(row), 64) }}</p>
-              <p class="board-sub">
-                <span class="board-posted">Posted {{ timeAgo(row.reviewed_at) }} · </span>
-                <span class="tally-up">{{ boardTally(row).up }} up</span>
-                · <span class="tally-down">{{ boardTally(row).down }} down</span>
-              </p>
+              <p class="board-sub">Posted {{ timeAgo(row.reviewed_at) }}</p>
             </div>
 
             <span class="vote">
@@ -629,7 +626,8 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
                   <path d="m6 14 6-6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
               </button>
-              <b :class="{ up: voteFor(row).score > 0, down: voteFor(row).score < 0 }">{{ voteFor(row).score }}</b>
+              <b :class="{ up: voteTally(row).up > 0 }" :aria-label="`${voteTally(row).up} upvotes`">{{ voteTally(row).up }}</b>
+              <b :class="{ down: voteTally(row).down > 0 }" :aria-label="`${voteTally(row).down} downvotes`">{{ voteTally(row).down ? `-${voteTally(row).down}` : 0 }}</b>
               <button
                 type="button"
                 class="vote-arrow"
@@ -773,7 +771,8 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
                   <path d="m6 14 6-6 6 6" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
               </button>
-              <b :class="{ up: voteFor(post).score > 0, down: voteFor(post).score < 0 }">{{ voteFor(post).score }}</b>
+              <b :class="{ up: voteTally(post).up > 0 }" :aria-label="`${voteTally(post).up} upvotes`">{{ voteTally(post).up }}</b>
+              <b :class="{ down: voteTally(post).down > 0 }" :aria-label="`${voteTally(post).down} downvotes`">{{ voteTally(post).down ? `-${voteTally(post).down}` : 0 }}</b>
               <button
                 type="button"
                 class="vote-arrow"
@@ -1381,7 +1380,8 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
 }
 
 .vote b.down {
-  color: #c53030;
+  /* A light red: the dark one this replaced all but vanished on the card. */
+  color: #f87171;
 }
 
 .vote-arrow {
@@ -1556,14 +1556,6 @@ a.board-name:hover {
   white-space: nowrap;
   font-size: 0.78rem;
   color: var(--d-muted);
-}
-
-.board-sub .tally-up {
-  color: var(--d-green);
-}
-
-.board-sub .tally-down {
-  color: #f87171;
 }
 
 /* --- Feed ----------------------------------------------------------------- */
@@ -2541,7 +2533,7 @@ a.board-name:hover {
     flex-direction: column;
   }
 
-  .board-posted,
+  .board-sub,
   .board-text .meta-line i,
   .board-text .meta-line span {
     display: none;

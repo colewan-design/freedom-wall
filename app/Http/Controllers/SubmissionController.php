@@ -102,6 +102,10 @@ class SubmissionController extends Controller
             ->limit(self::WALL_POST_LIMIT)
             ->select(['id', 'content', 'image_url', 'images', 'reviewed_at'])
             ->withSum('votes as score', 'value')
+            ->withCount([
+                'votes as upvotes' => fn ($votes) => $votes->where('value', 1),
+                'votes as downvotes' => fn ($votes) => $votes->where('value', -1),
+            ])
             ->get();
 
         $scored = $this->scoredPosts();
