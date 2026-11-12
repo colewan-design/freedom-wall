@@ -27,11 +27,29 @@ const type = ref(props.filters.type ?? '');
 const sector = ref(props.filters.sector ?? '');
 const posted = ref(props.filters.posted ?? '');
 const remote = ref(Boolean(props.filters.remote));
+const employer = ref(props.filters.employer ?? '');
 
 const saved = computed(() => new Set(props.savedIds));
 
 const hasFilters = computed(
-  () => Boolean(search.value || location.value || type.value || sector.value || posted.value || remote.value),
+  () => Boolean(search.value || location.value || type.value || sector.value || posted.value || remote.value || employer.value),
+);
+
+// Agencies first: most students who filter by employer are after a
+// government post. The server already sorts each group by openings.
+const employerGroups = computed(() => {
+  const all = props.options.employers ?? [];
+
+  return [
+    { label: 'Government', items: all.filter((item) => item.government) },
+    { label: 'Private and others', items: all.filter((item) => !item.government) },
+  ].filter((group) => group.items.length);
+});
+
+// A filter from an old link can name an employer with nothing open now; keep
+// it selectable so the select does not silently show "Any".
+const employerMissing = computed(
+  () => employer.value && !(props.options.employers ?? []).some((item) => item.name === employer.value),
 );
 
 function query() {
@@ -42,6 +60,7 @@ function query() {
       type: type.value,
       sector: sector.value,
       posted: posted.value,
+      employer: employer.value,
       remote: remote.value ? 1 : '',
     }).filter(([, value]) => value !== '' && value !== null),
   );
@@ -61,7 +80,7 @@ function applySoon() {
 onBeforeUnmount(() => clearTimeout(typing));
 
 watch(search, applySoon);
-watch([type, sector, posted, remote], apply);
+watch([type, sector, posted, remote, employer], apply);
 
 function clearFilters() {
   search.value = '';
@@ -70,11 +89,17 @@ function clearFilters() {
   sector.value = '';
   posted.value = '';
   remote.value = false;
+  employer.value = '';
 }
 
 function filterLocation(label) {
   location.value = label;
   apply();
+}
+
+// The watcher on `employer` does the request.
+function filterEmployer(name) {
+  employer.value = name;
 }
 
 function toggleSave(listing) {
@@ -207,6 +232,19 @@ const today = new Date().toISOString().slice(0, 10);
           </select>
         </label>
 
+        <label class="field field-employer">
+          <span>Hiring agency</span>
+          <select v-model="employer">
+            <option value="">Any employer</option>
+            <option v-if="employerMissing" :value="employer">{{ employer }} (none open)</option>
+            <optgroup v-for="group in employerGroups" :key="group.label" :label="group.label">
+              <option v-for="item in group.items" :key="item.name" :value="item.name">
+                {{ item.name }} ({{ item.total }})
+              </option>
+            </optgroup>
+          </select>
+        </label>
+
         <label class="field">
           <span>Posted</span>
           <select v-model="posted">
@@ -298,7 +336,7 @@ const today = new Date().toISOString().slice(0, 10);
         </div>
         <ul class="rail-rank">
           <li v-for="row in insights.topEmployers" :key="row.label">
-            <span>{{ row.label }}</span>
+            <button type="button" @click="filterEmployer(row.label)">{{ row.label }}</button>
             <b>{{ row.total }}</b>
           </li>
         </ul>
@@ -588,6 +626,16 @@ const today = new Date().toISOString().slice(0, 10);
 
 .field-grow {
   flex: 1 1 14rem;
+}
+
+/* Agency names run long ("Northern Philippines Root Crops Research…"); the
+   closed select stays a sensible width and the open list shows them whole. */
+.field-employer {
+  flex: 0 1 13rem;
+}
+
+.field-employer select {
+  text-overflow: ellipsis;
 }
 
 .field > span {

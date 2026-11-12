@@ -61,7 +61,7 @@ class JobController extends Controller
             'filters' => $filters,
             'savedIds' => $savedIds,
             'canTrack' => $this->student($request) !== null,
-            'options' => $this->options(),
+            'options' => [...$this->options(), 'employers' => $this->employers()],
             'insights' => $this->insights(),
         ]);
     }
@@ -202,6 +202,7 @@ class JobController extends Controller
             'sector' => in_array($sector, JobListing::SECTORS, true) ? $sector : null,
             'remote' => $request->boolean('remote'),
             'posted' => in_array($posted, [1, 7, 30], true) ? $posted : null,
+            'employer' => Str::limit(trim((string) $request->query('employer', '')), 160, ''),
         ];
     }
 
@@ -228,6 +229,9 @@ class JobController extends Controller
             ->when($filters['remote'] && $filters['location'] === '', fn (Builder $q) => $q->where('is_remote', true))
             ->when($filters['type'], fn (Builder $q, $type) => $q->where('employment_type', $type))
             ->when($filters['sector'], fn (Builder $q, $sector) => $q->where('sector', $sector))
+            // Exact, not LIKE: the value comes from the list of employers on
+            // the board, and "Acme" should not also pull in "Acme Logistics".
+            ->when($filters['employer'] !== '', fn (Builder $q) => $q->where('employer', $filters['employer']))
             ->when($filters['posted'], fn (Builder $q, $days) => $q->where('discovered_at', '>=', now()->subDays($days)));
     }
 
@@ -238,6 +242,28 @@ class JobController extends Controller
             'types' => JobListing::EMPLOYMENT_TYPES,
             'sectors' => JobListing::SECTORS,
         ];
+    }
+
+    /**
+     * Every employer with an open job, government agencies first (the reason
+     * most students filter by employer at all), then by how many openings.
+     *
+     * @return list<array{name: string, total: int, government: bool}>
+     */
+    private function employers(): array
+    {
+        return JobListing::query()
+            ->approved()
+            ->whereNotNull('employer')
+            ->selectRaw("employer, COUNT(*) as total, MAX(CASE WHEN sector = 'government' THEN 1 ELSE 0 END) as government")
+            ->groupBy('employer')
+            ->orderByDesc('government')
+            ->orderByDesc('total')
+            ->orderBy('employer')
+            ->limit(300)
+            ->get()
+            ->map(fn ($row) => ['name' => $row->employer, 'total' => (int) $row->total, 'government' => (bool) $row->government])
+            ->all();
     }
 
     /**

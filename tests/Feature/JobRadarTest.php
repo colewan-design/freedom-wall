@@ -438,6 +438,24 @@ class JobRadarTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page->has('listings.data', 1)->where('listings.data.0.title', 'Web Developer'));
     }
 
+    public function test_the_board_filters_by_hiring_agency_and_lists_agencies_first(): void
+    {
+        $this->listing(['title' => 'Courier', 'employer' => 'Acme']);
+        $this->listing(['title' => 'Dispatcher', 'employer' => 'Acme']);
+        $this->listing(['title' => 'Driver', 'employer' => 'Acme Logistics']);
+        $this->listing(['title' => 'Instructor 1', 'employer' => 'Benguet State University', 'sector' => 'government']);
+        $this->listing(['title' => 'Hidden', 'employer' => 'Pending Co', 'status' => 'pending']);
+
+        $this->get('/jobs')->assertInertia(fn (Assert $page) => $page
+            ->where('options.employers.0', ['name' => 'Benguet State University', 'total' => 1, 'government' => true])
+            ->where('options.employers.1', ['name' => 'Acme', 'total' => 2, 'government' => false])
+            ->has('options.employers', 3));
+
+        $this->get('/jobs?employer=Acme')->assertInertia(fn (Assert $page) => $page
+            ->where('filters.employer', 'Acme')
+            ->has('listings.data', 2));
+    }
+
     public function test_a_listing_page_says_what_is_missing_and_hides_pending_ones(): void
     {
         $listing = $this->listing(['salary_text' => null, 'deadline' => null]);
