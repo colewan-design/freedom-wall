@@ -172,9 +172,15 @@ class JobModerationController extends Controller
         if ($request->has('config')) {
             $config = array_filter((array) $request->input('config'), fn ($value) => $value !== null && $value !== '');
 
-            if (isset($config['keywords']) && is_string($config['keywords'])) {
-                $config['keywords'] = array_values(array_filter(array_map('trim', explode(',', $config['keywords']))));
+            foreach (['keywords', 'locations'] as $list) {
+                if (isset($config[$list]) && is_string($config[$list])) {
+                    $config[$list] = array_values(array_filter(array_map('trim', explode(',', $config[$list]))));
+                }
             }
+
+            // Checkboxes arrive as booleans; a cleared one is dropped rather
+            // than stored as false, so "set" always means on.
+            $config = array_filter($config, fn ($value) => $value !== false);
 
             $errors = $fetcher->driver($data['driver'] ?? $existing->driver)->validateConfig($config);
 

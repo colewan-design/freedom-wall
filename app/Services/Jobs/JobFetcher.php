@@ -6,6 +6,7 @@ use App\Models\JobSource;
 use App\Services\Jobs\Drivers\GreenhouseDriver;
 use App\Services\Jobs\Drivers\JobSourceDriver;
 use App\Services\Jobs\Drivers\LeverDriver;
+use App\Services\Jobs\Drivers\PageDriver;
 use App\Services\Jobs\Drivers\RemotiveDriver;
 use App\Services\Jobs\Drivers\RssDriver;
 use Illuminate\Support\Facades\Log;
@@ -24,6 +25,7 @@ final class JobFetcher
             'remotive' => app(RemotiveDriver::class),
             'greenhouse' => app(GreenhouseDriver::class),
             'lever' => app(LeverDriver::class),
+            'page' => app(PageDriver::class),
             default => throw new InvalidArgumentException("Unknown job source driver [{$name}]."),
         };
     }

@@ -37,6 +37,11 @@ class LeverDriver extends HttpDriver
             }
 
             $location = JobText::line($row['categories']['location'] ?? null, 160);
+
+            if (! $this->wantedLocation($location, $source->config)) {
+                continue;
+            }
+
             $description = JobText::plain($row['descriptionPlain'] ?? $row['description'] ?? null);
 
             $jobs[] = new NormalizedJob(

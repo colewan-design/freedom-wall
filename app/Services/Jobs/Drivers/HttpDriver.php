@@ -44,6 +44,32 @@ abstract class HttpDriver implements JobSourceDriver
         return $response;
     }
 
+    /**
+     * Whether a posting is somewhere our readers can take it. `locations` in
+     * the config lists terms ("Philippines", "Asia", "Worldwide"); a posting
+     * is kept when its location mentions any of them. Postings that state no
+     * location at all are kept, since leaving it out usually means "anywhere".
+     *
+     * @param  array<string, mixed>  $config
+     */
+    protected function wantedLocation(?string $location, array $config): bool
+    {
+        $raw = $config['locations'] ?? [];
+        $terms = array_values(array_filter(array_map('trim', is_string($raw) ? explode(',', $raw) : (array) $raw)));
+
+        if ($terms === [] || $location === null || trim($location) === '') {
+            return true;
+        }
+
+        foreach ($terms as $term) {
+            if (mb_stripos($location, $term) !== false) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     protected function date(mixed $value): ?CarbonImmutable
     {
         if ($value === null || $value === '') {

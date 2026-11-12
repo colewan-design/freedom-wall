@@ -177,6 +177,116 @@ class JobRadarTest extends TestCase
         $this->assertSame('approved', $community->fresh()->status);
     }
 
+    public function test_a_vacancy_page_becomes_listings_with_salary_type_and_deadline(): void
+    {
+        $deadline = now()->addDays(8);
+        $row = fn (string $code, string $title, string $kind, string $pay) => '<li class="job-row"><div class="job-row-main"><h2><a href="/jobs/'.$code.'">'.$title.'</a></h2>'
+            .'<p><span class="badge">CBAO</span><span>'.$kind.'</span><span>Items needed: 1</span></p></div>'
+            .'<div class="job-row-side"><strong>'.$pay.'</strong><span>Apply by '.$deadline->format('F j, Y').'</span><span>8 days left</span></div></li>';
+
+        Http::fake([
+            'hris.example.test/robots.txt' => Http::response('', 404),
+            'hris.example.test/jobs' => Http::response('<html><body><a href="/jobs">Job Openings</a><a href="/jobs/how-to-apply">How to apply</a><ul>'
+                .$row('AbC123', 'Engineer I (Civil Engineer)', 'PERMANENT', 'P 33,947.00 monthly')
+                .$row('XyZ789', 'Traffic Aide I', 'CASUAL', 'P 749.36 daily')
+                .'</ul></body></html>'),
+        ]);
+
+        $source = $this->source('page', ['url' => 'https://hris.example.test/jobs', 'link_contains' => '/jobs/', 'employer' => 'City Government of Baguio', 'location' => 'Baguio City'], autoApprove: true);
+
+        $this->assertSame(['new' => 2, 'merged' => 0, 'seen' => 0], app(JobFetcher::class)->run($source));
+
+        $engineer = JobListing::query()->where('title', 'Engineer I (Civil Engineer)')->sole();
+        $this->assertSame('approved', $engineer->status);
+        $this->assertSame('https://hris.example.test/jobs/AbC123', $engineer->apply_url);
+        $this->assertSame('full-time', $engineer->employment_type);
+        $this->assertSame('government', $engineer->sector);
+        $this->assertSame('P 33,947.00 monthly', $engineer->salary_text);
+        $this->assertSame($deadline->toDateString(), $engineer->deadline->toDateString());
+        $this->assertStringNotContainsString('days left', $engineer->description);
+
+        $aide = JobListing::query()->where('title', 'Traffic Aide I')->sole();
+        $this->assertSame('contractual', $aide->employment_type);
+        $this->assertSame('P 749.36 daily', $aide->salary_text);
+    }
+
+    public function test_a_page_disallowed_by_robots_txt_is_not_read(): void
+    {
+        Http::fake([
+            'blocked.example.test/robots.txt' => Http::response("User-agent: *\nDisallow: /careers\n"),
+            'blocked.example.test/careers*' => Http::response('<a href="/careers/1">Clerk</a>'),
+        ]);
+
+        $source = $this->source('page', ['url' => 'https://blocked.example.test/careers', 'link_contains' => '/careers/']);
+
+        $this->assertNull(app(JobFetcher::class)->run($source));
+        $this->assertStringContainsString('robots.txt', $source->fresh()->last_error);
+        Http::assertNotSent(fn ($request) => $request->url() === 'https://blocked.example.test/careers');
+    }
+
+    public function test_a_page_behind_a_bot_check_is_left_alone(): void
+    {
+        Http::fake([
+            'gov.example.test/robots.txt' => Http::response('', 404),
+            'gov.example.test/*' => Http::response('Just a moment...', 403),
+        ]);
+
+        $source = $this->source('page', ['url' => 'https://gov.example.test/vacancies', 'link_contains' => '/vacancy/']);
+
+        $this->assertNull(app(JobFetcher::class)->run($source));
+        $this->assertStringContainsString('403', $source->fresh()->last_error);
+        $this->assertSame(0, JobListing::query()->count());
+    }
+
+    public function test_rss_reads_job_board_tags_and_filters_by_location(): void
+    {
+        $xml = '<?xml version="1.0"?><rss version="2.0" xmlns:job_listing="https://jobicy.com"><channel>'
+            .'<item><title>Support Specialist</title><link>https://board.example.test/1</link><guid>1</guid>'
+            .'<job_listing:company><![CDATA[Acme]]></job_listing:company><job_listing:location><![CDATA[Philippines]]></job_listing:location>'
+            .'<job_listing:job_type><![CDATA[Part Time]]></job_listing:job_type><description>Help customers.</description></item>'
+            .'<item><title>Account Executive</title><link>https://board.example.test/2</link><guid>2</guid>'
+            .'<job_listing:company><![CDATA[Globex]]></job_listing:company><job_listing:location><![CDATA[UK, Germany]]></job_listing:location>'
+            .'<description>Sell.</description></item>'
+            .'</channel></rss>';
+
+        Http::fake(['board.example.test/*' => Http::response($xml)]);
+
+        app(JobFetcher::class)->run($this->source('rss', ['url' => 'https://board.example.test/feed', 'remote' => true, 'locations' => ['Philippines', 'Asia']], autoApprove: true));
+
+        $listing = JobListing::query()->sole();
+        $this->assertSame('Support Specialist', $listing->title);
+        $this->assertSame('Acme', $listing->employer);
+        $this->assertSame('Remote · Philippines', $listing->location);
+        $this->assertTrue($listing->is_remote);
+        $this->assertSame('part-time', $listing->employment_type);
+        $this->assertSame('approved', $listing->status);
+    }
+
+    public function test_rss_can_split_the_employer_out_of_the_title(): void
+    {
+        Http::fake(['wwr.example.test/*' => Http::response($this->rss([
+            ['Smart Suites: Operations Manager', 'https://wwr.example.test/1', 'Run things.'],
+        ]))]);
+
+        app(JobFetcher::class)->run($this->source('rss', ['url' => 'https://wwr.example.test/feed', 'employer_in_title' => true]));
+
+        $listing = JobListing::query()->sole();
+        $this->assertSame('Operations Manager', $listing->title);
+        $this->assertSame('Smart Suites', $listing->employer);
+    }
+
+    public function test_company_boards_can_be_limited_to_philippine_openings(): void
+    {
+        Http::fake(['api.lever.co/*' => Http::response([
+            ['id' => 'a', 'text' => 'Rider Coordinator', 'hostedUrl' => 'https://jobs.lever.co/x/a', 'categories' => ['location' => 'Taguig, Philippines']],
+            ['id' => 'b', 'text' => 'Warehouse Lead', 'hostedUrl' => 'https://jobs.lever.co/x/b', 'categories' => ['location' => 'Shah Alam, Selangor, Malaysia']],
+        ])]);
+
+        app(JobFetcher::class)->run($this->source('lever', ['company' => 'x', 'employer' => 'Ninja Van', 'locations' => 'Philippines']));
+
+        $this->assertSame(['Rider Coordinator'], JobListing::query()->pluck('title')->all());
+    }
+
     // --- Fingerprint, safety, matching -----------------------------------
 
     public function test_fingerprint_ignores_noise_words_and_company_suffixes(): void

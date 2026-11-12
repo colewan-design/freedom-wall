@@ -22,5 +22,6 @@ final class NormalizedJob
         public readonly ?string $salaryText = null,
         public readonly ?string $description = null,
         public readonly ?CarbonImmutable $publishedAt = null,
+        public readonly ?CarbonImmutable $deadline = null,
     ) {}
 }

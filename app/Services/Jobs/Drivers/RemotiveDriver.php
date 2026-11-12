@@ -50,6 +50,10 @@ class RemotiveDriver extends HttpDriver
 
             $where = JobText::line($row['candidate_required_location'] ?? null, 140);
 
+            if (! $this->wantedLocation($where, $config)) {
+                continue;
+            }
+
             $jobs[] = new NormalizedJob(
                 externalId: (string) $row['id'],
                 title: $title,

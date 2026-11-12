@@ -37,6 +37,11 @@ class GreenhouseDriver extends HttpDriver
             }
 
             $location = JobText::line($row['location']['name'] ?? null, 160);
+
+            if (! $this->wantedLocation($location, $source->config)) {
+                continue;
+            }
+
             $description = JobText::plain($row['content'] ?? null);
 
             $jobs[] = new NormalizedJob(

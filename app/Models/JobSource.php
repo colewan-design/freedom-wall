@@ -9,15 +9,17 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class JobSource extends Model
 {
     /**
-     * Every driver reads a feed or an API the publisher put there for this.
-     * Pages that only exist as HTML are not on the list on purpose — that is
-     * scraping, and Facebook groups in particular forbid it outright.
+     * Feeds and official APIs first. `page` reads a public vacancy page that
+     * has no feed, but only where robots.txt allows it, at most every six
+     * hours, and never past a block or a bot challenge. Facebook pages and
+     * groups stay off the list: their terms forbid automated reading outright.
      */
     public const DRIVERS = [
         'rss' => 'RSS / Atom feed',
         'remotive' => 'Remotive (remote jobs API)',
         'greenhouse' => 'Greenhouse job board',
         'lever' => 'Lever job board',
+        'page' => 'Web page listing job links',
     ];
 
     protected $fillable = ['name', 'driver', 'config', 'is_active', 'auto_approve'];

@@ -170,6 +170,7 @@ final class JobIngestor
             'description' => $job->description,
             'apply_url' => $job->url,
             'published_at' => $job->publishedAt,
+            'deadline' => $job->deadline?->toDateString(),
             'discovered_at' => now(),
             'status' => $status,
             'fingerprint' => $fingerprint,
@@ -192,6 +193,7 @@ final class JobIngestor
             'salary_text' => blank($listing->salary_text) ? $job->salaryText : null,
             'description' => blank($listing->description) ? $job->description : null,
             'published_at' => $listing->published_at === null ? $job->publishedAt : null,
+            'deadline' => $listing->deadline === null ? $job->deadline?->toDateString() : null,
         ], fn ($value) => $value !== null);
 
         if ($fill !== []) {

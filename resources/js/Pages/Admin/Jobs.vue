@@ -110,25 +110,45 @@ async function act(listing, action) {
 // --- Sources -----------------------------------------------------------
 
 // What each driver needs, so the form only asks for the fields that apply.
+// Where a posting may be based, so a remote board does not fill the page with
+// US-only jobs. Shared by every driver that reads more than one place.
+const LOCATIONS_FIELD = {
+  key: 'locations',
+  label: 'Only keep jobs located in (comma separated; blank = all)',
+  placeholder: 'Philippines, Asia, APAC, Worldwide, Anywhere',
+};
+
 const DRIVER_FIELDS = {
   rss: [
     { key: 'url', label: 'Feed URL', placeholder: 'https://example.gov.ph/careers/feed', required: true },
     { key: 'employer', label: 'Employer (if the feed is one employer)' },
     { key: 'location', label: 'Default location' },
     { key: 'keywords', label: 'Only keep items mentioning (comma separated)', placeholder: 'IT, programmer, analyst' },
+    LOCATIONS_FIELD,
+    { key: 'remote', label: 'Every job in this feed is remote', type: 'checkbox' },
+    { key: 'employer_in_title', label: 'Titles read “Company: Job title”', type: 'checkbox' },
   ],
   remotive: [
     { key: 'search', label: 'Search term', placeholder: 'developer' },
     { key: 'category', label: 'Category slug', placeholder: 'software-dev' },
     { key: 'limit', label: 'Max per read', placeholder: '50' },
+    LOCATIONS_FIELD,
   ],
   greenhouse: [
     { key: 'board', label: 'Board token', placeholder: 'from boards.greenhouse.io/<token>', required: true },
     { key: 'employer', label: 'Employer name' },
+    LOCATIONS_FIELD,
   ],
   lever: [
     { key: 'company', label: 'Company slug', placeholder: 'from jobs.lever.co/<company>', required: true },
     { key: 'employer', label: 'Employer name' },
+    LOCATIONS_FIELD,
+  ],
+  page: [
+    { key: 'url', label: 'Page that lists the openings', placeholder: 'https://hris.baguio.gov.ph/jobs', required: true },
+    { key: 'link_contains', label: 'Every job link contains', placeholder: '/jobs/', required: true },
+    { key: 'employer', label: 'Employer', placeholder: 'City Government of Baguio' },
+    { key: 'location', label: 'Location', placeholder: 'Baguio City' },
   ],
 };
 
@@ -163,6 +183,7 @@ function editSource(source) {
     config: {
       ...source.config,
       keywords: Array.isArray(source.config.keywords) ? source.config.keywords.join(', ') : source.config.keywords,
+      locations: Array.isArray(source.config.locations) ? source.config.locations.join(', ') : source.config.locations,
     },
     interval: source.config.interval_minutes ?? 60,
     is_active: source.is_active,
@@ -381,8 +402,9 @@ onMounted(() => {
     <section class="panel">
       <h2>Sources</h2>
       <p class="hint">
-        Only feeds and official APIs are supported. Facebook pages and groups can't be read automatically: Meta
-        doesn't allow it without app review, and scraping breaks its terms. Readers can still share those posts as links.
+        Feeds and official APIs work best. A plain vacancy page can be read too when its robots.txt allows it. Sites
+        behind Cloudflare or Imperva bot checks (CSC, DICT, DPWH) refuse automated reading, and Facebook pages and
+        groups forbid it; readers can still share those posts as links.
       </p>
 
       <p v-if="loadingSources" class="hint">Loading…</p>
@@ -441,10 +463,16 @@ onMounted(() => {
               <option v-for="(label, key) in drivers" :key="key" :value="key">{{ label }}</option>
             </select>
           </label>
-          <label v-for="field in fields" :key="field.key" class="mini-field" :class="{ wide: field.key === 'url' || field.key === 'keywords' }">
-            <span>{{ field.label }}</span>
-            <input v-model="sourceForm.config[field.key]" type="text" :placeholder="field.placeholder" :required="field.required" />
-          </label>
+          <template v-for="field in fields" :key="field.key">
+            <label v-if="field.type === 'checkbox'" class="mini-check">
+              <input v-model="sourceForm.config[field.key]" type="checkbox" />
+              {{ field.label }}
+            </label>
+            <label v-else class="mini-field" :class="{ wide: ['url', 'keywords', 'locations'].includes(field.key) }">
+              <span>{{ field.label }}</span>
+              <input v-model="sourceForm.config[field.key]" type="text" :placeholder="field.placeholder" :required="field.required" />
+            </label>
+          </template>
           <label class="mini-field">
             <span>Read every (minutes)</span>
             <input v-model.number="sourceForm.interval" type="number" min="30" max="10080" step="30" />
@@ -731,6 +759,18 @@ h1 {
   color: var(--ink);
   font: inherit;
   font-size: 0.85rem;
+}
+
+.mini-check {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  grid-column: 1 / -1;
+  font-size: 0.85rem;
+}
+
+.mini-check input {
+  accent-color: var(--nf-accent);
 }
 
 .actions {
