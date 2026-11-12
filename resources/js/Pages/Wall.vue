@@ -314,6 +314,19 @@ const boardTabLabel = computed(
   () => BOARD_TABS.find((tab) => tab.id === boardTab.value)?.label.toLowerCase() ?? '',
 );
 
+// Up and down counted separately: a net score shows "0" on a post five people
+// liked and five didn't, which reads as nobody voting. The server counted
+// with this browser's vote as it stood on page load; swap that out for the
+// live one so pressing an arrow moves the count at once.
+function voteTally(post) {
+  const was = Number(post.your_vote ?? 0);
+  const now = voteFor(post).yours;
+  return {
+    up: Number(post.upvotes ?? 0) - (was === 1 ? 1 : 0) + (now === 1 ? 1 : 0),
+    down: Number(post.downvotes ?? 0) - (was === -1 ? 1 : 0) + (now === -1 ? 1 : 0),
+  };
+}
+
 // A board row links to its post only when that post is one of the fifty the
 // feed rendered; an older one has no anchor on the page to jump to.
 const feedIds = computed(() => new Set(props.posts.map((post) => post.id)));
@@ -538,9 +551,8 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
                 <path d="m6 14 6-6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
               </svg>
             </button>
-            <b :class="{ up: voteFor(featuredPost).score > 0, down: voteFor(featuredPost).score < 0 }">
-              {{ voteFor(featuredPost).score }}
-            </b>
+            <b :class="{ up: voteTally(featuredPost).up > 0 }" :aria-label="`${voteTally(featuredPost).up} upvotes`">{{ voteTally(featuredPost).up }}</b>
+            <b :class="{ down: voteTally(featuredPost).down > 0 }" :aria-label="`${voteTally(featuredPost).down} downvotes`">{{ voteTally(featuredPost).down ? `-${voteTally(featuredPost).down}` : 0 }}</b>
             <button
               type="button"
               class="vote-arrow"
@@ -614,7 +626,8 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
                   <path d="m6 14 6-6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
               </button>
-              <b :class="{ up: voteFor(row).score > 0, down: voteFor(row).score < 0 }">{{ voteFor(row).score }}</b>
+              <b :class="{ up: voteTally(row).up > 0 }" :aria-label="`${voteTally(row).up} upvotes`">{{ voteTally(row).up }}</b>
+              <b :class="{ down: voteTally(row).down > 0 }" :aria-label="`${voteTally(row).down} downvotes`">{{ voteTally(row).down ? `-${voteTally(row).down}` : 0 }}</b>
               <button
                 type="button"
                 class="vote-arrow"
@@ -758,7 +771,8 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
                   <path d="m6 14 6-6 6 6" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
               </button>
-              <b :class="{ up: voteFor(post).score > 0, down: voteFor(post).score < 0 }">{{ voteFor(post).score }}</b>
+              <b :class="{ up: voteTally(post).up > 0 }" :aria-label="`${voteTally(post).up} upvotes`">{{ voteTally(post).up }}</b>
+              <b :class="{ down: voteTally(post).down > 0 }" :aria-label="`${voteTally(post).down} downvotes`">{{ voteTally(post).down ? `-${voteTally(post).down}` : 0 }}</b>
               <button
                 type="button"
                 class="vote-arrow"
@@ -1366,7 +1380,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
 }
 
 .vote b.down {
-  /* A light red: the dark one all but vanished on the dark card. */
+  /* A light red: the dark one this replaced all but vanished on the card. */
   color: #f87171;
 }
 
