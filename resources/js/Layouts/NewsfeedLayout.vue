@@ -277,6 +277,17 @@ function excerpt(text, length = 60) {
       <span v-else class="nf-admin-label">Moderation Dashboard</span>
 
       <div class="nf-user">
+        <Link v-if="!isAdminPage" href="/support" class="nf-support" aria-label="Support the wall">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path
+              d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.2a4.3 4.3 0 0 1 7.5 2.6C19.5 15.4 12 20 12 20Z"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linejoin="round"
+            />
+          </svg>
+          <span>Support</span>
+        </Link>
         <button
           type="button"
           class="nf-icon-btn"
@@ -755,6 +766,38 @@ function excerpt(text, length = 60) {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+}
+
+.nf-support {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  height: 2rem;
+  padding: 0 0.7rem;
+  border-radius: var(--b-r-sm);
+  border: 1px solid var(--nf-line);
+  background: var(--nf-panel);
+  color: var(--nf-accent);
+  font-size: 0.82rem;
+  font-weight: 650;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.nf-support:hover {
+  border-color: var(--nf-accent);
+}
+
+@media (max-width: 1100px) {
+  .nf-support span {
+    display: none;
+  }
+
+  .nf-support {
+    width: 2rem;
+    padding: 0;
+    justify-content: center;
+  }
 }
 
 .nf-icon-btn {

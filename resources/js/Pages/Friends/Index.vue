@@ -10,6 +10,7 @@ const props = defineProps({
   incoming: Array,
   outgoing: Array,
   searchResults: Array,
+  suggestions: Array,
   query: String,
 });
 
@@ -19,8 +20,16 @@ function runSearch() {
   router.get(route('friends.index'), { q: search.value }, { preserveState: true, replace: true });
 }
 
+const requestedIds = ref([]);
+
 function sendRequest(username) {
   router.post(route('friends.store', username), {}, { preserveScroll: true, onSuccess: runSearch });
+}
+
+function connectSuggestion(person) {
+  if (requestedIds.value.includes(person.id)) return;
+  requestedIds.value.push(person.id);
+  router.post(route('friends.store', person.username), {}, { preserveScroll: true, preserveState: true });
 }
 
 function accept(friendshipId) {
@@ -115,6 +124,28 @@ function avatarLetter(name) {
       </ul>
     </section>
 
+    <section id="suggestions" class="net-panel">
+      <div class="net-panel-head">
+        <h2>People you may know</h2>
+        <span v-if="suggestions.length" class="net-count">{{ suggestions.length }}</span>
+      </div>
+      <ul v-if="suggestions.length" class="person-list">
+        <li v-for="person in suggestions" :key="person.id">
+          <Link :href="`/profile/${person.username}`" class="avatar">
+            <img v-if="person.avatar_url" :src="person.avatar_url" alt="" />
+            <span v-else>{{ avatarLetter(person.name) }}</span>
+          </Link>
+          <div class="person-info">
+            <Link :href="`/profile/${person.username}`" class="name">{{ person.name }}</Link>
+            <span class="username">@{{ person.username }}</span>
+          </div>
+          <span v-if="requestedIds.includes(person.id)" class="pending-tag">Requested</span>
+          <button v-else type="button" class="btn-primary" @click="connectSuggestion(person)">Connect</button>
+        </li>
+      </ul>
+      <p v-else class="empty">Your network is all caught up.</p>
+    </section>
+
     <section class="net-panel">
       <div class="net-panel-head">
         <h2>Your connections</h2>
@@ -162,7 +193,7 @@ function avatarLetter(name) {
 .net-search input::placeholder { color: #87928c; }
 .net-search button { height: 30px; padding: 0 15px; border: 0; border-radius: 6px; background: linear-gradient(135deg, #08713e, #07562f); color: #fff; font: inherit; font-size: 11px; font-weight: 700; cursor: pointer; }
 
-.net-panel { padding: 13px 16px 15px; border: 1px solid var(--feed-line); border-radius: 10px; background: #fff; box-shadow: 0 2px 9px rgba(17,53,33,.035); }
+.net-panel { scroll-margin-top: 80px; padding: 13px 16px 15px; border: 1px solid var(--feed-line); border-radius: 10px; background: #fff; box-shadow: 0 2px 9px rgba(17,53,33,.035); }
 .net-panel-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
 .net-panel-head h2 { margin: 0; font-size: 14px; }
 .net-count { display: grid; place-items: center; min-width: 21px; height: 21px; padding: 0 6px; border-radius: 50px; background: #eaf5ef; color: var(--feed-green); font-size: 11px; font-weight: 700; }

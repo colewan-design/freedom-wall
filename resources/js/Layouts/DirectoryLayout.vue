@@ -151,6 +151,23 @@ const formatCount = (value) => Number(value).toLocaleString('en-PH');
             <kbd>/</kbd>
           </label>
 
+          <Link
+            href="/support"
+            class="dir-support"
+            :class="{ active: isActive('/support') }"
+            aria-label="Support the wall"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path
+                d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.2a4.3 4.3 0 0 1 7.5 2.6C19.5 15.4 12 20 12 20Z"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linejoin="round"
+              />
+            </svg>
+            <span>Support</span>
+          </Link>
+
           <button
             type="button"
             class="dir-icon-btn"
@@ -385,6 +402,36 @@ const formatCount = (value) => Number(value).toLocaleString('en-PH');
   color: var(--d-muted);
   cursor: pointer;
   transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+/* Support: a quiet pill beside the theme toggle, green-tinted so it reads as
+   an invitation rather than another control. Drops to the heart alone when
+   the bar gets tight. */
+.dir-support {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex: 0 0 auto;
+  height: 2.1rem;
+  padding: 0 0.75rem;
+  border-radius: var(--d-r-pill);
+  border: 1px solid var(--d-green-tint-line);
+  background: var(--d-green-tint);
+  color: var(--d-green-text);
+  font-size: 0.82rem;
+  font-weight: 650;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.dir-support:hover,
+.dir-support.active {
+  border-color: var(--d-green);
+}
+
+.dir-support svg {
+  flex-shrink: 0;
 }
 
 .dir-icon-btn:hover {
@@ -676,6 +723,18 @@ const formatCount = (value) => Number(value).toLocaleString('en-PH');
 
   .dir-foot-inner {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1100px) {
+  .dir-support span {
+    display: none;
+  }
+
+  .dir-support {
+    width: 2.1rem;
+    padding: 0;
+    justify-content: center;
   }
 }
 

@@ -53,11 +53,24 @@ class FriendController extends Controller
                 ->get(['id', 'name', 'username', 'avatar_path']);
         }
 
+        $connectedIds = $friendships->pluck('requester_id')
+            ->merge($friendships->pluck('addressee_id'))
+            ->push($user->id)
+            ->unique();
+
+        $suggestions = User::query()
+            ->where('role', 'student')
+            ->whereNotIn('id', $connectedIds)
+            ->inRandomOrder()
+            ->limit(24)
+            ->get(['id', 'name', 'username', 'avatar_path']);
+
         return Inertia::render('Friends/Index', [
             'friends' => $friends,
             'incoming' => $incoming,
             'outgoing' => $outgoing,
             'searchResults' => $searchResults,
+            'suggestions' => $suggestions,
             'query' => $query ?? '',
         ]);
     }

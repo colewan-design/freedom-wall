@@ -170,7 +170,7 @@ function submitSearch() {
           </section>
 
           <section class="rail-panel suggestions-panel">
-            <div class="rail-heading"><h2><span>♣</span> People you may know</h2><Link href="/friends">See all</Link></div>
+            <div class="rail-heading"><h2><span>♣</span> People you may know</h2><Link href="/friends#suggestions">See all</Link></div>
             <ul class="suggestion-list">
               <li v-for="person in suggestedFriends" :key="person.id">
                 <span class="avatar avatar-sm"><img v-if="person.avatar_url" :src="person.avatar_url" alt="" /><span v-else>{{ person.name.slice(0, 1) }}</span></span>
