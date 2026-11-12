@@ -169,7 +169,10 @@ class SubmissionController extends Controller
     private function postBoard($scored, $yourVotes): array
     {
         $windows = [
-            'today' => now()->startOfDay(),
+            // The app runs on UTC, but "today" for the wall's readers starts at
+            // Manila midnight — UTC midnight is 8am there, so a post from the
+            // early hours would otherwise count as yesterday's.
+            'today' => now('Asia/Manila')->startOfDay(),
             'week' => now()->subDays(7),
             'month' => now()->subDays(30),
             'all' => null,

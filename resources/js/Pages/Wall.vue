@@ -521,7 +521,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
               <i aria-hidden="true">•</i>
               <span>Anonymous</span>
             </p>
-            <h2>{{ excerpt(postBody(featuredPost), 76) }}</h2>
+            <h2>{{ postBody(featuredPost) }}</h2>
             <p class="spotlight-sub">Posted {{ timeAgo(featuredPost.reviewed_at) }}</p>
           </div>
 
@@ -1314,6 +1314,10 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
   letter-spacing: -0.02em;
   line-height: 1.3;
   color: var(--d-ink);
+  /* The whole post, line breaks and all: it is the one card on the page that
+     exists to be read, so cutting it short defeats it. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .spotlight-sub {
