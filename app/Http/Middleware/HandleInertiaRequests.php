@@ -44,6 +44,9 @@ class HandleInertiaRequests extends Middleware
                 // read as someone in trouble. Never blocks the post.
                 'support' => fn () => $request->session()->get('support'),
             ],
+            // The footer's visitor line. Cached in the service; a closure so
+            // partial reloads that do not ask for it skip it entirely.
+            'visitorStats' => fn () => rescue(fn () => app(\App\Services\VisitCounter::class)->publicStats(), null, false),
             'pendingRequestCount' => fn () => $request->user()?->role === 'student'
                 ? Friendship::query()->where('addressee_id', $request->user()->id)->where('status', 'pending')->count()
                 : 0,

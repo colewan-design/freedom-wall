@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Submission;
+use App\Services\VisitCounter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -54,6 +55,12 @@ class SubmissionModerationController extends Controller
             'approvedToday' => Submission::query()->approved()->whereDate('reviewed_at', today())->count(),
             'rejectedToday' => Submission::query()->where('status', 'rejected')->whereDate('reviewed_at', today())->count(),
         ]);
+    }
+
+    /** Unique visitors: headline numbers, today's sections, and 30 days. */
+    public function visits(VisitCounter $counter): JsonResponse
+    {
+        return response()->json($counter->adminStats());
     }
 
     public function approve(Request $request, Submission $submission): JsonResponse

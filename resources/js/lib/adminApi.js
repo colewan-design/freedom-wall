@@ -23,6 +23,8 @@ export const adminApi = {
 
   getStats: () => request('/admin/stats'),
 
+  getVisits: () => request('/admin/visits'),
+
   approve: (id, content) =>
     request(`/admin/submissions/${id}/approve`, { method: 'POST', body: { content } }),
 

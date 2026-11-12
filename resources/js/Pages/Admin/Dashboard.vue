@@ -402,11 +402,31 @@ function reportedText(report) {
   return report.target === 'reply' ? report.reply?.body : report.thread?.title;
 }
 
+// Unique visitors. Its own request and its own state: the stat cards above
+// animate a fixed set of keys, and these numbers are not moderation work.
+const visits = ref(null);
+
+async function loadVisits() {
+  try {
+    visits.value = await adminApi.getVisits();
+  } catch {
+    visits.value = null;
+  }
+}
+
+const visitPeak = computed(() => Math.max(1, ...(visits.value?.days ?? []).map((day) => day.visitors)));
+
+function shortDay(value) {
+  const [y, m, d] = value.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString([], { month: 'short', day: 'numeric' });
+}
+
 onMounted(() => {
   loadStats();
   loadPending();
   loadApproved();
   loadReports();
+  loadVisits();
 });
 </script>
 
@@ -444,6 +464,51 @@ onMounted(() => {
         <span class="stat-label">Rejected today</span>
       </div>
     </div>
+
+    <section v-if="visits" class="panel visits">
+      <div class="panel-head">
+        <h2>Unique visitors</h2>
+        <span class="hint visits-note">Each person counted once a day · Philippine time · bots and moderators left out</span>
+      </div>
+
+      <dl class="visit-numbers">
+        <div><dt>Today</dt><dd>{{ visits.today.toLocaleString() }}</dd></div>
+        <div><dt>Yesterday</dt><dd>{{ visits.yesterday.toLocaleString() }}</dd></div>
+        <div><dt>Last 7 days</dt><dd>{{ visits.last7.toLocaleString() }}</dd></div>
+        <div><dt>Last 30 days</dt><dd>{{ visits.last30.toLocaleString() }}</dd></div>
+        <div><dt>All time</dt><dd>{{ visits.total.toLocaleString() }}</dd></div>
+      </dl>
+
+      <div class="visit-detail">
+        <figure class="visit-chart">
+          <figcaption>Daily, last 30 days</figcaption>
+          <div class="visit-bars" role="img" :aria-label="`Daily unique visitors over 30 days, peak ${visitPeak}`">
+            <span
+              v-for="day in visits.days"
+              :key="day.date"
+              class="visit-bar"
+              :style="{ height: `${Math.max(2, (day.visitors / visitPeak) * 100)}%` }"
+              :title="`${shortDay(day.date)}: ${day.visitors}`"
+            ></span>
+          </div>
+          <div class="visit-axis">
+            <span>{{ shortDay(visits.days[0].date) }}</span>
+            <span>Today</span>
+          </div>
+        </figure>
+
+        <div class="visit-sections">
+          <p class="visit-sections-head">Today by section</p>
+          <p v-if="!visits.sections.length" class="hint">No visits yet today.</p>
+          <ul v-else>
+            <li v-for="row in visits.sections" :key="row.section">
+              <span>{{ row.label }}</span>
+              <b>{{ row.visitors.toLocaleString() }}</b>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
 
     <Transition name="banner">
       <p v-if="banner.message" class="banner" :class="banner.tone">{{ banner.message }}</p>
@@ -839,6 +904,123 @@ h1 {
   line-height: 1;
   font-weight: 800;
   margin-bottom: 0.35rem;
+}
+
+.visits-note {
+  margin: 0;
+  font-size: 0.78rem;
+}
+
+.visit-numbers {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 0 0 1.25rem;
+}
+
+.visit-numbers div {
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: var(--b-r-md);
+  background: var(--page-bg);
+}
+
+.visit-numbers dt {
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.visit-numbers dd {
+  margin: 0.25rem 0 0;
+  font-size: 1.4rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.visit-detail {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 1.25rem;
+}
+
+.visit-chart {
+  margin: 0;
+}
+
+.visit-chart figcaption,
+.visit-sections-head {
+  margin: 0 0 0.6rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.visit-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 7rem;
+  padding-bottom: 1px;
+  border-bottom: 1px solid var(--line);
+}
+
+.visit-bar {
+  flex: 1;
+  min-width: 0;
+  border-radius: 3px 3px 0 0;
+  background: var(--nf-accent);
+  opacity: 0.85;
+}
+
+.visit-bar:last-child {
+  opacity: 1;
+}
+
+.visit-bar:hover {
+  opacity: 1;
+  filter: brightness(1.15);
+}
+
+.visit-axis {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.35rem;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.visit-sections ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.visit-sections li {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.4rem 0;
+  border-bottom: 1px dashed var(--line);
+  font-size: 0.86rem;
+}
+
+.visit-sections li:last-child {
+  border-bottom: 0;
+}
+
+.visit-sections b {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 760px) {
+  .visit-numbers {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .visit-detail {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .stat-label {

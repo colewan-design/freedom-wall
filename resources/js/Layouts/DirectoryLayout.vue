@@ -112,6 +112,11 @@ function openComposer() {
 }
 
 const year = new Date().getFullYear();
+
+// Unique visitors, counted once per person per day. Null when the count could
+// not be read, in which case the line is simply left out.
+const visitors = computed(() => page.props.visitorStats ?? null);
+const formatCount = (value) => Number(value).toLocaleString('en-PH');
 </script>
 
 <template>
@@ -221,6 +226,13 @@ const year = new Date().getFullYear();
 
       <div class="dir-foot-bar">
         <span>&copy; {{ year }} BSU Freedom Wall. Student-run.</span>
+        <span v-if="visitors" class="dir-foot-visitors" title="Unique visitors, each counted once a day">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" />
+            <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.7" />
+          </svg>
+          {{ formatCount(visitors.total) }} visitors &middot; {{ formatCount(visitors.today) }} today
+        </span>
         <span>Anonymous &middot; Reviewed before posting</span>
       </div>
     </footer>
@@ -572,6 +584,13 @@ const year = new Date().getFullYear();
 
 .dir-foot-col :deep(a:hover) {
   color: var(--d-green-text);
+}
+
+.dir-foot-visitors {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .dir-foot-bar {
