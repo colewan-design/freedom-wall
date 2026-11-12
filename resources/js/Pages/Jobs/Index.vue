@@ -216,6 +216,19 @@ const today = new Date().toISOString().slice(0, 10);
           />
         </label>
 
+        <label class="field field-employer">
+          <span>Hiring agency</span>
+          <select v-model="employer">
+            <option value="">Any employer</option>
+            <option v-if="employerMissing" :value="employer">{{ employer }} (none open)</option>
+            <optgroup v-for="group in employerGroups" :key="group.label" :label="group.label">
+              <option v-for="item in group.items" :key="item.name" :value="item.name">
+                {{ item.name }} ({{ item.total }})
+              </option>
+            </optgroup>
+          </select>
+        </label>
+
         <label class="field">
           <span>Type</span>
           <select v-model="type">
@@ -229,19 +242,6 @@ const today = new Date().toISOString().slice(0, 10);
           <select v-model="sector">
             <option value="">Any sector</option>
             <option v-for="value in options.sectors" :key="value" :value="value">{{ SECTOR_LABELS[value] }}</option>
-          </select>
-        </label>
-
-        <label class="field field-employer">
-          <span>Hiring agency</span>
-          <select v-model="employer">
-            <option value="">Any employer</option>
-            <option v-if="employerMissing" :value="employer">{{ employer }} (none open)</option>
-            <optgroup v-for="group in employerGroups" :key="group.label" :label="group.label">
-              <option v-for="item in group.items" :key="item.name" :value="item.name">
-                {{ item.name }} ({{ item.total }})
-              </option>
-            </optgroup>
           </select>
         </label>
 
@@ -605,11 +605,14 @@ const today = new Date().toISOString().slice(0, 10);
 
 /* --- Filters -------------------------------------------------------------- */
 
+/* Two deliberate rows rather than a wrapping flex line, which left "Posted"
+   stranded on a row of its own: the two wide text-ish fields on top, the
+   four short choices under them. */
 .filters {
-  display: flex;
-  align-items: flex-end;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: end;
   gap: 0.65rem;
-  flex-wrap: wrap;
   padding: 0.9rem 0.95rem;
   background: var(--d-card);
   border: 1px solid var(--d-line);
@@ -624,15 +627,13 @@ const today = new Date().toISOString().slice(0, 10);
   min-width: 0;
 }
 
-.field-grow {
-  flex: 1 1 14rem;
+.field-grow,
+.field-employer {
+  grid-column: span 2;
 }
 
 /* Agency names run long ("Northern Philippines Root Crops Research…"); the
-   closed select stays a sensible width and the open list shows them whole. */
-.field-employer {
-  flex: 0 1 13rem;
-}
+   closed select truncates and the open list shows them whole. */
 
 .field-employer select {
   text-overflow: ellipsis;
@@ -1040,8 +1041,8 @@ const today = new Date().toISOString().slice(0, 10);
     gap: 0.4rem;
   }
 
-  .filters > .field {
-    flex: 1 1 100%;
+  .filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
