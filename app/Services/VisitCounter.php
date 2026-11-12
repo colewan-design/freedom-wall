@@ -38,6 +38,7 @@ class VisitCounter
         'messages' => 'feed',
         'journal' => 'feed',
         'saved' => 'feed',
+        'support' => 'support',
     ];
 
     public const LABELS = [
@@ -48,6 +49,7 @@ class VisitCounter
         'id-check' => 'ID Check',
         'tools' => 'Tools',
         'feed' => 'Student feed',
+        'support' => 'Support',
     ];
 
     private const STATS_CACHE_KEY = 'visits:public-stats';

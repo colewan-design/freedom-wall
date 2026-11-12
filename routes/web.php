@@ -85,6 +85,7 @@ Route::redirect('/id', '/id-check');
 // there is nothing for a controller to hand over here.
 Route::inertia('/tools', 'Tools/Index')->name('tools');
 Route::redirect('/apps', '/tools');
+Route::inertia('/support', 'Support/Index')->name('support');
 
 Route::middleware('guest')->group(function () {
     Route::get('register', [RegisteredUserController::class, 'create'])->name('register');

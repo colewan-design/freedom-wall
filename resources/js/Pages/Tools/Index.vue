@@ -194,6 +194,15 @@ const GROUPS = computed(() =>
         </ul>
       </section>
 
+      <section class="rail-card rail-support">
+        <img src="/images/support/instapay-qr.png" alt="" loading="lazy" decoding="async" class="rail-support-qr" />
+        <div>
+          <h2>Like what we build?</h2>
+          <p>Everything here is free. If it helped, you can chip in through InstaPay.</p>
+          <Link href="/support" class="rail-support-link">Support the wall <span aria-hidden="true">&rarr;</span></Link>
+        </div>
+      </section>
+
       <section class="rail-card rail-promo">
         <h2>Got an idea?</h2>
         <p>
@@ -685,6 +694,47 @@ const GROUPS = computed(() =>
   white-space: nowrap;
   font-size: 0.68rem;
   color: var(--d-muted);
+}
+
+.rail-support {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.rail-support h2 {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 750;
+  letter-spacing: -0.015em;
+  color: var(--d-ink);
+}
+
+.rail-support p {
+  margin: 0.3rem 0 0;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--d-muted);
+}
+
+/* White behind the code in both themes, as on /support. */
+.rail-support-qr {
+  width: 4.6rem;
+  height: 4.6rem;
+  flex-shrink: 0;
+  padding: 0.25rem;
+  border-radius: var(--d-r-md);
+  background: #fff;
+  border: 1px solid var(--d-line);
+}
+
+.rail-support-link {
+  display: inline-block;
+  margin-top: 0.45rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--d-green-text);
+  text-decoration: none;
 }
 
 .rail-promo p {

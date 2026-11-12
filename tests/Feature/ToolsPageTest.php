@@ -19,6 +19,15 @@ class ToolsPageTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page->component('Tools/Index'));
     }
 
+    public function test_guest_can_view_the_support_page_and_its_qr_exists(): void
+    {
+        $this->get('/support')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->component('Support/Index'));
+
+        $this->assertFileExists(public_path('images/support/instapay-qr.png'));
+    }
+
     public function test_shortcut_route_redirects_to_the_tools_page(): void
     {
         $this->get('/apps')->assertRedirect('/tools');

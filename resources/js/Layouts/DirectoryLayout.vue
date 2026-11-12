@@ -53,6 +53,7 @@ const FOOTER_COLUMNS = [
       { href: '/jobs', label: 'JobRadar' },
       { href: '/id-check', label: 'BSUkol ID Check' },
       { href: '/tools', label: 'All tools' },
+      { href: '/support', label: 'Support the wall' },
     ],
   },
   {
