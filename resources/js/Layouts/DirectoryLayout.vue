@@ -249,7 +249,7 @@ const formatCount = (value) => Number(value).toLocaleString('en-PH');
             <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" />
             <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.7" />
           </svg>
-          {{ formatCount(visitors.total) }} visitors &middot; {{ formatCount(visitors.today) }} today
+          {{ formatCount(visitors.total) }} {{ visitors.total === 1 ? 'visitor' : 'visitors' }} &middot; {{ formatCount(visitors.today) }} today
         </span>
         <span>Anonymous &middot; Reviewed before posting</span>
       </div>
