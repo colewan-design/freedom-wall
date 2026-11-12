@@ -23,12 +23,19 @@ abstract class HttpDriver implements JobSourceDriver
     /** @param array<string, scalar> $query */
     protected function get(string $url, array $query = [], string $accept = 'application/json'): Response
     {
+        // Merged into the URL by hand: handing Guzzle a `query` option, even
+        // an empty one, replaces the query string already in the URL, so a
+        // feed at "/?feed=job_feed" quietly became the site's home page.
+        if ($query !== []) {
+            $url .= (str_contains($url, '?') ? '&' : '?').http_build_query($query);
+        }
+
         try {
             $response = Http::timeout(20)
                 ->connectTimeout(8)
                 ->withUserAgent('BSUFreedomWall-JobRadar/1.0 (+'.config('app.url').'/jobs)')
                 ->accept($accept)
-                ->get($url, $query);
+                ->get($url);
         } catch (ConnectionException $e) {
             throw new RuntimeException('Could not connect: '.$e->getMessage(), previous: $e);
         }

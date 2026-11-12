@@ -275,6 +275,16 @@ class JobRadarTest extends TestCase
         $this->assertSame('Smart Suites', $listing->employer);
     }
 
+    public function test_a_feed_address_keeps_its_own_query_string(): void
+    {
+        Http::fake(['board.example.test/*' => Http::response($this->rss([['Writer', 'https://board.example.test/1', 'Write.']]))]);
+
+        app(JobFetcher::class)->run($this->source('rss', ['url' => 'https://board.example.test/?feed=job_feed']));
+
+        Http::assertSent(fn ($request) => $request->url() === 'https://board.example.test/?feed=job_feed');
+        $this->assertSame(1, JobListing::query()->count());
+    }
+
     public function test_an_overlong_location_is_trimmed_to_fit_the_column(): void
     {
         $countries = implode(', ', array_fill(0, 40, '🇦🇹 Austria'));
