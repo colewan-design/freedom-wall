@@ -36,7 +36,7 @@ class JobRadarTest extends TestCase
 
         $counts = app(JobFetcher::class)->run($source);
 
-        $this->assertSame(['new' => 2, 'merged' => 0, 'seen' => 0], $counts);
+        $this->assertSame(['new' => 2, 'merged' => 0, 'seen' => 0, 'skipped' => 0], $counts);
         $this->assertSame(2, JobListing::query()->pending()->count());
 
         $officer = JobListing::query()->where('title', 'like', 'IT Officer%')->sole();
@@ -57,7 +57,7 @@ class JobRadarTest extends TestCase
         app(JobFetcher::class)->run($source);
         $second = app(JobFetcher::class)->run($source->fresh(), force: true);
 
-        $this->assertSame(['new' => 0, 'merged' => 0, 'seen' => 1], $second);
+        $this->assertSame(['new' => 0, 'merged' => 0, 'seen' => 1, 'skipped' => 0], $second);
         $this->assertSame(1, JobListing::query()->count());
     }
 
@@ -194,7 +194,7 @@ class JobRadarTest extends TestCase
 
         $source = $this->source('page', ['url' => 'https://hris.example.test/jobs', 'link_contains' => '/jobs/', 'employer' => 'City Government of Baguio', 'location' => 'Baguio City'], autoApprove: true);
 
-        $this->assertSame(['new' => 2, 'merged' => 0, 'seen' => 0], app(JobFetcher::class)->run($source));
+        $this->assertSame(['new' => 2, 'merged' => 0, 'seen' => 0, 'skipped' => 0], app(JobFetcher::class)->run($source));
 
         $engineer = JobListing::query()->where('title', 'Engineer I (Civil Engineer)')->sole();
         $this->assertSame('approved', $engineer->status);
@@ -273,6 +273,24 @@ class JobRadarTest extends TestCase
         $listing = JobListing::query()->sole();
         $this->assertSame('Operations Manager', $listing->title);
         $this->assertSame('Smart Suites', $listing->employer);
+    }
+
+    public function test_an_overlong_location_is_trimmed_to_fit_the_column(): void
+    {
+        $countries = implode(', ', array_fill(0, 40, '🇦🇹 Austria'));
+        $xml = '<?xml version="1.0"?><rss version="2.0"><channel><item><title>Zanda Health: Product Owner</title>'
+            .'<link>https://wwr.example.test/9</link><guid>9</guid><region>Anywhere in the World</region>'
+            .'<country>'.$countries.'</country><description>Own the product.</description></item></channel></rss>';
+
+        Http::fake(['wwr.example.test/*' => Http::response($xml)]);
+
+        $counts = app(JobFetcher::class)->run($this->source('rss', ['url' => 'https://wwr.example.test/feed', 'remote' => true, 'employer_in_title' => true]));
+
+        $this->assertSame(1, $counts['new']);
+        $location = JobListing::query()->sole()->location;
+        $this->assertLessThanOrEqual(160, mb_strlen($location));
+        $this->assertStringStartsWith('Remote · Anywhere in the World', $location);
+        $this->assertStringEndsWith('…', $location);
     }
 
     public function test_company_boards_can_be_limited_to_philippine_openings(): void

@@ -61,7 +61,11 @@ class RssDriver extends HttpDriver
         }
 
         if ($xml === false) {
-            throw new RuntimeException('The address did not return a readable RSS or Atom feed.');
+            // Say what came back, since "not a feed" is usually a challenge
+            // page or an error page served with a 200.
+            $start = mb_substr(trim(preg_replace('/\s+/', ' ', strip_tags($body)) ?? ''), 0, 120);
+
+            throw new RuntimeException('The address did not return a readable RSS or Atom feed'.($start !== '' ? ": “{$start}”" : '.'));
         }
 
         $isAtom = ! isset($xml->channel);

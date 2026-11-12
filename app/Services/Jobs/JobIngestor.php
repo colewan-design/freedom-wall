@@ -5,7 +5,9 @@ namespace App\Services\Jobs;
 use App\Models\JobListing;
 use App\Models\JobListingSource;
 use App\Models\JobSource;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Turns what a driver read into listings, without duplicating any.
@@ -29,15 +31,24 @@ final class JobIngestor
     ) {}
 
     /**
+     * One posting that will not store (an odd field from a feed) is logged
+     * and skipped; it does not cost the rest of the source.
+     *
      * @param  list<NormalizedJob>  $jobs
-     * @return array{new: int, merged: int, seen: int}
+     * @return array{new: int, merged: int, seen: int, skipped: int}
      */
     public function ingest(JobSource $source, array $jobs): array
     {
-        $counts = ['new' => 0, 'merged' => 0, 'seen' => 0];
+        $counts = ['new' => 0, 'merged' => 0, 'seen' => 0, 'skipped' => 0];
 
         foreach (array_slice($jobs, 0, self::MAX_PER_FETCH) as $job) {
-            $outcome = DB::transaction(fn () => $this->ingestOne($source, $job));
+            try {
+                $outcome = DB::transaction(fn () => $this->ingestOne($source, $job));
+            } catch (QueryException $e) {
+                Log::warning('JobRadar skipped a posting', ['source' => $source->id, 'url' => $job->url, 'error' => $e->getMessage()]);
+                $outcome = 'skipped';
+            }
+
             $counts[$outcome]++;
         }
 

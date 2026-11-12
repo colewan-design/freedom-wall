@@ -29,7 +29,7 @@ final class JobText
         $text = preg_replace("/\n\s*\n\s*(\n\s*)+/", "\n\n", $text) ?? $text;
         $text = trim(preg_replace("/ *\n */", "\n", $text) ?? $text);
 
-        return $text === '' ? null : Str::limit($text, $limit, '…');
+        return $text === '' ? null : self::fit($text, $limit);
     }
 
     public static function line(?string $value, int $limit): ?string
@@ -40,7 +40,22 @@ final class JobText
 
         $value = trim(preg_replace('/\s+/u', ' ', strip_tags(html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8'))) ?? '');
 
-        return $value === '' ? null : Str::limit($value, $limit, '…');
+        return $value === '' ? null : self::fit($value, $limit);
+    }
+
+    /**
+     * Cut to at most $limit characters, ellipsis included. Str::limit counts
+     * display width and then appends the ellipsis, so its result can run past
+     * a varchar column — a 30-flag location list from one feed did exactly
+     * that. Character count is what MySQL measures, so count characters.
+     */
+    public static function fit(string $value, int $limit): string
+    {
+        if (mb_strlen($value) <= $limit) {
+            return $value;
+        }
+
+        return rtrim(mb_substr($value, 0, $limit - 1), " ,·;").'…';
     }
 
     /** Map whatever a source calls the arrangement onto our five values. */

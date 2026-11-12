@@ -36,7 +36,7 @@ class FetchJobs extends Command
                 continue;
             }
 
-            $this->info("{$source->name}: {$counts['new']} new, {$counts['merged']} merged, {$counts['seen']} already known");
+            $this->info("{$source->name}: {$counts['new']} new, {$counts['merged']} merged, {$counts['seen']} already known".($counts['skipped'] ? ", {$counts['skipped']} skipped (see the log)" : ''));
         }
 
         $closed = $ingestor->closeStale();
