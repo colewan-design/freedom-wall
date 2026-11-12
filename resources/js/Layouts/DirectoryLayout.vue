@@ -14,6 +14,9 @@ const props = defineProps({
   search: { type: String, default: '' },
   // What the bar says it searches, since each page searches its own list.
   searchPlaceholder: { type: String, default: 'Search posts' },
+  // Pages with nothing to search (log in, sign up) drop the box entirely
+  // rather than offer one that does nothing.
+  hideSearch: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['update:search']);
@@ -136,7 +139,7 @@ const formatCount = (value) => Number(value).toLocaleString('en-PH');
         </nav>
 
         <div class="dir-top-right">
-          <label class="dir-search">
+          <label v-if="!hideSearch" class="dir-search">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8" />
               <path d="m20 20-3.2-3.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
