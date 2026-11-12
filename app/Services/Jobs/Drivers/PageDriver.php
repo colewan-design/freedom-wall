@@ -70,15 +70,26 @@ class PageDriver extends HttpDriver
         libxml_use_internal_errors($previous);
 
         $needle = (string) $config['link_contains'];
-        $jobs = [];
-        $seen = [];
+        $excludes = array_values(array_filter(array_map('trim', is_string($config['link_excludes'] ?? null)
+            ? explode(',', $config['link_excludes'])
+            : (array) ($config['link_excludes'] ?? []))));
+
+        // Every job link first, so each one's block can be told apart from
+        // its neighbours' below.
+        $links = [];
 
         foreach ((new DOMXPath($dom))->query('//a[@href]') as $anchor) {
             /** @var DOMElement $anchor */
             $href = $this->absolute(trim($anchor->getAttribute('href')), $url);
 
-            if ($href === null || ! str_contains($href, $needle) || isset($seen[$href]) || rtrim($href, '/') === rtrim($url, '/')) {
+            if ($href === null || ! str_contains($href, $needle) || rtrim($href, '/') === rtrim($url, '/')) {
                 continue;
+            }
+
+            foreach ($excludes as $exclude) {
+                if (str_contains($href, $exclude)) {
+                    continue 2;
+                }
             }
 
             $title = JobText::line($anchor->textContent, 200);
@@ -89,11 +100,31 @@ class PageDriver extends HttpDriver
                 continue;
             }
 
-            $seen[$href] = true;
-            $context = $this->contextOf($anchor, $title);
+            $links[] = [$anchor, $href, $title];
+        }
+
+        $jobAnchors = array_map(fn ($link) => $link[0], $links);
+        $perHref = array_count_values(array_map(fn ($link) => $link[1], $links));
+        $jobs = [];
+        $seen = [];
+
+        foreach ($links as [$anchor, $href, $title]) {
+            $context = $this->contextOf($anchor, $title, $jobAnchors);
+            $title = $this->withDetail($title, $context);
+
+            // Usually the link is the identity. A page that points several
+            // openings at one notice (BSU links three Instructor posts to the
+            // same PDF) keeps them apart by what makes each one different.
+            $key = $perHref[$href] > 1 ? $href.'#'.Str::slug($title) : $href;
+
+            if (isset($seen[$key])) {
+                continue;
+            }
+
+            $seen[$key] = true;
 
             $jobs[] = new NormalizedJob(
-                externalId: mb_substr($href, 0, 191),
+                externalId: mb_substr($key, 0, 191),
                 title: $title,
                 url: $href,
                 employer: JobText::line($config['employer'] ?? null, 160),
@@ -114,23 +145,28 @@ class PageDriver extends HttpDriver
     }
 
     /**
-     * The text of the row or card the link sits in, minus the title itself
-     * and countdowns that would go stale ("6 days left").
+     * The text of the block the link belongs to, minus the title itself and
+     * countdowns that would go stale ("6 days left").
+     *
+     * The block is the largest ancestor that holds no other job link: a list
+     * row on an HRIS board, a paragraph in a WordPress post. Stopping one
+     * level short of the first ancestor that does is what keeps one opening's
+     * salary and deadline from being read off its neighbour.
+     *
+     * @param  list<DOMElement>  $jobAnchors
      */
-    private function contextOf(DOMElement $anchor, string $title): string
+    private function contextOf(DOMElement $anchor, string $title, array $jobAnchors): string
     {
-        $node = $anchor->parentNode;
         $card = null;
+        $node = $anchor->parentNode;
 
-        for ($depth = 0; $node instanceof DOMElement && $depth < 6; $depth++, $node = $node->parentNode) {
-            if (in_array(strtolower($node->nodeName), ['li', 'tr', 'article'], true)) {
-                $card = $node;
+        for ($depth = 0; $node instanceof DOMElement && $depth < 8; $depth++, $node = $node->parentNode) {
+            if ($this->holdsAnotherJob($node, $anchor, $jobAnchors)) {
                 break;
             }
-        }
 
-        // No list row: fall back to two levels up, which is usually the card.
-        $card ??= $anchor->parentNode?->parentNode instanceof DOMElement ? $anchor->parentNode->parentNode : null;
+            $card = $node;
+        }
 
         if (! $card instanceof DOMElement) {
             return '';
@@ -154,13 +190,53 @@ class PageDriver extends HttpDriver
         return Str::limit($text, 600, '…');
     }
 
-    private function salary(string $context): ?string
+    /** @param list<DOMElement> $jobAnchors */
+    private function holdsAnotherJob(DOMElement $node, DOMElement $anchor, array $jobAnchors): bool
     {
-        if (preg_match('/(?:₱|PHP|Php|P)\s?\d[\d,]*(?:\.\d+)?\s*(?:\/\s*)?(?:daily|monthly|per\s+(?:day|month)|a\s+(?:day|month)|day|month)?/u', $context, $m)) {
-            return JobText::line($m[0], 120);
+        foreach ($node->getElementsByTagName('a') as $inner) {
+            if ($inner !== $anchor && in_array($inner, $jobAnchors, true)) {
+                return true;
+            }
         }
 
-        return null;
+        return false;
+    }
+
+    /**
+     * Government notices repeat one title across offices ("Instructor 1" for
+     * three colleges, "Administrative Aide IV" for two offices). The
+     * specialization, or failing that the place of assignment, is what tells
+     * them apart — and what someone scanning the board needs to see anyway.
+     */
+    private function withDetail(string $title, string $context): string
+    {
+        foreach (['specialization', 'place of assignment', 'assignment', 'office'] as $label) {
+            if (preg_match('/\b'.$label.'\s*:\s*([^·]+?)\s*(?:·|$)/iu', $context, $m)) {
+                $detail = JobText::line($m[1], 100);
+
+                if ($detail !== null && ! str_contains(mb_strtolower($title), mb_strtolower($detail))) {
+                    return JobText::fit("{$title} — {$detail}", 200);
+                }
+            }
+        }
+
+        return $title;
+    }
+
+    private function salary(string $context): ?string
+    {
+        if (! preg_match('/(?:₱|PHP|Php|P)\s?\d[\d,]*(?:\.\d+)?(?:\s*\(SG\s*\d+\))?\s*(?:\/\s*)?(?:daily|monthly|per\s+(?:day|month)|a\s+(?:day|month)|day|month)?/u', $context, $m)) {
+            return null;
+        }
+
+        $salary = trim($m[0]);
+
+        // "Monthly Salary: Php 33,947.00 (SG 12)" puts the period in the label.
+        if (! preg_match('/daily|monthly|day|month/i', $salary) && preg_match('/\b(monthly|daily)\s+(salary|rate|wage)\b/i', $context, $period)) {
+            $salary .= ' '.strtolower($period[1]);
+        }
+
+        return JobText::line($salary, 120);
     }
 
     private function deadline(string $context): ?CarbonImmutable

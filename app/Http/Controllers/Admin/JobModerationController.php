@@ -172,7 +172,7 @@ class JobModerationController extends Controller
         if ($request->has('config')) {
             $config = array_filter((array) $request->input('config'), fn ($value) => $value !== null && $value !== '');
 
-            foreach (['keywords', 'locations'] as $list) {
+            foreach (['keywords', 'locations', 'link_excludes'] as $list) {
                 if (isset($config[$list]) && is_string($config[$list])) {
                     $config[$list] = array_values(array_filter(array_map('trim', explode(',', $config[$list]))));
                 }

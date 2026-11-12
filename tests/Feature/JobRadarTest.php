@@ -210,6 +210,58 @@ class JobRadarTest extends TestCase
         $this->assertSame('P 749.36 daily', $aide->salary_text);
     }
 
+    public function test_a_wordpress_notice_page_keeps_each_paragraphs_own_details(): void
+    {
+        $base = 'https://univ.example.test/wp-content/uploads/employment/';
+        $first = now()->addDays(3);
+        $second = now()->addDays(9);
+        $para = fn (string $pdf, string $title, string $assignment, ?string $spec, string $pay, $deadline) => '<p>Position(s): One (1) <a href="'.$base.$pdf.'"><strong>'.$title.'</strong></a><br />'
+            .'Place of Assignment: '.$assignment.'<br />Plantilla Item No.: X-1<br />Monthly Salary: '.$pay.'<br />'
+            .($spec ? 'Specialization: '.$spec.'<br />' : '').'Application Deadline: '.$deadline->format('F j, Y').'</p>';
+
+        Http::fake([
+            'univ.example.test/robots.txt' => Http::response("User-agent: *\nDisallow: /wp-admin/\n"),
+            'univ.example.test/job-opportunities/' => Http::response('<article><div class="entry-content"><div class="widget">'
+                .$para('INST1-CSS.pdf', 'Instructor 1', 'College of Social Sciences', 'Political Science', 'Php 33,947.00 (SG 12)', $first)
+                .$para('INST1-CSS.pdf', 'Instructor 1', 'College of Natural Sciences', 'Values Education', 'Php 33,947.00 (SG 12)', $second)
+                .$para('ADA4-OES.pdf', 'Administrative Aide IV (Clerk III)', 'Office of Extension Services', null, 'Php 17,506.00 (SG 4)', $second)
+                .'<p><a href="'.$base.'EQUAL-EMPLOYMENT-OPPORTUNITY-POLICY.pdf">EQUAL EMPLOYMENT OPPORTUNITY PRINCIPLE</a></p>'
+                .'<p><a href="https://univ.example.test/job-opportunities-a/">Previous Job Openings</a></p>'
+                .'</div></div></article>'),
+        ]);
+
+        $source = $this->source('page', [
+            'url' => 'https://univ.example.test/job-opportunities/',
+            'link_contains' => '/wp-content/uploads/employment/',
+            'link_excludes' => 'POLICY',
+            'employer' => 'Benguet State University',
+            'location' => 'La Trinidad, Benguet',
+        ], autoApprove: true);
+
+        $this->assertSame(3, app(JobFetcher::class)->run($source)['new']);
+
+        $titles = JobListing::query()->orderBy('id')->pluck('title')->all();
+        $this->assertSame([
+            'Instructor 1 — Political Science',
+            'Instructor 1 — Values Education',
+            'Administrative Aide IV (Clerk III) — Office of Extension Services',
+        ], $titles);
+
+        $political = JobListing::query()->where('title', 'like', '%Political%')->sole();
+        $this->assertSame($first->toDateString(), $political->deadline->toDateString());
+        $this->assertSame('Php 33,947.00 (SG 12) monthly', $political->salary_text);
+        $this->assertSame('full-time', $political->employment_type);
+        $this->assertSame('government', $political->sector);
+        $this->assertStringNotContainsString('Values Education', $political->description);
+
+        $values = JobListing::query()->where('title', 'like', '%Values%')->sole();
+        $this->assertSame($second->toDateString(), $values->deadline->toDateString());
+        $this->assertSame($base.'INST1-CSS.pdf', $values->apply_url);
+
+        // Reading the page again finds the same three, not three more.
+        $this->assertSame(3, app(JobFetcher::class)->run($source->fresh(), force: true)['seen']);
+    }
+
     public function test_a_page_disallowed_by_robots_txt_is_not_read(): void
     {
         Http::fake([

@@ -147,6 +147,7 @@ const DRIVER_FIELDS = {
   page: [
     { key: 'url', label: 'Page that lists the openings', placeholder: 'https://hris.baguio.gov.ph/jobs', required: true },
     { key: 'link_contains', label: 'Every job link contains', placeholder: '/jobs/', required: true },
+    { key: 'link_excludes', label: 'Skip links containing (comma separated)', placeholder: 'POLICY, how-to-apply' },
     { key: 'employer', label: 'Employer', placeholder: 'City Government of Baguio' },
     { key: 'location', label: 'Location', placeholder: 'Baguio City' },
   ],
