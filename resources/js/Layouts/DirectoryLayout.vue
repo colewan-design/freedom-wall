@@ -17,6 +17,9 @@ const props = defineProps({
   // Pages with nothing to search (log in, sign up) drop the box entirely
   // rather than offer one that does nothing.
   hideSearch: { type: Boolean, default: false },
+  // The green "Say it anonymously" band. Auth pages make that point in their
+  // own card, so showing it again underneath is just repetition.
+  hideCta: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['update:search']);
@@ -202,7 +205,9 @@ const formatCount = (value) => Number(value).toLocaleString('en-PH');
       </div>
     </header>
 
-    <div class="dir-body">
+    <!-- Without a rail the column would sit left of an empty 320px track, so a
+         rail-less page gets one centred column instead. -->
+    <div class="dir-body" :class="{ 'no-rail': !$slots.rail }">
       <main class="dir-main">
         <slot />
       </main>
@@ -212,7 +217,7 @@ const formatCount = (value) => Number(value).toLocaleString('en-PH');
       </aside>
     </div>
 
-    <section class="dir-cta-wrap">
+    <section v-if="!hideCta" class="dir-cta-wrap">
       <div class="dir-cta">
         <span class="dir-cta-dots" aria-hidden="true"></span>
         <span class="dir-cta-badge">Say it anonymously</span>
@@ -470,6 +475,10 @@ const formatCount = (value) => Number(value).toLocaleString('en-PH');
   max-width: 1180px;
   margin: 0 auto;
   padding: 1.75rem 1.25rem 2.5rem;
+}
+
+.dir-body.no-rail {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .dir-main {

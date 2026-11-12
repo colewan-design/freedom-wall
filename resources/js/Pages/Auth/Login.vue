@@ -3,9 +3,9 @@ import { Head, Link, useForm } from '@inertiajs/vue3';
 import { ref } from 'vue';
 import DirectoryLayout from '../../Layouts/DirectoryLayout.vue';
 
-// The same shell as the wall, threads and jobs, so signing in feels like part
-// of the site rather than a separate app. Rendered in the template, not via
-// defineOptions, because the page fills the layout's #rail slot.
+// One centred card in the directory shell: the form on the right, and on the
+// left what an account is for — and that posting does not need one. Nothing
+// sits beside it, so the page reads as a single task.
 
 const form = useForm({
   username: '',
@@ -30,129 +30,122 @@ const PERKS = [
 <template>
   <Head title="Log in" />
 
-  <DirectoryLayout hide-search>
+  <DirectoryLayout hide-search hide-cta>
     <div class="auth">
-      <header class="hero">
-        <p class="hero-badge">Student account</p>
-        <h1>Welcome back</h1>
-        <p class="hero-lede">
-          Log in with your username, or continue with Google. New here?
-          <Link href="/register">Create an account</Link> — it takes a minute.
-        </p>
-      </header>
-
       <section class="auth-card" aria-labelledby="login-head">
-        <h2 id="login-head" class="sr-only">Log in</h2>
+        <!-- Form first in the markup: it is what the page is for, and it is
+             what comes first on a phone, where the panes stack. -->
+        <div class="auth-form-pane">
+          <p class="badge">Student account</p>
+          <h1 id="login-head">Welcome back</h1>
+          <p class="lede">
+            New here? <Link href="/register">Create an account</Link> — it takes a minute.
+          </p>
 
-        <form class="auth-form" novalidate @submit.prevent="onSubmit">
-          <label class="field">
-            <span>Username</span>
-            <input
-              v-model="form.username"
-              type="text"
-              placeholder="Your username"
-              autocomplete="username"
-              autocapitalize="none"
-              spellcheck="false"
-              autofocus
-              :aria-invalid="Boolean(form.errors.username)"
-            />
-            <small v-if="form.errors.username" class="error" role="alert">{{ form.errors.username }}</small>
-          </label>
-
-          <label class="field">
-            <span>Password</span>
-            <span class="password-input">
+          <form class="auth-form" novalidate @submit.prevent="onSubmit">
+            <label class="field">
+              <span>Username</span>
               <input
-                v-model="form.password"
-                :type="showPassword ? 'text' : 'password'"
-                placeholder="Your password"
-                autocomplete="current-password"
-                :aria-invalid="Boolean(form.errors.password)"
+                v-model="form.username"
+                type="text"
+                placeholder="Your username"
+                autocomplete="username"
+                autocapitalize="none"
+                spellcheck="false"
+                autofocus
+                :aria-invalid="Boolean(form.errors.username)"
               />
-              <button
-                type="button"
-                class="password-toggle"
-                :aria-label="showPassword ? 'Hide password' : 'Show password'"
-                :aria-pressed="showPassword"
-                @click="showPassword = !showPassword"
-              >
-                <svg v-if="showPassword" width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path d="M2.5 12S6 5 12 5s9.5 7 9.5 7-3.5 7-9.5 7-9.5-7-9.5-7Z" stroke="currentColor" stroke-width="1.6" />
-                  <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.6" />
-                </svg>
-                <svg v-else width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path
-                    d="M3 3l18 18M10.6 10.7a3 3 0 0 0 4.2 4.2M9.4 5.5A9.7 9.7 0 0 1 12 5c6 0 9.5 7 9.5 7a14.8 14.8 0 0 1-3 3.9M6.2 6.9A14 14 0 0 0 2.5 12S6 19 12 19a9.6 9.6 0 0 0 3.6-.7"
-                    stroke="currentColor"
-                    stroke-width="1.6"
-                    stroke-linecap="round"
-                  />
-                </svg>
-              </button>
-            </span>
-            <small v-if="form.errors.password" class="error" role="alert">{{ form.errors.password }}</small>
-          </label>
+              <small v-if="form.errors.username" class="error" role="alert">{{ form.errors.username }}</small>
+            </label>
 
-          <button type="submit" class="btn btn-green btn-wide" :disabled="form.processing">
-            {{ form.processing ? 'Logging in…' : 'Log in' }}
-            <span v-if="!form.processing" aria-hidden="true">&rarr;</span>
-          </button>
-        </form>
+            <label class="field">
+              <span>Password</span>
+              <span class="password-input">
+                <input
+                  v-model="form.password"
+                  :type="showPassword ? 'text' : 'password'"
+                  placeholder="Your password"
+                  autocomplete="current-password"
+                  :aria-invalid="Boolean(form.errors.password)"
+                />
+                <button
+                  type="button"
+                  class="password-toggle"
+                  :aria-label="showPassword ? 'Hide password' : 'Show password'"
+                  :aria-pressed="showPassword"
+                  @click="showPassword = !showPassword"
+                >
+                  <svg v-if="showPassword" width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M2.5 12S6 5 12 5s9.5 7 9.5 7-3.5 7-9.5 7-9.5-7-9.5-7Z" stroke="currentColor" stroke-width="1.6" />
+                    <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.6" />
+                  </svg>
+                  <svg v-else width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path
+                      d="M3 3l18 18M10.6 10.7a3 3 0 0 0 4.2 4.2M9.4 5.5A9.7 9.7 0 0 1 12 5c6 0 9.5 7 9.5 7a14.8 14.8 0 0 1-3 3.9M6.2 6.9A14 14 0 0 0 2.5 12S6 19 12 19a9.6 9.6 0 0 0 3.6-.7"
+                      stroke="currentColor"
+                      stroke-width="1.6"
+                      stroke-linecap="round"
+                    />
+                  </svg>
+                </button>
+              </span>
+              <small v-if="form.errors.password" class="error" role="alert">{{ form.errors.password }}</small>
+            </label>
 
-        <div class="divider"><span>or</span></div>
+            <button type="submit" class="btn btn-green btn-wide" :disabled="form.processing">
+              {{ form.processing ? 'Logging in…' : 'Log in' }}
+              <span v-if="!form.processing" aria-hidden="true">&rarr;</span>
+            </button>
+          </form>
 
-        <a :href="route('auth.google.redirect')" class="btn btn-plain btn-wide">
-          <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.07 5.07 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1Z" fill="#4285F4" />
-            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.99.66-2.25 1.06-3.71 1.06-2.86 0-5.29-1.93-6.15-4.53H2.18v2.85A11 11 0 0 0 12 23Z" fill="#34A853" />
-            <path d="M5.85 14.1A6.6 6.6 0 0 1 5.5 12c0-.73.13-1.44.35-2.1V7.05H2.18a11 11 0 0 0 0 9.9l3.67-2.85Z" fill="#FBBC05" />
-            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1a11 11 0 0 0-9.82 6.05L5.85 9.9C6.71 7.3 9.14 5.38 12 5.38Z" fill="#EA4335" />
-          </svg>
-          Continue with Google
-        </a>
+          <div class="divider"><span>or</span></div>
 
-        <p class="auth-foot">
-          Moderator? Use the <Link href="/admin/login">admin login</Link>.
-        </p>
+          <a :href="route('auth.google.redirect')" class="btn btn-plain btn-wide">
+            <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.07 5.07 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1Z" fill="#4285F4" />
+              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.99.66-2.25 1.06-3.71 1.06-2.86 0-5.29-1.93-6.15-4.53H2.18v2.85A11 11 0 0 0 12 23Z" fill="#34A853" />
+              <path d="M5.85 14.1A6.6 6.6 0 0 1 5.5 12c0-.73.13-1.44.35-2.1V7.05H2.18a11 11 0 0 0 0 9.9l3.67-2.85Z" fill="#FBBC05" />
+              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1a11 11 0 0 0-9.82 6.05L5.85 9.9C6.71 7.3 9.14 5.38 12 5.38Z" fill="#EA4335" />
+            </svg>
+            Continue with Google
+          </a>
+
+          <p class="auth-foot">Moderator? Use the <Link href="/admin/login">admin login</Link>.</p>
+        </div>
+
+        <aside class="auth-side" aria-label="About accounts">
+          <h2>What an account adds</h2>
+          <ul class="perks">
+            <li v-for="perk in PERKS" :key="perk.title">
+              <span class="tile" aria-hidden="true">{{ perk.mark }}</span>
+              <span>
+                <b>{{ perk.title }}</b>
+                <small>{{ perk.body }}</small>
+              </span>
+            </li>
+          </ul>
+
+          <div class="side-note">
+            <b>Just want to post?</b>
+            <p>
+              The wall, threads and chat need no account, and wall posts stay anonymous either way — logging in
+              never puts your name on one.
+            </p>
+            <Link href="/wall#composer" class="side-link">
+              Write an anonymous post <span aria-hidden="true">&rarr;</span>
+            </Link>
+          </div>
+        </aside>
       </section>
     </div>
-
-    <template #rail>
-      <section class="rail-card">
-        <div class="rail-head">
-          <h2>What an account adds</h2>
-        </div>
-        <ul class="perks">
-          <li v-for="perk in PERKS" :key="perk.title">
-            <span class="tile tile-sm" aria-hidden="true">{{ perk.mark }}</span>
-            <span>
-              <b>{{ perk.title }}</b>
-              <small>{{ perk.body }}</small>
-            </span>
-          </li>
-        </ul>
-      </section>
-
-      <section class="rail-card rail-promo">
-        <h2>Just want to post?</h2>
-        <p>
-          The wall, threads and chat need no account. Posts stay anonymous either way — logging in never puts
-          your name on a wall post.
-        </p>
-        <Link href="/wall#composer" class="btn btn-green btn-block">
-          Write an anonymous post <span aria-hidden="true">&rarr;</span>
-        </Link>
-      </section>
-    </template>
   </DirectoryLayout>
 </template>
 
 <style scoped>
 .auth {
   display: flex;
-  flex-direction: column;
-  gap: 1rem;
+  justify-content: center;
+  padding: 1.5rem 0 1rem;
   container: auth / inline-size;
 }
 
@@ -204,47 +197,42 @@ const PERKS = [
   padding-block: 0.72rem;
 }
 
-.btn-block {
-  width: 100%;
-  margin-top: 0.9rem;
-}
-
 .tile {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  border-radius: var(--d-r-sm);
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: var(--d-r-md);
   background: var(--d-green);
   color: var(--d-green-ink);
+  font-size: 0.7rem;
   font-weight: 800;
   line-height: 1;
 }
 
-.tile-sm {
-  width: 1.65rem;
-  height: 1.65rem;
-  font-size: 0.62rem;
-}
+/* --- Card ----------------------------------------------------------------- */
 
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
+.auth-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  width: 100%;
+  max-width: 58rem;
   overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
+  background: var(--d-card);
+  border: 1px solid var(--d-line);
+  border-radius: var(--d-r-xl);
+  box-shadow: var(--d-shadow-lift);
 }
 
-/* --- Hero ----------------------------------------------------------------- */
-
-.hero {
-  padding: 1.5rem 0 0.5rem;
+.auth-form-pane {
+  padding: 2.4rem 2.5rem 2rem;
 }
 
-.hero-badge {
+.badge {
   display: inline-block;
-  margin: 0 0 0.8rem;
+  margin: 0 0 0.9rem;
   padding: 0.3rem 0.65rem;
   border-radius: var(--d-r-pill);
   background: var(--d-green-tint);
@@ -254,45 +242,31 @@ const PERKS = [
   color: var(--d-green-text);
 }
 
-.hero h1 {
+.auth-form-pane h1 {
   margin: 0;
-  font-size: 2.4rem;
+  font-size: 2.2rem;
   line-height: 1.1;
   font-weight: 800;
   letter-spacing: -0.035em;
   color: var(--d-ink);
 }
 
-.hero-lede {
-  margin: 0.85rem 0 0;
-  max-width: 46ch;
-  font-size: 0.95rem;
-  line-height: 1.6;
+.lede {
+  margin: 0.6rem 0 1.6rem;
+  font-size: 0.92rem;
   color: var(--d-muted);
 }
 
-.hero-lede :deep(a),
+.lede :deep(a),
 .auth-foot :deep(a) {
   font-weight: 650;
   color: var(--d-green-text);
   text-decoration: none;
 }
 
-.hero-lede :deep(a:hover),
+.lede :deep(a:hover),
 .auth-foot :deep(a:hover) {
   text-decoration: underline;
-}
-
-/* --- Card ----------------------------------------------------------------- */
-
-.auth-card {
-  width: 100%;
-  max-width: 28rem;
-  padding: 1.4rem 1.4rem 1.2rem;
-  background: var(--d-card);
-  border: 1px solid var(--d-line);
-  border-radius: var(--d-r-lg);
-  box-shadow: var(--d-shadow);
 }
 
 .auth-form {
@@ -319,7 +293,7 @@ const PERKS = [
 .field input {
   width: 100%;
   min-width: 0;
-  padding: 0.62rem 0.75rem;
+  padding: 0.66rem 0.8rem;
   border: 1px solid var(--d-line);
   border-radius: var(--d-r-md);
   background: var(--d-soft);
@@ -379,7 +353,7 @@ const PERKS = [
   align-items: center;
   gap: 0.75rem;
   margin: 1.1rem 0;
-  font-size: 0.74rem;
+  font-size: 0.72rem;
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -395,48 +369,35 @@ const PERKS = [
 }
 
 .auth-foot {
-  margin: 1.1rem 0 0;
-  padding-top: 0.9rem;
-  border-top: 1px dashed var(--d-line);
+  margin: 1.4rem 0 0;
   font-size: 0.8rem;
   color: var(--d-muted);
-  text-align: center;
 }
 
-/* --- Rail ----------------------------------------------------------------- */
+/* --- Side pane ------------------------------------------------------------ */
 
-.rail-card {
-  padding: 0.9rem 0.95rem 1rem;
-  background: var(--d-card);
-  border: 1px solid var(--d-line);
-  border-radius: var(--d-r-lg);
-  box-shadow: var(--d-shadow);
+/* The tint gradient the guest pages use for soft green panels, so the side
+   reads as part of the same card rather than a second one. */
+.auth-side {
+  display: flex;
+  flex-direction: column;
+  padding: 2.4rem 2.2rem 2rem;
+  background: linear-gradient(160deg, var(--d-green-tint), var(--d-green-tint-2));
+  border-left: 1px solid var(--d-green-tint-line);
 }
 
-.rail-head {
-  margin-bottom: 0.6rem;
-}
-
-.rail-head h2,
-.rail-promo h2 {
-  margin: 0;
-  font-size: 0.92rem;
-  font-weight: 750;
-  letter-spacing: -0.015em;
+.auth-side h2 {
+  margin: 0 0 1.1rem;
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
   color: var(--d-ink);
-}
-
-.rail-promo p {
-  margin: 0.5rem 0 0;
-  font-size: 0.82rem;
-  line-height: 1.55;
-  color: var(--d-muted);
 }
 
 .perks {
   display: flex;
   flex-direction: column;
-  gap: 0.7rem;
+  gap: 1rem;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -444,34 +405,85 @@ const PERKS = [
 
 .perks li {
   display: flex;
-  gap: 0.6rem;
+  gap: 0.75rem;
 }
 
 .perks b {
   display: block;
-  font-size: 0.84rem;
-  font-weight: 650;
+  font-size: 0.9rem;
+  font-weight: 700;
   color: var(--d-ink);
 }
 
 .perks small {
   display: block;
-  margin-top: 0.1rem;
-  font-size: 0.76rem;
-  line-height: 1.45;
-  color: var(--d-muted);
+  margin-top: 0.15rem;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--d-ink-2);
+}
+
+.side-note {
+  margin-top: auto;
+  padding-top: 1.4rem;
+  border-top: 1px dashed var(--d-green-tint-line);
+}
+
+.side-note b {
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--d-ink);
+}
+
+.side-note p {
+  margin: 0.3rem 0 0;
+  font-size: 0.8rem;
+  line-height: 1.55;
+  color: var(--d-ink-2);
+}
+
+.side-link {
+  display: inline-block;
+  margin-top: 0.6rem;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--d-green-text);
+  text-decoration: none;
+}
+
+.side-link:hover {
+  text-decoration: underline;
 }
 
 /* --- Responsive ----------------------------------------------------------- */
 
-@container auth (max-width: 540px) {
-  .hero h1 {
-    font-size: 2rem;
+@container auth (max-width: 720px) {
+  .auth {
+    padding-top: 0.5rem;
   }
 
   .auth-card {
-    max-width: none;
-    padding: 1.15rem 1.05rem 1rem;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .auth-side {
+    border-left: 0;
+    border-top: 1px solid var(--d-green-tint-line);
+  }
+
+  .side-note {
+    margin-top: 1.4rem;
+  }
+}
+
+@container auth (max-width: 480px) {
+  .auth-form-pane,
+  .auth-side {
+    padding: 1.6rem 1.25rem 1.4rem;
+  }
+
+  .auth-form-pane h1 {
+    font-size: 1.8rem;
   }
 }
 </style>
