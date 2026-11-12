@@ -147,7 +147,11 @@ class SubmissionController extends Controller
             ->whereHas('votes')
             ->select(['id', 'content', 'reviewed_at'])
             ->withSum('votes as score', 'value')
+            ->withCount('votes')
             ->orderByDesc('score')
+            // Between equal scores, the post more people weighed in on wins:
+            // ten votes that cancel out still beat one stray vote.
+            ->orderByDesc('votes_count')
             ->orderByDesc('reviewed_at')
             // A guard, not a product rule: the board shows six, and no window
             // needs more candidates than this to fill them.
@@ -158,9 +162,11 @@ class SubmissionController extends Controller
     /**
      * The leaderboard: the best-scoring posts, by when they were posted.
      *
-     * Only posts in positive territory make it — a board that listed posts on
-     * zero would be ranking nothing, and one that listed negatives would be
-     * pointing at the posts people liked least.
+     * Any voted-on post that has not gone negative makes it. Up and down
+     * votes cancel often enough that a strictly-positive board sat nearly
+     * empty while dozens of votes had been cast; a post on zero people argued
+     * over still earns a row. Negatives stay off — the board would otherwise
+     * be pointing at the posts people liked least.
      *
      * @param  \Illuminate\Database\Eloquent\Collection<int, Submission>  $scored
      * @param  \Illuminate\Support\Collection<int, int>  $yourVotes
@@ -183,7 +189,7 @@ class SubmissionController extends Controller
         foreach ($windows as $window => $since) {
             $board[$window] = $scored
                 ->filter(function (Submission $post) use ($since) {
-                    if ((int) ($post->score ?? 0) <= 0) {
+                    if ((int) ($post->score ?? 0) < 0) {
                         return false;
                     }
 

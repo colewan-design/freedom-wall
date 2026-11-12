@@ -31,19 +31,42 @@ class WallLeaderboardTest extends TestCase
                 ->where('voteTotal', 6));
     }
 
-    public function test_posts_on_zero_or_below_stay_off_the_board(): void
+    public function test_negative_and_unvoted_posts_stay_off_the_board(): void
     {
         $up = $this->approved('Liked. #kilig', now());
+        $split = $this->approved('Argued over. #rant', now());
         $down = $this->approved('Disliked. #rant', now());
         $this->approved('Untouched. #question', now());
 
         $this->votes($up, 1);
+        $this->votes($split, 1);
+        SubmissionVote::create(['submission_id' => $split->id, 'voter_token' => 'split-down', 'value' => -1]);
         $this->votes($down, 1, -1);
 
         $this->get(route('wall'))
             ->assertInertia(fn ($page) => $page
-                ->has('postBoard.all', 1)
-                ->where('postBoard.all.0.id', $up->id));
+                ->has('postBoard.all', 2)
+                ->where('postBoard.all.0.id', $up->id)
+                ->where('postBoard.all.1.id', $split->id)
+                ->where('postBoard.all.1.score', 0));
+    }
+
+    public function test_equal_scores_rank_by_how_many_voted(): void
+    {
+        $quiet = $this->approved('One stray vote each way. #rant', now());
+        $busy = $this->approved('Lots of back and forth. #rant', now()->subHour());
+
+        $this->votes($quiet, 1);
+        SubmissionVote::create(['submission_id' => $quiet->id, 'voter_token' => 'quiet-down', 'value' => -1]);
+        $this->votes($busy, 5);
+        foreach (range(1, 5) as $index) {
+            SubmissionVote::create(['submission_id' => $busy->id, 'voter_token' => "busy-down-{$index}", 'value' => -1]);
+        }
+
+        $this->get(route('wall'))
+            ->assertInertia(fn ($page) => $page
+                ->where('postBoard.all.0.id', $busy->id)
+                ->where('postBoard.all.1.id', $quiet->id));
     }
 
     public function test_each_window_only_counts_posts_put_up_inside_it(): void
