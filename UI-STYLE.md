@@ -13,6 +13,7 @@ reinventing the measurements.
 | `/threads` | `DirectoryLayout` | thread list, topics, trending, tags, rules |
 | `/chat` | `DirectoryLayout` | room controls, presence, snapshot |
 | `/tools` | `DirectoryLayout` | on-this-site, elsewhere, suggestion box |
+| `/jobs`, `/jobs/{id}`, `/jobs/mine` | `DirectoryLayout` | job stats, alerts CTA, sources, tracker |
 | `/id-check`, `/admin/*` | `NewsfeedLayout` | — still the older squared skin |
 
 ---
@@ -100,7 +101,9 @@ fill; use `--d-green-ink` and let the theme decide.
 
 **Red is the only colour outside the ramp.** `#c53030` for a negative score,
 `#dc2626` for form errors, `#e05252` for a lit downvote arrow in either theme.
-There is no red token because these are the only three places it appears.
+JobRadar adds a fourth: the "check before applying" warning, `#c53030` on a 9%
+`color-mix` tint, lifted to `#f08a8a` in dark mode.
+There is no red token because these are the only places it appears.
 
 **Never define a colour only inside a `[data-theme]` block.** Light is the base
 declaration; dark overrides.

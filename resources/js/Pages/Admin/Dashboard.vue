@@ -418,6 +418,8 @@ onMounted(() => {
         <p class="subtext">Review submissions before they go live, then post them manually anywhere you want.</p>
       </div>
 
+      <a href="/admin/jobs" class="btn btn-secondary btn-sm">JobRadar queue &rarr;</a>
+
       <div class="view-toggle" role="group" aria-label="View mode">
         <button type="button" class="view-btn" :class="{ active: viewMode === 'card' }" @click="viewMode = 'card'">
           Cards

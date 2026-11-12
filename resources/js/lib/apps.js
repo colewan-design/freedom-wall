@@ -24,6 +24,20 @@
  */
 export const APPS = [
   {
+    id: 'jobradar',
+    name: 'JobRadar',
+    mark: 'JR',
+    logo: '/images/branding/bsufw-mark-180.png',
+    url: '/jobs',
+    host: '/jobs',
+    platform: 'On this site',
+    internal: true,
+    blurb: 'Job openings from many sources, in one list.',
+    description:
+      'Browse vacancies gathered from employer feeds, job boards and links students share. Sign in to save jobs, track applications, and get alerts when a new one matches.',
+    tags: ['Jobs', 'Alerts'],
+  },
+  {
     id: 'id-check',
     name: 'BSUkol ID Check',
     mark: 'ID',

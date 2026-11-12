@@ -33,6 +33,7 @@ const NAV = [
   { href: '/wall', label: 'News Feed' },
   { href: '/threads', label: 'Threads' },
   { href: '/chat', label: 'Chat' },
+  { href: '/jobs', label: 'Jobs' },
   { href: '/id-check', label: 'ID Check' },
   { href: '/tools', label: 'Tools' },
 ];
@@ -49,6 +50,7 @@ const FOOTER_COLUMNS = [
   {
     title: 'Tools',
     links: [
+      { href: '/jobs', label: 'JobRadar' },
       { href: '/id-check', label: 'BSUkol ID Check' },
       { href: '/tools', label: 'All tools' },
     ],

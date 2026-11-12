@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AuthController as AdminAuthController;
+use App\Http\Controllers\Admin\JobModerationController;
 use App\Http\Controllers\Admin\SubmissionModerationController;
 use App\Http\Controllers\Admin\ThreadModerationController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
@@ -15,6 +16,8 @@ use App\Http\Controllers\ConversationMessageController;
 use App\Http\Controllers\FeedController;
 use App\Http\Controllers\FriendController;
 use App\Http\Controllers\IdCheckController;
+use App\Http\Controllers\JobController;
+use App\Http\Controllers\JobTrackerController;
 use App\Http\Controllers\JournalController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\ProfileController;
@@ -63,6 +66,17 @@ Route::post('/thread-replies/{reply}/vote', [ThreadController::class, 'vote'])
 Route::post('/thread-replies/{reply}/report', [ThreadController::class, 'reportReply'])
     ->middleware('throttle:thread-report')
     ->name('threads.replies.report');
+// JobRadar. Browsing and sharing a link are public like the rest of the wall;
+// saving, tracking and monitors need a verified student and sit further down.
+Route::get('/jobs', [JobController::class, 'index'])->name('jobs.index');
+Route::post('/jobs', [JobController::class, 'store'])
+    ->middleware('throttle:job-share')
+    ->name('jobs.store');
+Route::get('/jobs/{listing}', [JobController::class, 'show'])->whereNumber('listing')->name('jobs.show');
+Route::post('/jobs/{listing}/report', [JobController::class, 'report'])
+    ->whereNumber('listing')
+    ->middleware('throttle:job-report')
+    ->name('jobs.report');
 Route::get('/id-check', [IdCheckController::class, 'index'])->name('id-check');
 Route::redirect('/id', '/id-check');
 
@@ -121,6 +135,19 @@ Route::middleware(['auth', 'student'])->group(function () {
         Route::patch('journal/{entry}', [JournalController::class, 'update'])->name('journal.update');
         Route::delete('journal/{entry}', [JournalController::class, 'destroy'])->name('journal.destroy');
 
+        Route::get('jobs/mine', [JobTrackerController::class, 'mine'])->name('jobs.mine');
+        Route::post('jobs/{listing}/save', [JobTrackerController::class, 'save'])->whereNumber('listing')->name('jobs.save');
+        Route::delete('jobs/{listing}/save', [JobTrackerController::class, 'unsave'])->whereNumber('listing')->name('jobs.unsave');
+        Route::patch('job-saves/{save}', [JobTrackerController::class, 'updateSave'])->name('jobs.saves.update');
+        Route::delete('job-saves/{save}', [JobTrackerController::class, 'destroySave'])->name('jobs.saves.destroy');
+        Route::post('job-monitors', [JobTrackerController::class, 'storeMonitor'])
+            ->middleware('throttle:job-monitor')
+            ->name('jobs.monitors.store');
+        Route::patch('job-monitors/{monitor}', [JobTrackerController::class, 'updateMonitor'])
+            ->middleware('throttle:job-monitor')
+            ->name('jobs.monitors.update');
+        Route::delete('job-monitors/{monitor}', [JobTrackerController::class, 'destroyMonitor'])->name('jobs.monitors.destroy');
+
         Route::get('messages', [ConversationController::class, 'index'])->name('messages.index');
         Route::post('messages', [ConversationController::class, 'store'])->name('conversations.store');
         Route::get('messages/{conversation}', [ConversationController::class, 'show'])->name('conversations.show');
@@ -147,6 +174,17 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('submissions/approve-all', [SubmissionModerationController::class, 'approveAll'])->name('submissions.approveAll');
         Route::post('submissions/{submission}/approve', [SubmissionModerationController::class, 'approve'])->name('submissions.approve');
         Route::post('submissions/{submission}/reject', [SubmissionModerationController::class, 'reject'])->name('submissions.reject');
+
+        Route::get('jobs', [JobModerationController::class, 'page'])->name('jobs');
+        Route::get('jobs/listings', [JobModerationController::class, 'listings'])->name('jobs.listings');
+        Route::post('jobs/listings/{listing}/approve', [JobModerationController::class, 'approve'])->name('jobs.listings.approve');
+        Route::post('jobs/listings/{listing}/reject', [JobModerationController::class, 'reject'])->name('jobs.listings.reject');
+        Route::post('jobs/listings/{listing}/close', [JobModerationController::class, 'close'])->name('jobs.listings.close');
+        Route::get('jobs/sources', [JobModerationController::class, 'sources'])->name('jobs.sources');
+        Route::post('jobs/sources', [JobModerationController::class, 'storeSource'])->name('jobs.sources.store');
+        Route::patch('jobs/sources/{source}', [JobModerationController::class, 'updateSource'])->name('jobs.sources.update');
+        Route::delete('jobs/sources/{source}', [JobModerationController::class, 'destroySource'])->name('jobs.sources.destroy');
+        Route::post('jobs/sources/{source}/fetch', [JobModerationController::class, 'fetchSource'])->name('jobs.sources.fetch');
 
         Route::get('thread-reports', [ThreadModerationController::class, 'reports'])->name('threads.reports');
         Route::post('thread-reports/{report}/resolve', [ThreadModerationController::class, 'resolve'])->name('threads.reports.resolve');

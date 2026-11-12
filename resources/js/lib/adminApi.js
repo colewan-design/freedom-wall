@@ -8,7 +8,8 @@ async function request(path, { method = 'GET', body, isForm = false } = {}) {
   });
 
   if (res.status >= 400) {
-    throw new Error(res.data?.error || `Request failed (${res.status})`);
+    // Validation failures come back as { message, errors } rather than { error }.
+    throw new Error(res.data?.error || res.data?.message || `Request failed (${res.status})`);
   }
   return res.data;
 }
@@ -42,4 +43,23 @@ export const adminApi = {
   restoreThreadReply: (id) => request(`/admin/thread-replies/${id}/restore`, { method: 'POST' }),
 
   dismissThreadReport: (id) => request(`/admin/thread-reports/${id}/resolve`, { method: 'POST' }),
+
+  getJobListings: (status = 'pending', page = 1, limit = 15) =>
+    request(`/admin/jobs/listings?status=${status}&page=${page}&limit=${limit}`),
+
+  approveJob: (id, edits = {}) => request(`/admin/jobs/listings/${id}/approve`, { method: 'POST', body: edits }),
+
+  rejectJob: (id) => request(`/admin/jobs/listings/${id}/reject`, { method: 'POST' }),
+
+  closeJob: (id) => request(`/admin/jobs/listings/${id}/close`, { method: 'POST' }),
+
+  getJobSources: () => request('/admin/jobs/sources'),
+
+  createJobSource: (body) => request('/admin/jobs/sources', { method: 'POST', body }),
+
+  updateJobSource: (id, body) => request(`/admin/jobs/sources/${id}`, { method: 'PATCH', body }),
+
+  deleteJobSource: (id) => request(`/admin/jobs/sources/${id}`, { method: 'DELETE' }),
+
+  fetchJobSource: (id) => request(`/admin/jobs/sources/${id}/fetch`, { method: 'POST' }),
 };

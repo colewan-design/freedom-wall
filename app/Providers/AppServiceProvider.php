@@ -77,5 +77,20 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('thread-report', function (Request $request) {
             return Limit::perMinutes(10, 6)->by($request->ip());
         });
+
+        // JobRadar. Sharing a link lands in a moderated queue, so it is held
+        // about as tight as a wall submission; monitors re-scan the board on
+        // every save, which is the expensive part.
+        RateLimiter::for('job-share', function (Request $request) {
+            return Limit::perMinutes(10, 5)->by($request->ip());
+        });
+
+        RateLimiter::for('job-report', function (Request $request) {
+            return Limit::perMinutes(10, 6)->by($request->ip());
+        });
+
+        RateLimiter::for('job-monitor', function (Request $request) {
+            return Limit::perMinute(10)->by('job-monitor|'.$request->user()?->id);
+        });
     }
 }

@@ -270,6 +270,7 @@ function excerpt(text, length = 60) {
         <Link href="/wall" :class="{ active: isActive('/wall').value }">News Feed</Link>
         <Link href="/threads" :class="{ active: isActive('/threads').value || isThreadsPage }">Threads</Link>
         <Link href="/chat" :class="{ active: isActive('/chat').value }">Chat</Link>
+        <Link href="/jobs" :class="{ active: isActive('/jobs').value }">Jobs</Link>
         <Link href="/id-check" :class="{ active: isActive('/id-check').value }">ID Check</Link>
         <Link href="/tools" :class="{ active: isActive('/tools').value }">Tools</Link>
       </nav>
