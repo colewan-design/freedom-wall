@@ -314,6 +314,17 @@ const boardTabLabel = computed(
   () => BOARD_TABS.find((tab) => tab.id === boardTab.value)?.label.toLowerCase() ?? '',
 );
 
+// The server counted the row with this browser's vote as it stood on page
+// load; swap that out for the live one so voting moves the tally at once.
+function boardTally(row) {
+  const was = Number(row.your_vote ?? 0);
+  const now = voteFor(row).yours;
+  return {
+    up: Number(row.upvotes ?? 0) - (was === 1 ? 1 : 0) + (now === 1 ? 1 : 0),
+    down: Number(row.downvotes ?? 0) - (was === -1 ? 1 : 0) + (now === -1 ? 1 : 0),
+  };
+}
+
 // A board row links to its post only when that post is one of the fifty the
 // feed rendered; an older one has no anchor on the page to jump to.
 const feedIds = computed(() => new Set(props.posts.map((post) => post.id)));
@@ -598,7 +609,11 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onLightboxKeydown));
                 {{ excerpt(postBody(row), 64) }}
               </a>
               <p v-else class="board-name as-text">{{ excerpt(postBody(row), 64) }}</p>
-              <p class="board-sub">Posted {{ timeAgo(row.reviewed_at) }}</p>
+              <p class="board-sub">
+                <span class="board-posted">Posted {{ timeAgo(row.reviewed_at) }} · </span>
+                <span class="tally-up">{{ boardTally(row).up }} up</span>
+                · <span class="tally-down">{{ boardTally(row).down }} down</span>
+              </p>
             </div>
 
             <span class="vote">
@@ -1541,6 +1556,14 @@ a.board-name:hover {
   white-space: nowrap;
   font-size: 0.78rem;
   color: var(--d-muted);
+}
+
+.board-sub .tally-up {
+  color: var(--d-green);
+}
+
+.board-sub .tally-down {
+  color: #f87171;
 }
 
 /* --- Feed ----------------------------------------------------------------- */
@@ -2518,7 +2541,7 @@ a.board-name:hover {
     flex-direction: column;
   }
 
-  .board-sub,
+  .board-posted,
   .board-text .meta-line i,
   .board-text .meta-line span {
     display: none;

@@ -147,7 +147,11 @@ class SubmissionController extends Controller
             ->whereHas('votes')
             ->select(['id', 'content', 'reviewed_at'])
             ->withSum('votes as score', 'value')
-            ->withCount('votes')
+            ->withCount([
+                'votes',
+                'votes as upvotes' => fn ($votes) => $votes->where('value', 1),
+                'votes as downvotes' => fn ($votes) => $votes->where('value', -1),
+            ])
             ->orderByDesc('score')
             // Between equal scores, the post more people weighed in on wins:
             // ten votes that cancel out still beat one stray vote.
@@ -202,6 +206,10 @@ class SubmissionController extends Controller
                     'content' => $post->content,
                     'reviewed_at' => $post->reviewed_at,
                     'score' => (int) $post->score,
+                    // The net score alone reads "0" on a post five people
+                    // liked and five didn't, which looks like nobody voted.
+                    'upvotes' => (int) $post->upvotes,
+                    'downvotes' => (int) $post->downvotes,
                     'your_vote' => (int) ($yourVotes[$post->id] ?? 0),
                 ])
                 ->values()

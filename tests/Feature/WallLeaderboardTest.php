@@ -48,7 +48,9 @@ class WallLeaderboardTest extends TestCase
                 ->has('postBoard.all', 2)
                 ->where('postBoard.all.0.id', $up->id)
                 ->where('postBoard.all.1.id', $split->id)
-                ->where('postBoard.all.1.score', 0));
+                ->where('postBoard.all.1.score', 0)
+                ->where('postBoard.all.1.upvotes', 1)
+                ->where('postBoard.all.1.downvotes', 1));
     }
 
     public function test_equal_scores_rank_by_how_many_voted(): void
